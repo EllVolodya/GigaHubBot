@@ -220,10 +220,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
                 }
 
-                case "➕ Додати в кошик" -> handleButtonPress(userId, chatId, text);
-                case "🛍 Переглянути кошик" -> handleButtonPress(userId, chatId, text);
-                case "🔙 Назад" -> handleButtonPress(userId, chatId, text);
-
                 case "🧹 Очистити кошик" -> clearCart(userId);
                 case "⬅ Назад", "⬅️ Назад" -> {
                     clearUserState(userId);
@@ -937,26 +933,16 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔹 Додати товар у кошик
-    private void addToCart(Long userId) {
-        String chatId = String.valueOf(userId);
-        Map<String, Object> product = lastShownProduct.get(userId);
+    private void addToCart(Long chatId) throws TelegramApiException {
+        Map<String, Object> product = lastShownProduct.get(chatId);
 
         if (product == null) {
             sendText(chatId, "❌ Неможливо додати товар. Спробуйте ще раз.");
-            System.out.println("[addToCart] Product is null for user " + userId);
             return;
         }
 
-        // Додаємо товар у кошик
-        userCart.computeIfAbsent(userId, k -> new ArrayList<>()).add(product);
-        sendText(chatId, "✅ Товар \"" + product.get("name") + "\" додано до кошика!\n" +
-                "🔎 Якщо бажаєте продовжити покупки, введіть назву наступного товару.");
-
-        // Лог для дебагу
-        System.out.println("[addToCart] User " + userId + " added product: " + product.get("name"));
-
-        // Стан користувача — очікування пошуку
-        userStates.put(userId, "waiting_for_search");
+        userCart.computeIfAbsent(chatId, k -> new ArrayList<>()).add(product);
+        sendText(chatId, "✅ Товар \"" + product.get("name") + "\" додано до кошика!");
     }
 
     private final UserManager userManager = new UserManager();
@@ -3184,40 +3170,6 @@ public class StoreBot extends TelegramLongPollingBot {
         } catch (Exception e) {
             e.printStackTrace();
             sendText(chatId, "❌ Сталася помилка при відправленні фото.");
-        }
-    }
-
-    private void handleButtonPress(Long userId, String chatId, String text) {
-        Map<String, Object> product = lastShownProduct.get(userId);
-
-        switch (text) {
-            case "🛠 Додати в кошик":
-                if (product != null) {
-                    addToCart(userId); // <-- тільки userId
-                    sendText(userId.toString(), "✅ Товар додано в кошик!");
-                } else {
-                    sendText(userId.toString(), "⚠️ Спершу виберіть товар.");
-                }
-                break;
-
-            case "🛒 Переглянути кошик":
-                try {
-                    showCart(userId); // <-- тільки userId
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                    sendText(userId.toString(), "❌ Не вдалося відкрити кошик.");
-                }
-                break;
-
-            case "🔙 Назад":
-                sendText(userId.toString(), "🔙 Повернулися назад. Введіть назву товару для пошуку.");
-                lastShownProduct.remove(userId);
-                searchResults.remove(userId);
-                break;
-
-            default:
-                sendText(userId.toString(), "⚠️ Невідома команда. Введіть назву товару або натисніть одну з кнопок.");
-                break;
         }
     }
 
