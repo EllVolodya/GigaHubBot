@@ -8,7 +8,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
@@ -66,8 +65,11 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, List<String>> feedbacks = new HashMap<>();
     private final Map<Long, Long> replyTargets = new HashMap<>();
 
+    private final PhotoHandler photoHandler;
+
     public StoreBot(String botToken) {
         super(botToken);
+        photoHandler = new PhotoHandler(userStates, adminEditingProduct);
     }
 
     @Override
@@ -87,34 +89,7 @@ public class StoreBot extends TelegramLongPollingBot {
         String text = update.getMessage().getText().trim();
         String state = userStates.get(userId);
 
-        if (update.hasMessage()) {
-            Message msg = update.getMessage();
-            System.out.println("[DEBUG] Message class: " + msg.getClass().getSimpleName());
-            System.out.println("[DEBUG] Message content type:");
-            System.out.println("  hasText=" + msg.hasText());
-            System.out.println("  hasPhoto=" + msg.hasPhoto());
-            System.out.println("  hasDocument=" + msg.hasDocument());
-            System.out.println("  hasAnimation=" + msg.hasAnimation());
-            System.out.println("  hasSticker=" + msg.hasSticker());
-            System.out.println("  hasVideo=" + msg.hasVideo());
-            System.out.println("  hasVideoNote=" + msg.hasVideoNote());
-            System.out.println("  hasVoice=" + msg.hasVoice());
-
-            // 🔍 Перевірка текстового повідомлення на некоректні посилання
-            if (msg.hasText() && isInvalidLink(msg.getText())) {
-                sendText(chatId, "❌ Локальні або blob-посилання не підтримуються. Надішліть URL зображення з інтернету.");
-                return; // зупиняємо подальшу обробку
-            }
-        }
-
-        // Якщо користувач у стані "awaiting_photo"
-        if ("awaiting_photo".equals(state)) {
-            System.out.println("[DEBUG] Стан користувача 'awaiting_photo' — викликаємо handleAwaitingPhoto");
-            handleAwaitingPhoto(userId, chatId, update);
-            return;
-        } else {
-            System.out.println("[DEBUG] Стан користувача не 'awaiting_photo', handleAwaitingPhoto не викликано. Поточний стан: " + state);
-        }
+        photoHandler.handleUpdate(userId, chatId, update);
 
         if (update.getMessage().hasText()) {
             text = update.getMessage().getText(); // просто присвоюємо, без String
@@ -1004,71 +979,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                     sendText(chatId, "❌ Помилка при пошуку товару.");
-                }
-            }
-
-            case "awaiting_photo" -> {
-                String productName = adminEditingProduct.get(userId);
-                if (productName == null || productName.isEmpty()) {
-                    sendText(chatId, "⚠️ Не знайдено товар для збереження фото.");
-                    userStates.remove(userId);
-                    return;
-                }
-
-                Message msg = update.getMessage();
-
-                try {
-                    String imageUrl = null; // посилання, яке потім збережемо у базі
-
-                    // 🖼️ Якщо користувач надіслав фото
-                    if (msg.hasPhoto()) {
-                        var photos = msg.getPhoto();
-                        var largestPhoto = photos.get(photos.size() - 1); // беремо найякісніше
-                        java.io.File file = downloadTelegramFile(largestPhoto.getFileId());
-                        imageUrl = CloudinaryManager.uploadImage(file, "products");
-
-                        // 📄 Якщо користувач надіслав документ (будь-який файл)
-                    } else if (msg.hasDocument()) {
-                        java.io.File file = downloadTelegramFile(msg.getDocument().getFileId());
-                        imageUrl = CloudinaryManager.uploadImage(file, "products");
-
-                        // 🔗 Якщо користувач надіслав посилання текстом
-                    } else if (msg.hasText()) {
-                        String link = msg.getText().trim();
-
-                        if (isInvalidLink(link)) {
-                            sendText(chatId, "❌ Локальні або blob-посилання не підтримуються. Надішліть URL зображення з інтернету.");
-                            return;
-                        }
-
-                        if (link.startsWith("http://") || link.startsWith("https://")) {
-                            imageUrl = link;
-                        } else {
-                            sendText(chatId, "❌ Це не виглядає як посилання. Надішліть URL або сам файл.");
-                            return;
-                        }
-
-                        // ❌ Якщо нічого з вище перерахованого
-                    } else {
-                        sendText(chatId, "📎 Надішліть фото, документ або посилання на зображення.");
-                        return;
-                    }
-
-                    // ✅ Зберігаємо посилання в базу
-                    if (imageUrl != null) {
-                        boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
-                        if (updated)
-                            sendText(chatId, "✅ Фото збережено для товару '" + productName + "'.");
-                        else
-                            sendText(chatId, "⚠️ Фото отримано, але не вдалося оновити базу даних.");
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    sendText(chatId, "❌ Помилка при обробці файлу: " + e.getMessage());
-                } finally {
-                    userStates.remove(userId);
-                    adminEditingProduct.remove(userId);
                 }
             }
 
@@ -2071,9 +1981,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 break;
 
             case "🖼️ Додати фотографію":
-                adminEditingProduct.put(userId, productName); // зберігаємо товар
-                userStates.put(userId, "awaiting_photo");     // ставимо стан
-                sendText(chatId, "📷 Надішліть посилання на фото для товару '" + productName + "':");
+                startPhotoUpload(userId, chatId, productName);
                 break;
 
             case "📏 Одиниця виміру":
@@ -3277,10 +3185,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    private boolean isInvalidLink(String link) {
-        if (link == null) return true;
-        link = link.trim();
-        // Локальні та blob-посилання
-        return link.startsWith("blob:") || link.startsWith("file://") || link.matches("^[a-zA-Z]:\\\\.*");
+    public void startPhotoUpload(Long userId, String chatId, String productName) {
+        photoHandler.requestPhotoUpload(userId, chatId, productName);
     }
 }
