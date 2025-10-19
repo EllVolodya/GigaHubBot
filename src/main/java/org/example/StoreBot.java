@@ -80,12 +80,19 @@ public class StoreBot extends TelegramLongPollingBot {
         String text = update.getMessage().getText().trim();
         String state = userStates.get(userId);
 
-        System.out.println("=== New update received ===");
-        System.out.println("[DEBUG] userId=" + userId);
-        System.out.println("[DEBUG] userState=" + state);
-        System.out.println("[DEBUG] hasPhoto=" + update.getMessage().hasPhoto());
-        System.out.println("[DEBUG] hasDocument=" + update.getMessage().hasDocument());
-        System.out.println("[DEBUG] text=" + update.getMessage().getText());
+        if (update.hasMessage()) {
+            Message msg = update.getMessage();
+            System.out.println("[DEBUG] Message class: " + msg.getClass().getSimpleName());
+            System.out.println("[DEBUG] Message content type:");
+            System.out.println("  hasText=" + msg.hasText());
+            System.out.println("  hasPhoto=" + msg.hasPhoto());
+            System.out.println("  hasDocument=" + msg.hasDocument());
+            System.out.println("  hasAnimation=" + msg.hasAnimation());
+            System.out.println("  hasSticker=" + msg.hasSticker());
+            System.out.println("  hasVideo=" + msg.hasVideo());
+            System.out.println("  hasVideoNote=" + msg.hasVideoNote());
+            System.out.println("  hasVoice=" + msg.hasVoice());
+        }
 
         if (update.getMessage().hasText()) {
             text = update.getMessage().getText(); // просто присвоюємо, без String
