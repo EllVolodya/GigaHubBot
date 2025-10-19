@@ -1008,41 +1008,43 @@ public class StoreBot extends TelegramLongPollingBot {
                 Message msg = update.getMessage();
 
                 try {
-                    String imageUrl = null;
+                    String imageUrl = null; // посилання, яке потім збережемо у базі
 
                     // 🖼️ Якщо користувач надіслав фото
                     if (msg.hasPhoto()) {
                         var photos = msg.getPhoto();
-                        var largestPhoto = photos.get(photos.size() - 1); // беремо найякісніше фото
+                        var largestPhoto = photos.get(photos.size() - 1); // беремо найякісніше
                         java.io.File file = downloadTelegramFile(largestPhoto.getFileId());
                         imageUrl = CloudinaryManager.uploadImage(file, "products");
 
-                        // 📄 Якщо користувач надіслав документ
+                        // 📄 Якщо користувач надіслав документ (будь-який файл)
                     } else if (msg.hasDocument()) {
                         java.io.File file = downloadTelegramFile(msg.getDocument().getFileId());
                         imageUrl = CloudinaryManager.uploadImage(file, "products");
 
-                        // 🔗 Якщо користувач надіслав посилання
+                        // 🔗 Якщо користувач надіслав посилання текстом
                     } else if (msg.hasText()) {
-                        text = msg.getText().trim(); // без 'String'
-                        if (text.startsWith("http://") || text.startsWith("https://")) {
-                            imageUrl = text;
+                        String link = msg.getText().trim();
+                        if (link.startsWith("http://") || link.startsWith("https://")) {
+                            imageUrl = link;
                         } else {
-                            sendText(chatId, "❌ Це не виглядає як посилання. Надішліть URL або файл.");
+                            sendText(chatId, "❌ Це не виглядає як посилання. Надішліть URL або сам файл.");
                             return;
                         }
+
+                        // ❌ Якщо нічого з вище перерахованого
                     } else {
                         sendText(chatId, "📎 Надішліть фото, документ або посилання на зображення.");
                         return;
                     }
 
-                    // ✅ Якщо отримали посилання або завантажили успішно
+                    // ✅ Зберігаємо посилання в базу
                     if (imageUrl != null) {
                         boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
                         if (updated)
-                            sendText(chatId, "✅ Фото збережено у базі для товару '" + productName + "'.");
+                            sendText(chatId, "✅ Фото збережено для товару '" + productName + "'.");
                         else
-                            sendText(chatId, "⚠️ Фото отримано, але не вдалося оновити базу.");
+                            sendText(chatId, "⚠️ Фото отримано, але не вдалося оновити базу даних.");
                     }
 
                 } catch (Exception e) {
