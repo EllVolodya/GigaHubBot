@@ -17,8 +17,6 @@ import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 
 import java.io.InputStream;
-import java.io.FileOutputStream;
-import java.net.URL;
 import java.util.*;
 import java.util.List;
 import java.util.Map;
@@ -90,22 +88,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if ("awaiting_photo".equals(state)) {
             if (update.getMessage().hasPhoto()) {
-                List<PhotoSize> photos = update.getMessage().getPhoto();
-                handleAwaitingPhoto(userId, chatId, photos);
-            } else if (update.getMessage().hasDocument()) {
-                Document doc = update.getMessage().getDocument();
-                if (doc.getMimeType().startsWith("image/")) {
-                    // конвертуємо документ в список PhotoSize для уніфікації
-                    PhotoSize photo = new PhotoSize();
-                    photo.setFileId(doc.getFileId());
-                    handleAwaitingPhoto(userId, chatId, List.of(photo));
-                } else {
-                    sendText(chatId, "❌ Надішліть зображення у форматі jpg/png, а не інший файл.");
-                }
+                handleAwaitingPhoto(userId, chatId, update.getMessage().getPhoto());
             } else {
                 sendText(chatId, "❌ Будь ласка, надішліть фото, а не текст.");
             }
-            return;
+            return; // дуже важливо не заходити далі
         }
 
         if (update.getMessage().hasText()) {
@@ -975,6 +962,14 @@ public class StoreBot extends TelegramLongPollingBot {
             case "editing" -> handleEditing(userId, chatId, text);
             case "awaiting_field_value" -> handleAwaitingField(userId, chatId, text);
             case "awaiting_subcategory" -> handleAddToSubcategory(userId, chatId, text);
+            case "awaiting_photo" -> {
+                if (update.hasMessage() && update.getMessage().hasPhoto()) {
+                    List<PhotoSize> photos = update.getMessage().getPhoto();
+                    handleAwaitingPhoto(userId, chatId, photos);
+                } else {
+                    sendText(chatId, "❌ Будь ласка, надішліть фото, а не текст.");
+                }
+            }
             case "add_hit" -> handleAddHit(userId, chatId, text);
             case "add_category" -> handleAddCategory(userId, chatId, text);
             case "add_subcategory" -> handleAddSubcategory(userId, chatId, text);
