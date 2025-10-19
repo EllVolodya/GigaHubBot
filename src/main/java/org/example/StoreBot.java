@@ -109,8 +109,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // Якщо користувач у стані "awaiting_photo"
         if ("awaiting_photo".equals(state)) {
+            System.out.println("[DEBUG] Стан користувача 'awaiting_photo' — викликаємо handleAwaitingPhoto");
             handleAwaitingPhoto(userId, chatId, update);
             return;
+        } else {
+            System.out.println("[DEBUG] Стан користувача не 'awaiting_photo', handleAwaitingPhoto не викликано. Поточний стан: " + state);
         }
 
         if (update.getMessage().hasText()) {
@@ -2262,6 +2265,7 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void handleAwaitingPhoto(Long userId, String chatId, Update update) {
+        System.out.println("[DEBUG] Входження в handleAwaitingPhoto для користувача " + userId);
         String productName = adminEditingProduct.get(userId);
         if (productName == null || productName.isEmpty()) {
             sendText(chatId, "⚠️ Не знайдено товар для збереження фото.");
