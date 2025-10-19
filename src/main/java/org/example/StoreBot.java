@@ -180,7 +180,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                         String imageUrl = update.getMessage().getText().trim();
 
-                        // Перевірка, що це URL (можна додати більш точну валідацію)
+                        // Перевірка, що це URL
                         if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
                             sendText(chatId, "❌ Це не виглядає як посилання на фото. Надішліть правильне URL.");
                             return;
@@ -189,7 +189,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         // Оновлюємо поле photo у базі
                         boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
                         if (updated) {
-                            sendText(chatId, "✅ Фото успішно додано для товару: '" + productName + "'\n🌐 " + imageUrl);
+                            sendText(chatId, "✅ Фото оновлено у хмарі для товару '" + productName + "'.");
                         } else {
                             sendText(chatId, "⚠️ Посилання на фото отримано, але не вдалося оновити базу даних.");
                         }
