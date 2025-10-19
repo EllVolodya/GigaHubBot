@@ -99,6 +99,15 @@ public class StoreBot extends TelegramLongPollingBot {
             System.out.println("  hasVideo=" + msg.hasVideo());
             System.out.println("  hasVideoNote=" + msg.hasVideoNote());
             System.out.println("  hasVoice=" + msg.hasVoice());
+
+            // 🔍 Перевірка текстового повідомлення на некоректні посилання
+            if (msg.hasText()) {
+                String link = msg.getText().trim();
+                if (link.startsWith("blob:") || link.startsWith("file://") || link.matches("^[a-zA-Z]:\\\\.*")) {
+                    sendText(chatId, "❌ Локальні або blob-посилання не підтримуються. Надішліть URL зображення з інтернету.");
+                    return; // зупиняємо подальшу обробку
+                }
+            }
         }
 
         if ("awaiting_photo".equals(state)) {
@@ -1025,7 +1034,16 @@ public class StoreBot extends TelegramLongPollingBot {
                         // 🔗 Якщо користувач надіслав посилання текстом
                     } else if (msg.hasText()) {
                         String link = msg.getText().trim();
+
+                        // Перевірка на HTTP/HTTPS
                         if (link.startsWith("http://") || link.startsWith("https://")) {
+
+                            // 🚫 Перевірка на локальні або blob-посилання
+                            if (link.startsWith("blob:") || link.startsWith("file://") || link.matches("^[a-zA-Z]:\\\\.*")) {
+                                sendText(chatId, "❌ Локальні або blob-посилання не підтримуються. Надішліть URL зображення з інтернету.");
+                                return;
+                            }
+
                             imageUrl = link;
                         } else {
                             sendText(chatId, "❌ Це не виглядає як посилання. Надішліть URL або сам файл.");
