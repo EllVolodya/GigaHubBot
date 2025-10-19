@@ -75,21 +75,45 @@ public class StoreBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (!update.hasMessage() || !update.getMessage().hasText()) return;
+        System.out.println("=== New update received ===");
 
-        Long userId = update.getMessage().getFrom().getId();
-        String chatId = update.getMessage().getChatId().toString();
+        Long userId = null;
+        String chatId = null;
+
+        if (update.hasMessage()) {
+            userId = update.getMessage().getFrom().getId();
+            chatId = update.getMessage().getChatId().toString();
+
+            System.out.println("[DEBUG] hasPhoto=" + update.getMessage().hasPhoto());
+            System.out.println("[DEBUG] hasDocument=" + update.getMessage().hasDocument());
+            System.out.println("[DEBUG] text=" + update.getMessage().getText());
+
+        } else if (update.hasCallbackQuery()) {
+            userId = update.getCallbackQuery().getFrom().getId();
+            chatId = update.getCallbackQuery().getMessage().getChatId().toString();
+            System.out.println("[DEBUG] CallbackQuery data=" + update.getCallbackQuery().getData());
+        }
+
+        if (userId != null) {
+            System.out.println("[DEBUG] userId=" + userId);
+            System.out.println("[DEBUG] userState=" + userStates.get(userId));
+        }
+
         String text = update.getMessage().getText().trim();
         String state = userStates.get(userId);
 
         // 🔹 Обробка станів з фото
-        if ("awaiting_photo".equals(state)) {
-            if (update.getMessage().hasPhoto()) {
+        if ("awaiting_photo".equals(userStates.get(userId))) {
+            System.out.println("[DEBUG] State = awaiting_photo");
+
+            if (update.hasMessage() && update.getMessage().hasPhoto()) {
                 List<PhotoSize> photos = update.getMessage().getPhoto();
                 System.out.println("[PHOTO] Отримано фото від userId=" + userId + ", кількість розмірів: " + photos.size());
+
                 handleAwaitingPhoto(userId, chatId, photos);
             } else {
-                sendText(chatId, "❌ Будь ласка, надішліть фото, а не текст.");
+                System.out.println("[PHOTO] Повідомлення без фото!");
+                sendText(chatId, "❌ Будь ласка, надішліть саме фото, а не текст чи файл.");
             }
             return;
         }
