@@ -103,10 +103,11 @@ public class StoreBot extends TelegramLongPollingBot {
             // 🔍 Перевірка текстового повідомлення на некоректні посилання
             if (msg.hasText() && isInvalidLink(msg.getText())) {
                 sendText(chatId, "❌ Локальні або blob-посилання не підтримуються. Надішліть URL зображення з інтернету.");
-                return;
+                return; // зупиняємо подальшу обробку
             }
         }
 
+        // Якщо користувач у стані "awaiting_photo"
         if ("awaiting_photo".equals(state)) {
             handleAwaitingPhoto(userId, chatId, update);
             return;
@@ -2275,6 +2276,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String imageUrl = update.getMessage().getText().trim();
 
+        // 🚫 Перевірка на локальні та blob-посилання
+        if (imageUrl.startsWith("blob:") || imageUrl.startsWith("file://") || imageUrl.matches("^[a-zA-Z]:\\\\.*")) {
+            sendText(chatId, "❌ Локальні або blob-посилання не підтримуються. Надішліть URL зображення з інтернету.");
+            return;
+        }
+
+        // ✅ Перевірка на HTTP/HTTPS
         if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
             sendText(chatId, "❌ Це не виглядає як посилання на фото. Надішліть правильне URL.");
             return;
