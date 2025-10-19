@@ -101,18 +101,15 @@ public class StoreBot extends TelegramLongPollingBot {
             System.out.println("  hasVoice=" + msg.hasVoice());
 
             // 🔍 Перевірка текстового повідомлення на некоректні посилання
-            if (msg.hasText()) {
-                String link = msg.getText().trim();
-                if (link.startsWith("blob:") || link.startsWith("file://") || link.matches("^[a-zA-Z]:\\\\.*")) {
-                    sendText(chatId, "❌ Локальні або blob-посилання не підтримуються. Надішліть URL зображення з інтернету.");
-                    return; // зупиняємо подальшу обробку
-                }
+            if (msg.hasText() && isInvalidLink(msg.getText())) {
+                sendText(chatId, "❌ Локальні або blob-посилання не підтримуються. Надішліть URL зображення з інтернету.");
+                return;
             }
         }
 
         if ("awaiting_photo".equals(state)) {
             handleAwaitingPhoto(userId, chatId, update);
-            return; // виходимо, бо обробили
+            return;
         }
 
         if (update.getMessage().hasText()) {
@@ -1035,15 +1032,12 @@ public class StoreBot extends TelegramLongPollingBot {
                     } else if (msg.hasText()) {
                         String link = msg.getText().trim();
 
-                        // Перевірка на HTTP/HTTPS
+                        if (isInvalidLink(link)) {
+                            sendText(chatId, "❌ Локальні або blob-посилання не підтримуються. Надішліть URL зображення з інтернету.");
+                            return;
+                        }
+
                         if (link.startsWith("http://") || link.startsWith("https://")) {
-
-                            // 🚫 Перевірка на локальні або blob-посилання
-                            if (link.startsWith("blob:") || link.startsWith("file://") || link.matches("^[a-zA-Z]:\\\\.*")) {
-                                sendText(chatId, "❌ Локальні або blob-посилання не підтримуються. Надішліть URL зображення з інтернету.");
-                                return;
-                            }
-
                             imageUrl = link;
                         } else {
                             sendText(chatId, "❌ Це не виглядає як посилання. Надішліть URL або сам файл.");
@@ -3269,5 +3263,12 @@ public class StoreBot extends TelegramLongPollingBot {
                 System.out.println("❌ Не вдалося надіслати користувачу " + userId);
             }
         }
+    }
+
+    private boolean isInvalidLink(String link) {
+        if (link == null) return true;
+        link = link.trim();
+        // Локальні та blob-посилання
+        return link.startsWith("blob:") || link.startsWith("file://") || link.matches("^[a-zA-Z]:\\\\.*");
     }
 }
