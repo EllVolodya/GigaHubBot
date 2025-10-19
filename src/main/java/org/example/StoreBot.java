@@ -451,6 +451,17 @@ public class StoreBot extends TelegramLongPollingBot {
                     } else sendText(chatId, "⛔ У вас немає прав.");
                 }
 
+                case "🖼️ Додати фотографію" -> {
+                    System.out.println("[DEBUG] Button 'Add Photo' clicked by userId=" + userId);
+
+                    String productName = adminEditingProduct.get(userId); // присвоєння без String
+                    if (productName != null) {
+                        startPhotoUpload(userId, chatId, productName); // делегуємо PhotoHandler
+                    } else {
+                        sendText(chatId, "⚠️ Please select a product first.");
+                    }
+                }
+
                 case "🔹 MySQL" -> {
                     String keyword = adminSearchKeyword.get(userId);
                     CatalogSearcher catalogSearcher = new CatalogSearcher();
@@ -487,6 +498,8 @@ public class StoreBot extends TelegramLongPollingBot {
                         sendText(chatId, sb.toString());
                     }
                 }
+
+
 
                 case "Редагувати категорії" -> {
                     if (ADMINS.contains(userId)) {
