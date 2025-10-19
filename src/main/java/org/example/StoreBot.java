@@ -164,40 +164,6 @@ public class StoreBot extends TelegramLongPollingBot {
                         userStates.remove(userId);
                         sendText(chatId, "✅ Ваше замовлення на самовивіз успішно оформлено!\nКод замовлення: " + orderCode);
                     }
-
-                    case "awaiting_photo" -> {
-                        String productName = adminEditingProduct.get(userId);
-                        if (productName == null || productName.isEmpty()) {
-                            sendText(chatId, "⚠️ Не знайдено товар для збереження фото.");
-                            userStates.remove(userId);
-                            return;
-                        }
-
-                        if (!update.hasMessage() || update.getMessage().getText() == null) {
-                            sendText(chatId, "❌ Будь ласка, надішліть посилання на фото у вигляді тексту.");
-                            return;
-                        }
-
-                        String imageUrl = update.getMessage().getText().trim();
-
-                        // Перевірка, що це URL
-                        if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
-                            sendText(chatId, "❌ Це не виглядає як посилання на фото. Надішліть правильне URL.");
-                            return;
-                        }
-
-                        // Оновлюємо поле photo у базі
-                        boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
-                        if (updated) {
-                            sendText(chatId, "✅ Фото оновлено у хмарі для товару '" + productName + "'.");
-                        } else {
-                            sendText(chatId, "⚠️ Посилання на фото отримано, але не вдалося оновити базу даних.");
-                        }
-
-                        // Очищаємо стан користувача
-                        userStates.remove(userId);
-                        adminEditingProduct.remove(userId);
-                    }
                 }
             }
 
@@ -1024,6 +990,40 @@ public class StoreBot extends TelegramLongPollingBot {
                     e.printStackTrace();
                     sendText(chatId, "❌ Помилка при пошуку товару.");
                 }
+            }
+
+            case "awaiting_photo" -> {
+                String productName = adminEditingProduct.get(userId);
+                if (productName == null || productName.isEmpty()) {
+                    sendText(chatId, "⚠️ Не знайдено товар для збереження фото.");
+                    userStates.remove(userId);
+                    return;
+                }
+
+                if (!update.hasMessage() || update.getMessage().getText() == null) {
+                    sendText(chatId, "❌ Будь ласка, надішліть посилання на фото у вигляді тексту.");
+                    return;
+                }
+
+                String imageUrl = update.getMessage().getText().trim();
+
+                // Перевірка, що це URL
+                if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
+                    sendText(chatId, "❌ Це не виглядає як посилання на фото. Надішліть правильне URL.");
+                    return;
+                }
+
+                // Оновлюємо поле photo у базі
+                boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
+                if (updated) {
+                    sendText(chatId, "✅ Фото оновлено у хмарі для товару '" + productName + "'.");
+                } else {
+                    sendText(chatId, "⚠️ Посилання на фото отримано, але не вдалося оновити базу даних.");
+                }
+
+                // Очищаємо стан користувача
+                userStates.remove(userId);
+                adminEditingProduct.remove(userId);
             }
 
             case "reject_order_reason" -> {
