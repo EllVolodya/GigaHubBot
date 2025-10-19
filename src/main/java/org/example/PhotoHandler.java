@@ -50,6 +50,7 @@ public class PhotoHandler {
 
     // Переведення користувача в стан очікування фото
     public void requestPhotoUpload(Long userId, String chatId, String productName) {
+        System.out.println("[DEBUG] Виклик requestPhotoUpload: userId=" + userId + ", productName=" + productName);
         adminEditingProduct.put(userId, productName);
         userStates.put(userId, "awaiting_photo");
         sendText(chatId, "📎 Надішліть посилання на фото для товару '" + productName + "'.");

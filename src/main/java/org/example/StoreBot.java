@@ -91,6 +91,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
         photoHandler.handleUpdate(userId, chatId, update);
 
+        if (update.hasMessage() && update.getMessage().hasText()) {
+            System.out.println("[DEBUG] Натиснута кнопка: '" + text + "'");
+        }
+
         if (update.getMessage().hasText()) {
             text = update.getMessage().getText(); // просто присвоюємо, без String
             text = text.trim(); // обрізаємо пробіли
@@ -1981,6 +1985,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 break;
 
             case "🖼️ Додати фотографію":
+                System.out.println("[DEBUG] Натиснута кнопка 'Додати фотографію' для userId=" + userId);
                 startPhotoUpload(userId, chatId, productName);
                 break;
 
