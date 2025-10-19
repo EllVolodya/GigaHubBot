@@ -214,7 +214,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
                 case "🛍️ Перейти в кошик" -> {
                     try {
-                        showCart(userId);  // userId — Long
+                        showCart(userId);
                     } catch (TelegramApiException e) {
                         e.printStackTrace();
                     }
