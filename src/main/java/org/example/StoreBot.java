@@ -1984,10 +1984,10 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "✏️ Введіть назву підкатегорії, куди хочете додати товар:");
                 break;
 
-            case "🖼️ Додати фотографію":
+            case "🖼️ Add Photo":
                 System.out.println("[DEBUG] Button 'Add Photo' clicked by userId=" + userId);
 
-                String productName = adminEditingProduct.get(userId);
+                productName = adminEditingProduct.get(userId); // присвоєння, не оголошення
                 if (productName != null) {
                     startPhotoUpload(userId, chatId, productName);
                 } else {
