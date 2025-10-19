@@ -746,6 +746,34 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "№12, Іваненко Іван Іванович, +380501234567, 4444"
                 );
             }
+
+            if (text.contains("Додати фотографію") || text.contains("Add Photo")) {
+                System.out.println("[DEBUG] Button 'Add Photo' detected");
+
+                String productName = adminEditingProduct.get(userId);
+                if (productName != null) {
+                    startPhotoUpload(userId, chatId, productName); // делегуємо PhotoHandler
+                } else {
+                    sendText(chatId, "⚠️ Please select a product first.");
+                }
+
+            } else if (text.contains("Редагувати товар") || text.contains("Edit Product")) {
+                if (ADMINS.contains(userId)) {
+                    userStates.put(userId, "edit_product");
+                    sendText(chatId, "✏️ Enter the product name you want to edit:");
+                } else {
+                    sendText(chatId, "⛔ You do not have permission.");
+                }
+
+            } else if (text.contains("Змінити ціну") || text.contains("Change Price")) {
+                userStates.put(userId, "editing_price");
+                sendText(chatId, "💰 Enter new price for the product:");
+
+            } else {
+                // ===== DELEGATE TO PHOTO HANDLER =====
+                System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
+                photoHandler.handleUpdate(userId, chatId, update);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
