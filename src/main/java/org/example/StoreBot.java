@@ -75,43 +75,33 @@ public class StoreBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        System.out.println("=== New update received ===");
-
-        Long userId = null;
-        String chatId = null;
-
-        if (update.hasMessage()) {
-            userId = update.getMessage().getFrom().getId();
-            chatId = update.getMessage().getChatId().toString();
-
-            System.out.println("[DEBUG] hasPhoto=" + update.getMessage().hasPhoto());
-            System.out.println("[DEBUG] hasDocument=" + update.getMessage().hasDocument());
-            System.out.println("[DEBUG] text=" + update.getMessage().getText());
-
-        } else if (update.hasCallbackQuery()) {
-            userId = update.getCallbackQuery().getFrom().getId();
-            chatId = update.getCallbackQuery().getMessage().getChatId().toString();
-            System.out.println("[DEBUG] CallbackQuery data=" + update.getCallbackQuery().getData());
-        }
-
-        if (userId != null) {
-            System.out.println("[DEBUG] userId=" + userId);
-            System.out.println("[DEBUG] userState=" + userStates.get(userId));
-        }
-
+        Long userId = update.getMessage().getFrom().getId();
+        String chatId = update.getMessage().getChatId().toString();
         String text = update.getMessage().getText().trim();
         String state = userStates.get(userId);
 
-        // 🔹 Обробка станів з фото
-        if ("awaiting_photo".equals(userStates.get(userId))) {
+        System.out.println("=== New update received ===");
+        System.out.println("[DEBUG] userId=" + userId);
+        System.out.println("[DEBUG] userState=" + state);
+        System.out.println("[DEBUG] hasPhoto=" + update.getMessage().hasPhoto());
+        System.out.println("[DEBUG] hasDocument=" + update.getMessage().hasDocument());
+        System.out.println("[DEBUG] text=" + update.getMessage().getText());
+
+        if ("awaiting_photo".equals(state)) {
             if (update.getMessage().hasPhoto()) {
                 List<PhotoSize> photos = update.getMessage().getPhoto();
                 System.out.println("[PHOTO] Отримано фото від userId=" + userId + ", кількість розмірів: " + photos.size());
-                handleAwaitingPhoto(userId, chatId, photos); // ← виклик твоєї функції
+                handleAwaitingPhoto(userId, chatId, photos);
             } else {
                 sendText(chatId, "❌ Будь ласка, надішліть фото, а не текст.");
             }
-            return;
+            return; // важливо повернутись після обробки фото
+        }
+
+        if (update.getMessage().hasText()) {
+            text = update.getMessage().getText(); // просто присвоюємо, без String
+            text = text.trim(); // обрізаємо пробіли
+            // тут логіка по userState для тексту
         }
 
         // 🔹 Якщо користувач у стані – передаємо в handleState
