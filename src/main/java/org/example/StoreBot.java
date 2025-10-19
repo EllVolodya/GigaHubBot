@@ -926,20 +926,26 @@ public class StoreBot extends TelegramLongPollingBot {
         productIndex.put(chatId, index);
     }
 
-    // 🔹 Додати в кошик
+    // 🔹 Додати товар у кошик
     private void addToCart(Long userId) {
+        String chatId = String.valueOf(userId);
         Map<String, Object> product = lastShownProduct.get(userId);
 
         if (product == null) {
-            sendText(String.valueOf(userId), "❌ Неможливо додати товар. Спробуйте ще раз.");
+            sendText(chatId, "❌ Неможливо додати товар. Спробуйте ще раз.");
+            System.out.println("[addToCart] Product is null for user " + userId);
             return;
         }
 
+        // Додаємо товар у кошик
         userCart.computeIfAbsent(userId, k -> new ArrayList<>()).add(product);
-        sendText(String.valueOf(userId),
-                "✅ Товар \"" + product.get("name") + "\" додано до кошика!\n🔎 Якщо бажаєте продовжити покупки, введіть назву наступного товару.");
+        sendText(chatId, "✅ Товар \"" + product.get("name") + "\" додано до кошика!\n" +
+                "🔎 Якщо бажаєте продовжити покупки, введіть назву наступного товару.");
 
-        // Тепер користувач може шукати далі
+        // Лог для дебагу
+        System.out.println("[addToCart] User " + userId + " added product: " + product.get("name"));
+
+        // Стан користувача — очікування пошуку
         userStates.put(userId, "waiting_for_search");
     }
 
@@ -1816,22 +1822,16 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
         text = text.trim();
 
-        // 🔹 Якщо натиснута кнопка, обробляємо її і виходимо
-        if (text.equals("🛠 Додати в кошик") || text.equals("🛒 Переглянути кошик") || text.equals("🔙 Назад")) {
-            handleButtonPress(userId, chatId, text);
-            return; // не робимо пошук
-        }
-
-        // 🔹 Перевірка числа для вибору товару
+        // 1️⃣ Якщо користувач ввів номер товару з попереднього списку
         if (text.matches("\\d+")) {
-            List<Map<String, Object>> products = searchResults.get(Long.parseLong(chatId));
+            List<Map<String, Object>> products = searchResults.get(userId);
             if (products != null) {
                 int index = Integer.parseInt(text) - 1;
                 if (index >= 0 && index < products.size()) {
                     Map<String, Object> product = products.get(index);
-                    lastShownProduct.put(Long.parseLong(chatId), product);
-                    sendProductDetailsWithButtons(chatId, product);
-                    searchResults.remove(Long.parseLong(chatId));
+                    lastShownProduct.put(userId, product);
+                    sendProductDetailsWithButtons(userId); // беремо product всередині
+                    searchResults.remove(userId); // очищаємо список після вибору
                     return;
                 } else {
                     sendText(chatId, "⚠️ Неправильний номер товару. Спробуйте ще раз.");
@@ -1840,44 +1840,51 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        // 🔹 Пошук по назві
-        if (!text.isEmpty()) {
-            try {
-                CatalogSearcher searcher = new CatalogSearcher();
-                List<Map<String, Object>> foundProducts = searcher.searchMixedFromYAML(text);
-
-                if (foundProducts.isEmpty()) {
-                    // 🔹 більше не пишемо "Товар не знайдено"
-                    return;
-                }
-
-                if (foundProducts.size() > 1) {
-                    StringBuilder sb = new StringBuilder("🔎 Знайдено кілька товарів:\n\n");
-                    int idx = 1;
-                    for (Map<String, Object> p : foundProducts) {
-                        sb.append(idx++).append(". ").append(p.get("name")).append("\n");
-                    }
-                    sb.append("\nВведіть номер товару, щоб побачити деталі.");
-                    searchResults.put(Long.parseLong(chatId), foundProducts);
-                    sendText(chatId, sb.toString());
-                    return;
-                }
-
-                Map<String, Object> product = foundProducts.get(0);
-                lastShownProduct.put(Long.parseLong(chatId), product);
-                sendProductDetailsWithButtons(chatId, product);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                sendText(chatId, "⚠️ Помилка під час пошуку товару.");
-            }
-        } else {
+        // 2️⃣ Пошук по назві
+        if (text.isEmpty()) {
             sendText(chatId, "⚠️ Введіть назву товару для пошуку.");
+            return;
+        }
+
+        try {
+            CatalogSearcher searcher = new CatalogSearcher();
+            List<Map<String, Object>> foundProducts = searcher.searchMixedFromYAML(text);
+
+            if (foundProducts.isEmpty()) {
+                // Просто не показуємо повідомлення "Товар не знайдено"
+                return;
+            }
+
+            if (foundProducts.size() > 1) {
+                StringBuilder sb = new StringBuilder("🔎 Знайдено кілька товарів:\n\n");
+                int idx = 1;
+                for (Map<String, Object> p : foundProducts) {
+                    sb.append(idx++).append(". ").append(p.get("name")).append("\n");
+                }
+                sb.append("\nВведіть номер товару, щоб побачити деталі.");
+
+                searchResults.put(userId, foundProducts);
+                sendText(chatId, sb.toString());
+                return;
+            }
+
+            // Якщо знайдено один товар
+            Map<String, Object> product = foundProducts.get(0);
+            lastShownProduct.put(userId, product);
+            sendProductDetailsWithButtons(userId);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendText(chatId, "⚠️ Помилка під час пошуку товару.");
         }
     }
 
-    // 🔹 Отправка деталей товару з кнопками
-    private void sendProductDetailsWithButtons(String chatId, Map<String, Object> product) {
+    // 🔹 Надсилаємо деталі останнього показаного товару з кнопками
+    private void sendProductDetailsWithButtons(Long userId) {
+        String chatId = userId.toString();
+        Map<String, Object> product = lastShownProduct.get(userId);
+        if (product == null) return;
+
         try {
             String message = String.format(
                     "📦 %s\n💰 Ціна: %s грн за шт\n📂 %s → %s\n\n🔎 Виберіть дію нижче або введіть інший товар для пошуку.",
@@ -1913,6 +1920,7 @@ public class StoreBot extends TelegramLongPollingBot {
             sendMessage.setReplyMarkup(keyboardMarkup);
 
             execute(sendMessage);
+
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
@@ -2184,60 +2192,50 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private void handleAwaitingPhoto(Long userId, String chatId, List<PhotoSize> photos) {
         try {
+            System.out.println("[PHOTO] Handling photo from userId=" + userId);
+
             if (photos == null || photos.isEmpty()) {
                 sendText(chatId, "❌ Фото не отримано. Спробуйте ще раз.");
                 return;
             }
 
-            String productName = adminEditingProduct.get(userId);
-            if (productName == null) {
-                sendText(chatId, "❌ Назву товару не знайдено. Почніть редагування заново.");
+            // Беремо найбільше фото
+            PhotoSize largestPhoto = photos.get(photos.size() - 1);
+            String fileId = largestPhoto.getFileId();
+
+            System.out.println("[PHOTO] FileId: " + fileId);
+
+            // Отримуємо файл з Telegram
+            GetFile getFile = new GetFile(fileId);
+            org.telegram.telegrambots.meta.api.objects.File telegramFile = execute(getFile);
+
+            // Завантажуємо у тимчасовий файл
+            java.io.File tempFile = downloadFile(telegramFile);
+            System.out.println("[PHOTO] Temp file downloaded: " + tempFile.getAbsolutePath());
+
+            // Завантажуємо в Cloudinary
+            String imageUrl = CloudinaryManager.uploadImage(tempFile, "products");
+            if (imageUrl == null) {
+                sendText(chatId, "❌ Помилка при завантаженні фото.");
                 return;
             }
 
-            // Беремо найбільше фото
-            PhotoSize photo = photos.get(photos.size() - 1);
-            String fileId = photo.getFileId();
-            org.telegram.telegrambots.meta.api.methods.GetFile getFileMethod = new GetFile(fileId);
-            org.telegram.telegrambots.meta.api.objects.File file = execute(getFileMethod);
+            System.out.println("[PHOTO] Uploaded successfully: " + imageUrl);
+            sendText(chatId, "✅ Фото успішно завантажено!\n🌐 " + imageUrl);
 
-            // Завантажуємо файл із Telegram
-            String filePath = file.getFileUrl(getBotToken());
-            java.io.File tempFile = new java.io.File("temp_" + fileId + ".jpg");
-
-            try (InputStream is = new URL(filePath).openStream();
-                 FileOutputStream fos = new FileOutputStream(tempFile)) {
-                byte[] buffer = new byte[4096];
-                int read;
-                while ((read = is.read(buffer)) != -1) {
-                    fos.write(buffer, 0, read);
-                }
+            // Видаляємо тимчасовий файл
+            if (tempFile.exists()) {
+                tempFile.delete();
+                System.out.println("[PHOTO] Temp file deleted.");
             }
 
-            // Перевіряємо старе фото (з YAML або БД)
-            String oldPhotoUrl = CatalogEditor.getField(productName, "photo");
-            if (oldPhotoUrl != null && !oldPhotoUrl.isEmpty() && oldPhotoUrl.startsWith("http")) {
-                CloudinaryManager.deleteImage(oldPhotoUrl);
-            }
-
-            // Завантажуємо нове фото у Cloudinary
-            String imageUrl = CloudinaryManager.uploadImage(tempFile, "products");
-
-            // Видаляємо локальний тимчасовий файл
-            tempFile.delete();
-
-            // Оновлюємо поле photo у YAML або БД
-            CatalogEditor.updateField(productName, "photo", imageUrl);
-
-            sendText(chatId, "✅ Фото оновлено у хмарі для товару '" + productName + "'.");
-
-            // Скидаємо стан користувача
+            // Очистка стану
             userStates.remove(userId);
             adminEditingProduct.remove(userId);
 
         } catch (Exception e) {
             e.printStackTrace();
-            sendText(chatId, "❌ Сталася помилка при завантаженні фото.");
+            sendText(chatId, "❌ Помилка при обробці фото: " + e.getMessage());
         }
     }
 
@@ -3183,33 +3181,36 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void handleButtonPress(Long userId, String chatId, String text) {
+        Map<String, Object> product = lastShownProduct.get(userId);
+
         switch (text) {
-            case "➕ Додати в кошик":
-                Map<String, Object> product = lastShownProduct.get(userId);
-                if (product == null) {
-                    sendText(chatId, "❌ Неможливо додати товар. Спробуйте ще раз.");
-                    return;
+            case "🛠 Додати в кошик":
+                if (product != null) {
+                    addToCart(userId); // <-- тільки userId
+                    sendText(userId.toString(), "✅ Товар додано в кошик!");
+                } else {
+                    sendText(userId.toString(), "⚠️ Спершу виберіть товар.");
                 }
-                userCart.computeIfAbsent(userId, k -> new ArrayList<>()).add(product);
-                sendText(chatId, "✅ Товар \"" + product.get("name") + "\" додано до кошика!\n🔎 Якщо бажаєте продовжити покупки, введіть назву наступного товару.");
                 break;
 
-            case "\uD83D\uDECD Переглянути кошик":
+            case "🛒 Переглянути кошик":
                 try {
-                    showCart(userId); // тепер тільки userId
+                    showCart(userId); // <-- тільки userId
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
-                    sendText(chatId, "⚠️ Помилка при показі кошика.");
+                    sendText(userId.toString(), "❌ Не вдалося відкрити кошик.");
                 }
                 break;
 
             case "🔙 Назад":
-                createUserMenu(chatId, userId); // повернення в головне меню
+                sendText(userId.toString(), "🔙 Повернулися назад. Введіть назву товару для пошуку.");
+                lastShownProduct.remove(userId);
+                searchResults.remove(userId);
                 break;
 
             default:
-                // Якщо це не кнопка, перевіряємо чи це пошук
-                handleWaitingForSearch(userId, chatId, text);
+                sendText(userId.toString(), "⚠️ Невідома команда. Введіть назву товару або натисніть одну з кнопок.");
+                break;
         }
     }
 

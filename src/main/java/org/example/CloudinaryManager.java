@@ -13,33 +13,52 @@ public class CloudinaryManager {
         cloudinary = new Cloudinary(ObjectUtils.asMap(
                 "cloud_name", "dohs4bvma",
                 "api_key", "673113637171148",
-                "api_secret", "kcKYT7Ju_1g_x-00oxzuhBGs6Ps"
+                "api_secret", "kcKYT7Ju_1g_x-00oxzuhBGs6Ps",
+                "secure", true
         ));
     }
 
-    // Завантаження фото
-    public static String uploadImage(File file, String folder) throws IOException {
-        Map uploadResult = cloudinary.uploader().upload(file, ObjectUtils.asMap(
-                "folder", folder,
-                "overwrite", true
-        ));
-        return (String) uploadResult.get("secure_url");
+    public static String uploadImage(File file, String folder) {
+        try {
+            System.out.println("[Cloudinary] Uploading file: " + file.getName() + " (" + file.length() + " bytes)");
+
+            Map uploadResult = cloudinary.uploader().upload(file, ObjectUtils.asMap(
+                    "folder", folder,
+                    "overwrite", true
+            ));
+
+            System.out.println("[Cloudinary] Upload result: " + uploadResult);
+
+            return uploadResult.get("secure_url").toString();
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.err.println("[Cloudinary] Upload failed: " + e.getMessage());
+            return null;
+        }
     }
 
-    // Видалення фото
     public static void deleteImage(String imageUrl) {
         try {
-            if (imageUrl == null || !imageUrl.contains("/")) return;
+            if (imageUrl == null || imageUrl.isEmpty()) return;
 
-            // Отримуємо public_id з URL Cloudinary
-            String publicId = imageUrl.substring(imageUrl.indexOf("/upload/") + 8);
-            publicId = publicId.replaceAll("\\.[^.]+$", ""); // прибираємо .jpg/.png
+            int idx = imageUrl.indexOf("/upload/");
+            if (idx == -1) return;
 
-            // Видаляємо
-            cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
-            System.out.println("[CLOUDINARY] Видалено фото: " + publicId);
+            String publicPart = imageUrl.substring(idx + 8);
+            String[] parts = publicPart.split("/");
+
+            if (parts[0].matches("v\\d+")) {
+                publicPart = publicPart.substring(parts[0].length() + 1);
+            }
+
+            publicPart = publicPart.replaceAll("\\.[^.]+$", "");
+
+            System.out.println("[Cloudinary] Deleting image public_id=" + publicPart);
+
+            cloudinary.uploader().destroy(publicPart, ObjectUtils.emptyMap());
+
         } catch (Exception e) {
-            System.err.println("[CLOUDINARY] Не вдалося видалити фото: " + e.getMessage());
+            System.err.println("[Cloudinary] Failed to delete image: " + e.getMessage());
         }
     }
 }
