@@ -7,27 +7,27 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
-import org.telegram.telegrambots.meta.api.objects.Document;
 
 import org.telegram.telegrambots.meta.api.objects.Message;
-import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
+import org.telegram.telegrambots.meta.api.methods.GetFile;
 
 import java.io.InputStream;
+
 import java.util.*;
 import java.util.List;
 import java.util.Map;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+
 import java.time.LocalDateTime;
-import java.io.FileOutputStream;
-import java.net.URL;
 
 public class StoreBot extends TelegramLongPollingBot {
 
@@ -73,6 +73,11 @@ public class StoreBot extends TelegramLongPollingBot {
     @Override
     public String getBotUsername() {
         return botUsername;
+    }
+
+    private java.io.File downloadTelegramFile(String fileId) throws TelegramApiException {
+        org.telegram.telegrambots.meta.api.objects.File tgFile = execute(new GetFile(fileId));
+        return downloadFile(tgFile);
     }
 
     @Override
@@ -1000,30 +1005,53 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                if (!update.hasMessage() || update.getMessage().getText() == null) {
-                    sendText(chatId, "❌ Будь ласка, надішліть посилання на фото у вигляді тексту.");
-                    return;
+                Message msg = update.getMessage();
+
+                try {
+                    String imageUrl = null;
+
+                    // 🖼️ Якщо користувач надіслав фото
+                    if (msg.hasPhoto()) {
+                        var photos = msg.getPhoto();
+                        var largestPhoto = photos.get(photos.size() - 1); // беремо найякісніше фото
+                        java.io.File file = downloadTelegramFile(largestPhoto.getFileId());
+                        imageUrl = CloudinaryManager.uploadImage(file, "products");
+
+                        // 📄 Якщо користувач надіслав документ
+                    } else if (msg.hasDocument()) {
+                        java.io.File file = downloadTelegramFile(msg.getDocument().getFileId());
+                        imageUrl = CloudinaryManager.uploadImage(file, "products");
+
+                        // 🔗 Якщо користувач надіслав посилання
+                    } else if (msg.hasText()) {
+                        text = msg.getText().trim(); // без 'String'
+                        if (text.startsWith("http://") || text.startsWith("https://")) {
+                            imageUrl = text;
+                        } else {
+                            sendText(chatId, "❌ Це не виглядає як посилання. Надішліть URL або файл.");
+                            return;
+                        }
+                    } else {
+                        sendText(chatId, "📎 Надішліть фото, документ або посилання на зображення.");
+                        return;
+                    }
+
+                    // ✅ Якщо отримали посилання або завантажили успішно
+                    if (imageUrl != null) {
+                        boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
+                        if (updated)
+                            sendText(chatId, "✅ Фото збережено у базі для товару '" + productName + "'.");
+                        else
+                            sendText(chatId, "⚠️ Фото отримано, але не вдалося оновити базу.");
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при обробці файлу: " + e.getMessage());
+                } finally {
+                    userStates.remove(userId);
+                    adminEditingProduct.remove(userId);
                 }
-
-                String imageUrl = update.getMessage().getText().trim();
-
-                // Перевірка, що це URL
-                if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
-                    sendText(chatId, "❌ Це не виглядає як посилання на фото. Надішліть правильне URL.");
-                    return;
-                }
-
-                // Оновлюємо поле photo у базі
-                boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
-                if (updated) {
-                    sendText(chatId, "✅ Фото оновлено у хмарі для товару '" + productName + "'.");
-                } else {
-                    sendText(chatId, "⚠️ Посилання на фото отримано, але не вдалося оновити базу даних.");
-                }
-
-                // Очищаємо стан користувача
-                userStates.remove(userId);
-                adminEditingProduct.remove(userId);
             }
 
             case "reject_order_reason" -> {
