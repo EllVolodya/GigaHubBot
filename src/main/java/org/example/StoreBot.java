@@ -104,7 +104,6 @@ public class StoreBot extends TelegramLongPollingBot {
         if (update.getMessage().hasText()) {
             text = update.getMessage().getText(); // просто присвоюємо, без String
             text = text.trim(); // обрізаємо пробіли
-            // тут логіка по userState для тексту
         }
 
         // 🔹 Якщо користувач у стані – передаємо в handleState
@@ -164,6 +163,40 @@ public class StoreBot extends TelegramLongPollingBot {
                         userCart.remove(userId);
                         userStates.remove(userId);
                         sendText(chatId, "✅ Ваше замовлення на самовивіз успішно оформлено!\nКод замовлення: " + orderCode);
+                    }
+
+                    case "awaiting_photo" -> {
+                        String productName = adminEditingProduct.get(userId);
+                        if (productName == null || productName.isEmpty()) {
+                            sendText(chatId, "⚠️ Не знайдено товар для збереження фото.");
+                            userStates.remove(userId);
+                            return;
+                        }
+
+                        if (!update.hasMessage() || update.getMessage().getText() == null) {
+                            sendText(chatId, "❌ Будь ласка, надішліть посилання на фото у вигляді тексту.");
+                            return;
+                        }
+
+                        String imageUrl = update.getMessage().getText().trim();
+
+                        // Перевірка, що це URL (можна додати більш точну валідацію)
+                        if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
+                            sendText(chatId, "❌ Це не виглядає як посилання на фото. Надішліть правильне URL.");
+                            return;
+                        }
+
+                        // Оновлюємо поле photo у базі
+                        boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
+                        if (updated) {
+                            sendText(chatId, "✅ Фото успішно додано для товару: '" + productName + "'\n🌐 " + imageUrl);
+                        } else {
+                            sendText(chatId, "⚠️ Посилання на фото отримано, але не вдалося оновити базу даних.");
+                        }
+
+                        // Очищаємо стан користувача
+                        userStates.remove(userId);
+                        adminEditingProduct.remove(userId);
                     }
                 }
             }
