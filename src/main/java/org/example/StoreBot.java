@@ -92,7 +92,7 @@ public class StoreBot extends TelegramLongPollingBot {
         photoHandler.handleUpdate(userId, chatId, update);
 
         if (update.hasMessage() && update.getMessage().hasText()) {
-            System.out.println("[DEBUG] Натиснута кнопка: '" + text + "'");
+            System.out.println("[DEBUG] Received message from userId=" + userId + ": '" + text + "'");
         }
 
         if (update.getMessage().hasText()) {
@@ -1985,8 +1985,14 @@ public class StoreBot extends TelegramLongPollingBot {
                 break;
 
             case "🖼️ Додати фотографію":
-                System.out.println("[DEBUG] Натиснута кнопка 'Додати фотографію' для userId=" + userId);
-                startPhotoUpload(userId, chatId, productName);
+                System.out.println("[DEBUG] Button 'Add Photo' clicked by userId=" + userId);
+
+                String productName = adminEditingProduct.get(userId);
+                if (productName != null) {
+                    startPhotoUpload(userId, chatId, productName);
+                } else {
+                    sendText(chatId, "⚠️ Please select a product first.");
+                }
                 break;
 
             case "📏 Одиниця виміру":

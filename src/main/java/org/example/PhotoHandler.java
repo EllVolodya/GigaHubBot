@@ -33,32 +33,33 @@ public class PhotoHandler {
             System.out.println("  hasVoice=" + msg.hasVoice());
 
             if (msg.hasText() && isInvalidLink(msg.getText())) {
-                sendText(chatId, "❌ Локальні або blob-посилання не підтримуються. Надішліть URL зображення з інтернету.");
+                sendText(chatId, "❌ Local or blob URLs are not supported. Please send an internet image URL.");
                 return;
             }
         }
 
-        System.out.println("[DEBUG] Поточний стан користувача: " + state);
+        System.out.println("[DEBUG] Current user state: " + state);
 
         if ("awaiting_photo".equals(state)) {
-            System.out.println("[DEBUG] Стан користувача 'awaiting_photo' — викликаємо handleAwaitingPhoto");
+            System.out.println("[DEBUG] User state is 'awaiting_photo' — calling handleAwaitingPhoto");
             handleAwaitingPhoto(userId, chatId, update);
         } else {
-            System.out.println("[DEBUG] handleAwaitingPhoto не викликано. Поточний стан: " + state);
+            System.out.println("[DEBUG] handleAwaitingPhoto not called. Current state: " + state);
         }
     }
 
     // Переведення користувача в стан очікування фото
     public void requestPhotoUpload(Long userId, String chatId, String productName) {
-        System.out.println("[DEBUG] Виклик requestPhotoUpload: userId=" + userId + ", productName=" + productName);
+        System.out.println("[DEBUG] requestPhotoUpload called: userId=" + userId + ", productName=" + productName);
+
         adminEditingProduct.put(userId, productName);
         userStates.put(userId, "awaiting_photo");
-        sendText(chatId, "📎 Надішліть посилання на фото для товару '" + productName + "'.");
+        sendText(chatId, "📎 Please send an image URL for the product '" + productName + "'.");
     }
 
     // Обробка очікуваного фото
     private void handleAwaitingPhoto(Long userId, String chatId, Update update) {
-        System.out.println("[DEBUG] Входження в handleAwaitingPhoto для користувача " + userId);
+        System.out.println("[DEBUG] Entered handleAwaitingPhoto for userId=" + userId);
 
         String productName = adminEditingProduct.get(userId);
         if (productName == null || productName.isEmpty()) {
