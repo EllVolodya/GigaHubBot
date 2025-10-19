@@ -151,6 +151,77 @@ public class StoreBot extends TelegramLongPollingBot {
                         userStates.remove(userId);
                         sendText(chatId, "✅ Ваше замовлення на самовивіз успішно оформлено!\nКод замовлення: " + orderCode);
                     }
+
+                    case "awaiting_photo" -> {
+                        String productName = adminEditingProduct.get(userId);
+                        if (productName == null || productName.isEmpty()) {
+                            sendText(chatId, "⚠️ Не знайдено товар для збереження фото.");
+                            userStates.remove(userId);
+                            return;
+                        }
+
+                        if (!update.hasMessage() || update.getMessage() == null) {
+                            sendText(chatId, "❌ Немає повідомлення з файлом.");
+                            return;
+                        }
+
+                        Message msg = update.getMessage();
+                        java.io.File tempFile = null;
+                        String imageUrl = null;
+
+                        try {
+                            if (msg.hasPhoto()) {
+                                // Беремо найбільше фото (останнє у списку)
+                                List<PhotoSize> photos = msg.getPhoto();
+                                PhotoSize largestPhoto = photos.get(photos.size() - 1);
+                                org.telegram.telegrambots.meta.api.objects.File telegramFile = execute(new GetFile(largestPhoto.getFileId()));
+                                tempFile = downloadFile(telegramFile);
+                            } else if (msg.hasDocument()) {
+                                Document doc = msg.getDocument();
+                                String mimeType = doc.getMimeType();
+                                if (mimeType != null && mimeType.startsWith("image/")) {
+                                    org.telegram.telegrambots.meta.api.objects.File telegramFile = execute(new GetFile(doc.getFileId()));
+                                    tempFile = downloadFile(telegramFile);
+                                } else {
+                                    sendText(chatId, "❌ Будь ласка, надішліть саме фото або зображення у вигляді файлу.");
+                                    return;
+                                }
+                            } else {
+                                sendText(chatId, "❌ Будь ласка, надішліть фото або файл зображення.");
+                                return;
+                            }
+
+                            // Завантажуємо в Cloudinary
+                            if (tempFile != null && tempFile.exists()) {
+                                imageUrl = CloudinaryManager.uploadImage(tempFile, "products");
+                                tempFile.delete();
+                            }
+
+                            if (imageUrl == null || imageUrl.isEmpty()) {
+                                sendText(chatId, "❌ Помилка при завантаженні фото у Cloudinary.");
+                                return;
+                            }
+
+                            // Оновлюємо поле photo у базі
+                            boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
+                            if (updated) {
+                                sendText(chatId, "✅ Фото успішно додано для товару: '" + productName + "'\n🌐 " + imageUrl);
+                            } else {
+                                sendText(chatId, "⚠️ Фото завантажено, але не вдалося оновити базу даних.");
+                            }
+
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                            sendText(chatId, "❌ Помилка Telegram API: " + e.getMessage());
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            sendText(chatId, "❌ Помилка при обробці фото: " + e.getMessage());
+                        } finally {
+                            userStates.remove(userId);
+                            adminEditingProduct.remove(userId);
+                            if (tempFile != null && tempFile.exists()) tempFile.delete();
+                        }
+                    }
                 }
             }
 
