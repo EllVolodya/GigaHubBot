@@ -7,6 +7,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
+import org.telegram.telegrambots.meta.api.objects.Document;
 
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.objects.PhotoSize;
@@ -87,54 +88,23 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("[DEBUG] hasDocument=" + update.getMessage().hasDocument());
         System.out.println("[DEBUG] text=" + update.getMessage().getText());
 
-        if (state != null && state.equals("awaiting_photo")) {
-            System.out.println("[PHOTO DEBUG] Отримано повідомлення у стані awaiting_photo");
-
-            if (update.getMessage().hasPhoto() || update.getMessage().hasDocument()) {
+        if ("awaiting_photo".equals(state)) {
+            if (update.getMessage().hasPhoto()) {
                 List<PhotoSize> photos = update.getMessage().getPhoto();
-
-                // Якщо користувач надіслав фото як документ (файл)
-                if ((photos == null || photos.isEmpty()) && update.getMessage().hasDocument()) {
-                    System.out.println("[PHOTO DEBUG] Фото прийшло як документ, конвертація...");
-                    org.telegram.telegrambots.meta.api.objects.Document doc = update.getMessage().getDocument();
-                    String fileId = doc.getFileId();
-
-                    // Обробляємо як звичайне фото (через GetFile)
-                    try {
-                        GetFile getFile = new GetFile(fileId);
-                        org.telegram.telegrambots.meta.api.objects.File telegramFile = execute(getFile);
-                        java.io.File tempFile = downloadFile(telegramFile);
-
-                        String imageUrl = CloudinaryManager.uploadImage(tempFile, "products");
-                        if (imageUrl == null) {
-                            sendText(chatId, "❌ Помилка при завантаженні фото.");
-                        } else {
-                            sendText(chatId, "✅ Фото успішно завантажено!\n🌐 " + imageUrl);
-                        }
-
-                        if (tempFile.exists()) tempFile.delete();
-                        // очищаємо стан лише після успішної обробки
-                        userStates.remove(userId);
-                        adminEditingProduct.remove(userId);
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        sendText(chatId, "❌ Помилка при обробці фото: " + e.getMessage());
-                    }
-                    return;
+                handleAwaitingPhoto(userId, chatId, photos);
+            } else if (update.getMessage().hasDocument()) {
+                Document doc = update.getMessage().getDocument();
+                if (doc.getMimeType().startsWith("image/")) {
+                    // конвертуємо документ в список PhotoSize для уніфікації
+                    PhotoSize photo = new PhotoSize();
+                    photo.setFileId(doc.getFileId());
+                    handleAwaitingPhoto(userId, chatId, List.of(photo));
+                } else {
+                    sendText(chatId, "❌ Надішліть зображення у форматі jpg/png, а не інший файл.");
                 }
-
-                // Якщо це звичайне фото
-                if (photos != null && !photos.isEmpty()) {
-                    System.out.println("[PHOTO DEBUG] Фото прийнято, кількість розмірів: " + photos.size());
-                    handleAwaitingPhoto(userId, chatId, photos);
-                    return;
-                }
-
             } else {
-                sendText(chatId, "❌ Будь ласка, надішліть фото (як зображення, не як документ).");
+                sendText(chatId, "❌ Будь ласка, надішліть фото, а не текст.");
             }
-
             return;
         }
 
