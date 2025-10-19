@@ -151,75 +151,12 @@ public class StoreBot extends TelegramLongPollingBot {
                         userStates.remove(userId);
                         sendText(chatId, "✅ Ваше замовлення на самовивіз успішно оформлено!\nКод замовлення: " + orderCode);
                     }
-
                     case "awaiting_photo" -> {
-                        String productName = adminEditingProduct.get(userId);
-                        if (productName == null || productName.isEmpty()) {
-                            sendText(chatId, "⚠️ Не знайдено товар для збереження фото.");
-                            userStates.remove(userId);
-                            return;
-                        }
-
-                        if (!update.hasMessage() || update.getMessage() == null) {
-                            sendText(chatId, "❌ Немає повідомлення з файлом.");
-                            return;
-                        }
-
-                        Message msg = update.getMessage();
-                        java.io.File tempFile = null;
-                        String imageUrl = null;
-
-                        try {
-                            if (msg.hasPhoto()) {
-                                // Беремо найбільше фото (останнє у списку)
-                                List<PhotoSize> photos = msg.getPhoto();
-                                PhotoSize largestPhoto = photos.get(photos.size() - 1);
-                                org.telegram.telegrambots.meta.api.objects.File telegramFile = execute(new GetFile(largestPhoto.getFileId()));
-                                tempFile = downloadFile(telegramFile);
-                            } else if (msg.hasDocument()) {
-                                Document doc = msg.getDocument();
-                                String mimeType = doc.getMimeType();
-                                if (mimeType != null && mimeType.startsWith("image/")) {
-                                    org.telegram.telegrambots.meta.api.objects.File telegramFile = execute(new GetFile(doc.getFileId()));
-                                    tempFile = downloadFile(telegramFile);
-                                } else {
-                                    sendText(chatId, "❌ Будь ласка, надішліть саме фото або зображення у вигляді файлу.");
-                                    return;
-                                }
-                            } else {
-                                sendText(chatId, "❌ Будь ласка, надішліть фото або файл зображення.");
-                                return;
-                            }
-
-                            // Завантажуємо в Cloudinary
-                            if (tempFile != null && tempFile.exists()) {
-                                imageUrl = CloudinaryManager.uploadImage(tempFile, "products");
-                                tempFile.delete();
-                            }
-
-                            if (imageUrl == null || imageUrl.isEmpty()) {
-                                sendText(chatId, "❌ Помилка при завантаженні фото у Cloudinary.");
-                                return;
-                            }
-
-                            // Оновлюємо поле photo у базі
-                            boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
-                            if (updated) {
-                                sendText(chatId, "✅ Фото успішно додано для товару: '" + productName + "'\n🌐 " + imageUrl);
-                            } else {
-                                sendText(chatId, "⚠️ Фото завантажено, але не вдалося оновити базу даних.");
-                            }
-
-                        } catch (TelegramApiException e) {
-                            e.printStackTrace();
-                            sendText(chatId, "❌ Помилка Telegram API: " + e.getMessage());
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            sendText(chatId, "❌ Помилка при обробці фото: " + e.getMessage());
-                        } finally {
-                            userStates.remove(userId);
-                            adminEditingProduct.remove(userId);
-                            if (tempFile != null && tempFile.exists()) tempFile.delete();
+                        if (update.hasMessage() && update.getMessage().hasPhoto()) {
+                            List<PhotoSize> photos = update.getMessage().getPhoto();
+                            handleAwaitingPhoto(userId, chatId, photos);
+                        } else {
+                            sendText(chatId, "❌ Будь ласка, надішліть фото, а не текст.");
                         }
                     }
                 }
@@ -1023,9 +960,6 @@ public class StoreBot extends TelegramLongPollingBot {
             case "editing" -> handleEditing(userId, chatId, text);
             case "awaiting_field_value" -> handleAwaitingField(userId, chatId, text);
             case "awaiting_subcategory" -> handleAddToSubcategory(userId, chatId, text);
-            case "awaiting_photo" -> {
-                handleAwaitingPhoto(userId, chatId, update);
-            }
             case "add_hit" -> handleAddHit(userId, chatId, text);
             case "add_category" -> handleAddCategory(userId, chatId, text);
             case "add_subcategory" -> handleAddSubcategory(userId, chatId, text);
@@ -2244,80 +2178,53 @@ public class StoreBot extends TelegramLongPollingBot {
         userStates.remove(userId);
     }
 
-    private void handleAwaitingPhoto(Long userId, String chatId, Update update) {
+    private void handleAwaitingPhoto(Long userId, String chatId, List<PhotoSize> photos) {
         try {
-            if (!update.hasMessage()) {
-                sendText(chatId, "❌ Немає повідомлення з файлом.");
+            if (photos == null || photos.isEmpty()) {
+                sendText(chatId, "❌ Фото не отримано. Спробуйте ще раз.");
                 return;
             }
 
-            Message msg = update.getMessage();
-            java.io.File tempFile = null;
-            String imageUrl = null;
-
-            if (msg.hasPhoto()) {
-                // Беремо найбільше фото (останнє у списку)
-                List<PhotoSize> photos = msg.getPhoto();
-                PhotoSize largestPhoto = photos.get(photos.size() - 1);
-                String fileId = largestPhoto.getFileId();
-                org.telegram.telegrambots.meta.api.objects.File telegramFile = execute(new GetFile(fileId));
-                tempFile = downloadFile(telegramFile);
-            } else if (msg.hasDocument()) {
-                Document doc = msg.getDocument();
-                String mimeType = doc.getMimeType();
-                if (mimeType != null && mimeType.startsWith("image/")) {
-                    org.telegram.telegrambots.meta.api.objects.File telegramFile = execute(new GetFile(doc.getFileId()));
-                    tempFile = downloadFile(telegramFile);
-                } else {
-                    sendText(chatId, "❌ Будь ласка, надішліть саме фото.");
-                    return;
-                }
-            } else {
-                sendText(chatId, "❌ Будь ласка, надішліть фото.");
-                return;
-            }
-
-            if (tempFile == null || !tempFile.exists()) {
-                sendText(chatId, "❌ Не вдалося завантажити файл.");
-                return;
-            }
-
-            // Завантажуємо у Cloudinary
-            imageUrl = CloudinaryManager.uploadImage(tempFile, "products");
-            if (imageUrl == null || imageUrl.isEmpty()) {
-                sendText(chatId, "❌ Помилка при завантаженні фото у Cloudinary.");
-                tempFile.delete();
-                return;
-            }
-
-            // Оновлюємо поле photo у таблиці products
             String productName = adminEditingProduct.get(userId);
             if (productName == null || productName.isEmpty()) {
-                sendText(chatId, "⚠️ Не знайдено товар для збереження фото.");
-                tempFile.delete();
+                sendText(chatId, "❌ Назву товару не знайдено. Почніть редагування заново.");
                 return;
             }
 
+            // Беремо найбільше фото (останнє у списку)
+            PhotoSize photo = photos.get(photos.size() - 1);
+            String fileId = photo.getFileId();
+            org.telegram.telegrambots.meta.api.objects.File file = execute(new GetFile(fileId));
+
+            // Завантажуємо тимчасовий файл
+            java.io.File tempFile = downloadFile(file);
+
+            // Завантажуємо у Cloudinary
+            String imageUrl = CloudinaryManager.uploadImage(tempFile, "products");
+
+            // Видаляємо тимчасовий файл
+            if (tempFile.exists()) tempFile.delete();
+
+            if (imageUrl == null || imageUrl.isEmpty()) {
+                sendText(chatId, "❌ Помилка при завантаженні фото у Cloudinary.");
+                return;
+            }
+
+            // Оновлюємо поле photo у MySQL
             boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
             if (updated) {
-                sendText(chatId, "✅ Фото успішно додано для товару: '" + productName + "'\n🌐 " + imageUrl);
+                sendText(chatId, "✅ Фото успішно додано до товару '" + productName + "'.\n🌐 " + imageUrl);
             } else {
                 sendText(chatId, "⚠️ Фото завантажено, але не вдалося оновити базу даних.");
             }
 
-            // Видаляємо тимчасовий файл
-            tempFile.delete();
-
-            // Очищаємо стан
+            // Очищаємо стан користувача
             userStates.remove(userId);
             adminEditingProduct.remove(userId);
 
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-            sendText(chatId, "❌ Помилка Telegram API: " + e.getMessage());
         } catch (Exception e) {
             e.printStackTrace();
-            sendText(chatId, "❌ Помилка при обробці фото: " + e.getMessage());
+            sendText(chatId, "❌ Сталася помилка при завантаженні фото.");
         }
     }
 
