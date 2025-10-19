@@ -97,8 +97,8 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         if ("awaiting_photo".equals(state)) {
-            handleAwaitingPhoto(userId, chatId, update); // передаємо саме Update
-            return;
+            handleAwaitingPhoto(userId, chatId, update);
+            return; // виходимо, бо обробили
         }
 
         if (update.getMessage().hasText()) {
@@ -2025,8 +2025,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 break;
 
             case "🖼️ Додати фотографію":
-                userStates.put(userId, "awaiting_photo");
-                sendText(chatId, "📷 Надішліть фото для товару '" + productName + "' зі свого комп’ютера:");
+                adminEditingProduct.put(userId, productName); // зберігаємо товар
+                userStates.put(userId, "awaiting_photo");     // ставимо стан
+                sendText(chatId, "📷 Надішліть посилання на фото для товару '" + productName + "':");
                 break;
 
             case "📏 Одиниця виміру":
@@ -2225,86 +2226,27 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        java.io.File tempFile = null;
-        String imageUrl = null;
-
-        try {
-            if (!update.hasMessage() || update.getMessage() == null) {
-                sendText(chatId, "❌ Немає повідомлення з файлом.");
-                return;
-            }
-
-            Message msg = update.getMessage();
-
-            // --- Якщо надіслано фото
-            if (msg.hasPhoto()) {
-                List<PhotoSize> photos = msg.getPhoto();
-                PhotoSize largestPhoto = photos.get(photos.size() - 1);
-                org.telegram.telegrambots.meta.api.objects.File telegramFile = execute(new GetFile(largestPhoto.getFileId()));
-                tempFile = downloadFile(telegramFile);
-            }
-            // --- Якщо надіслано документ з image MIME
-            else if (msg.hasDocument()) {
-                Document doc = msg.getDocument();
-                String mimeType = doc.getMimeType();
-                if (mimeType != null && mimeType.startsWith("image/")) {
-                    org.telegram.telegrambots.meta.api.objects.File telegramFile = execute(new GetFile(doc.getFileId()));
-                    tempFile = downloadFile(telegramFile);
-                } else {
-                    sendText(chatId, "❌ Будь ласка, надішліть саме фото або файл зображення.");
-                    return;
-                }
-            }
-            // --- Якщо прийшов текст із посиланням на картинку
-            else if (msg.hasText()) {
-                String text = msg.getText().trim();
-                if (text.startsWith("http") && (text.endsWith(".jpg") || text.endsWith(".png") || text.endsWith(".jpeg"))) {
-                    // Завантажуємо файл з URL у тимчасовий файл
-                    tempFile = java.io.File.createTempFile("upload_", ".img");
-                    try (InputStream in = new URL(text).openStream();
-                         FileOutputStream out = new FileOutputStream(tempFile)) {
-                        byte[] buffer = new byte[4096];
-                        int n;
-                        while ((n = in.read(buffer)) != -1) {
-                            out.write(buffer, 0, n);
-                        }
-                    }
-                } else {
-                    sendText(chatId, "❌ Будь ласка, надішліть фото або посилання на зображення (.jpg/.png).");
-                    return;
-                }
-            } else {
-                sendText(chatId, "❌ Будь ласка, надішліть фото або посилання на зображення.");
-                return;
-            }
-
-            // --- Завантажуємо у Cloudinary
-            if (tempFile != null && tempFile.exists()) {
-                imageUrl = CloudinaryManager.uploadImage(tempFile, "products");
-                tempFile.delete();
-            }
-
-            if (imageUrl == null || imageUrl.isEmpty()) {
-                sendText(chatId, "❌ Помилка при завантаженні фото у Cloudinary.");
-                return;
-            }
-
-            // --- Оновлюємо поле photo у MySQL
-            boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
-            if (updated) {
-                sendText(chatId, "✅ Фото успішно додано для товару: '" + productName + "'\n🌐 " + imageUrl);
-            } else {
-                sendText(chatId, "⚠️ Фото завантажено, але не вдалося оновити базу даних.");
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendText(chatId, "❌ Сталася помилка при обробці фото: " + e.getMessage());
-        } finally {
-            userStates.remove(userId);
-            adminEditingProduct.remove(userId);
-            if (tempFile != null && tempFile.exists()) tempFile.delete();
+        if (!update.hasMessage() || update.getMessage().getText() == null) {
+            sendText(chatId, "❌ Будь ласка, надішліть посилання на фото у вигляді тексту.");
+            return;
         }
+
+        String imageUrl = update.getMessage().getText().trim();
+
+        if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
+            sendText(chatId, "❌ Це не виглядає як посилання на фото. Надішліть правильне URL.");
+            return;
+        }
+
+        boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
+        if (updated) {
+            sendText(chatId, "✅ Фото оновлено у хмарі для товару '" + productName + "'.");
+        } else {
+            sendText(chatId, "⚠️ Не вдалося оновити базу даних.");
+        }
+
+        userStates.remove(userId);
+        adminEditingProduct.remove(userId);
     }
 
     // Завантаження каталогу у плоский список
