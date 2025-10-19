@@ -273,31 +273,6 @@ public class CatalogEditor {
         }
     }
 
-    // --- Отримати будь-яке поле товару у вигляді String
-    public static String getField(String productName, String field) {
-        if (!isAllowedField(field) && !field.equals("manufacturer")) {
-            System.out.println("❌ Заборонене поле: " + field);
-            return null;
-        }
-
-        String sql = "SELECT " + field + " FROM products WHERE name = ?";
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setString(1, productName);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                Object value = rs.getObject(field);
-                return value != null ? value.toString() : null;
-            }
-            return null;
-
-        } catch (SQLException e) {
-            System.err.println("❌ getField error: " + e.getMessage());
-            return null;
-        }
-    }
-
     // --- Перевірити існування категорії
     public static boolean categoryExists(String categoryName) {
         String sql = "SELECT id FROM categories WHERE name = ?";
@@ -358,13 +333,5 @@ public class CatalogEditor {
             System.err.println("❌ getProductPriceFromYAML error: " + e.getMessage());
         }
         return 0.0;
-    }
-
-    // --- Дозволені поля
-    private static boolean isAllowedField(String field) {
-        return switch (field) {
-            case "price", "description", "photo", "unit" -> true;
-            default -> false;
-        };
     }
 }
