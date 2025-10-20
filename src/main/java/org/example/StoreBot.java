@@ -84,16 +84,60 @@ public class StoreBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+        // ====== BASIC SAFETY CHECK ======
+        if (update == null || update.getMessage() == null) {
+            System.out.println("[DEBUG] Update or message is null, skipping.");
+            return;
+        }
+
+        // ====== BASIC DATA EXTRACTION ======
         Long userId = update.getMessage().getFrom().getId();
         String chatId = update.getMessage().getChatId().toString();
-        String text = update.getMessage().getText().trim();
+        String text = update.getMessage().getText() != null ? update.getMessage().getText().trim() : "";
         String state = userStates.get(userId);
 
-        photoHandler.handleUpdate(userId, chatId, update);
+        // ====== DEBUG LOGS ======
+        System.out.println("[DEBUG] Received message from userId=" + userId + ": '" + text + "' (state=" + state + ")");
 
-        if (update.hasMessage() && update.getMessage().hasText()) {
-            System.out.println("[DEBUG] Received message from userId=" + userId + ": '" + text + "'");
+        // Normalize text to handle invisible Unicode symbols and emoji variations
+        String normalizedText = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKC)
+                .replaceAll("[\\p{Cf}\\p{Zs}]+", " ") // remove zero-width and special spaces
+                .trim();
+
+        System.out.println("[DEBUG] Normalized text: '" + normalizedText + "'");
+
+        // ====== BUTTON HANDLING ======
+        if (normalizedText.contains("Додати фотографію") || normalizedText.contains("Add Photo")) {
+            System.out.println("[DEBUG] Button 'Add Photo' detected for userId=" + userId);
+
+            String productName = adminEditingProduct.get(userId);
+            if (productName != null) {
+                startPhotoUpload(userId, chatId, productName); // delegate to PhotoHandler
+            } else {
+                sendText(chatId, "⚠️ Please select a product first.");
+            }
+            return;
         }
+
+        else if (normalizedText.contains("Редагувати товар") || normalizedText.contains("Edit Product")) {
+            if (ADMINS.contains(userId)) {
+                userStates.put(userId, "edit_product");
+                sendText(chatId, "✏️ Enter the product name you want to edit:");
+            } else {
+                sendText(chatId, "⛔ You do not have permission.");
+            }
+            return;
+        }
+
+        else if (normalizedText.contains("Змінити ціну") || normalizedText.contains("Change Price")) {
+            userStates.put(userId, "editing_price");
+            sendText(chatId, "💰 Enter new price for the product:");
+            return;
+        }
+
+        // ====== DELEGATE TO PHOTO HANDLER (DEFAULT) ======
+        System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
+        photoHandler.handleUpdate(userId, chatId, update);
 
         if (update.getMessage().hasText()) {
             text = update.getMessage().getText(); // просто присвоюємо, без String
@@ -745,37 +789,6 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "📌 Приклад:\n" +
                                 "№12, Іваненко Іван Іванович, +380501234567, 4444"
                 );
-            }
-
-            if (text.contains("Додати фотографію") || text.contains("Add Photo")) {
-                System.out.println("[DEBUG] Button 'Add Photo' detected");
-
-                String productName = adminEditingProduct.get(userId);
-                if (productName != null) {
-                    startPhotoUpload(userId, chatId, productName); // делегуємо PhotoHandler
-                } else {
-                    sendText(chatId, "⚠️ Please select a product first.");
-                }
-                return; // 🧩 ← дуже важливо! зупиняє подальшу обробку
-
-            } else if (text.contains("Редагувати товар") || text.contains("Edit Product")) {
-                if (ADMINS.contains(userId)) {
-                    userStates.put(userId, "edit_product");
-                    sendText(chatId, "✏️ Enter the product name you want to edit:");
-                } else {
-                    sendText(chatId, "⛔ You do not have permission.");
-                }
-                return;
-
-            } else if (text.contains("Змінити ціну") || text.contains("Change Price")) {
-                userStates.put(userId, "editing_price");
-                sendText(chatId, "💰 Enter new price for the product:");
-                return;
-
-            } else {
-                // ===== DELEGATE TO PHOTO HANDLER =====
-                System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
-                photoHandler.handleUpdate(userId, chatId, update);
             }
         } catch (Exception e) {
             e.printStackTrace();
