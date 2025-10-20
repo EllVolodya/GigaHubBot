@@ -784,7 +784,6 @@ public class StoreBot extends TelegramLongPollingBot {
         List<Map<String, Object>> cart = userCart.get(userId);
 
         if (cart == null || cart.isEmpty()) {
-            sendText(userId, "🛒 Ваш кошик порожній!");
             sendMessage(createUserMenu(String.valueOf(userId), userId));
             return;
         }
@@ -801,19 +800,26 @@ public class StoreBot extends TelegramLongPollingBot {
         }
         sb.append("\n💰 Всього: ").append(total).append(" грн");
 
+        // Клавіатура
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
 
         KeyboardRow row1 = new KeyboardRow();
-        row1.add(new KeyboardButton("🛒 Замовити товар"));
-        row1.add(new KeyboardButton("🧹 Очистити кошик"));
+        row1.add("🛒 Замовити товар");
+        row1.add("🧹 Очистити кошик");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add(new KeyboardButton(BACK_BUTTON));
+        row2.add(BACK_BUTTON); // використовуємо твою константу
 
         markup.setKeyboard(List.of(row1, row2));
 
-        sendMessage(String.valueOf(userId), sb.toString(), markup);
+        SendMessage msg = SendMessage.builder()
+                .chatId(String.valueOf(userId))
+                .text(sb.toString())
+                .replyMarkup(markup)
+                .build();
+
+        execute(msg);
     }
 
     // 🔹 Побудова клавіатури з кнопками + Назад + Кошик
@@ -858,7 +864,6 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleBack(String chatId) throws TelegramApiException {
         Long userId = Long.parseLong(chatId);
 
-        // 🔹 Якщо користувач у підкатегорії → повертаємо в категорії
         if (currentSubcategory.containsKey(userId)) {
             currentSubcategory.remove(userId);
             productIndex.remove(userId);
@@ -866,35 +871,29 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 Якщо користувач у категорії → головне меню
         if (currentCategory.containsKey(userId)) {
             currentCategory.remove(userId);
             sendCategories(userId);
             return;
         }
 
-        // 🔹 Якщо користувач у кошику → головне меню
         if (userCart.containsKey(userId)) {
-            clearUserState(userId);
-            sendMessage(createUserMenu(chatId, userId));
+            sendMessage(createUserMenu(chatId, userId)); // повертаємо у головне меню
             return;
         }
 
-        // 🔹 Якщо користувач у адмін-меню
         if (adminOrderIndex.containsKey(userId)) {
             adminOrderIndex.remove(userId);
             sendMessage(createAdminMenu(chatId));
             return;
         }
 
-        // 🔹 Якщо користувач — розробник і зараз у меню розробника
-        if (DEVELOPERS.contains(userId) && "developer_menu".equals(userStates.get(userId))) {
+        if (DEVELOPERS.contains(userId)) {
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
 
-        // 🔹 За замовчуванням — головне меню
-        clearUserState(userId);
+        // За замовчуванням — головне меню
         sendMessage(createUserMenu(chatId, userId));
     }
 
