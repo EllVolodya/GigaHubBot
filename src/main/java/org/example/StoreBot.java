@@ -873,6 +873,13 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🔹 Якщо користувач у кошику → головне меню
+        if (userCart.containsKey(userId)) {
+            clearUserState(userId);
+            sendMessage(createUserMenu(chatId, userId));
+            return;
+        }
+
         // 🔹 Якщо користувач у адмін-меню
         if (adminOrderIndex.containsKey(userId)) {
             adminOrderIndex.remove(userId);
@@ -880,16 +887,9 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 Якщо користувач — розробник і перебуває в меню розробника
-        if (DEVELOPERS.contains(userId)) {
+        // 🔹 Якщо користувач — розробник і зараз у меню розробника
+        if (DEVELOPERS.contains(userId) && "developer_menu".equals(userStates.get(userId))) {
             sendMessage(createDeveloperMenu(chatId));
-            return;
-        }
-
-        // 🔹 Якщо користувач у кошику → головне меню
-        if (userCart.containsKey(userId)) {
-            clearUserState(userId);
-            sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
