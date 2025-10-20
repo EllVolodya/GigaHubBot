@@ -16,6 +16,7 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 
 import java.io.InputStream;
+import java.io.IOException;
 
 import java.util.*;
 import java.util.List;
@@ -516,24 +517,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "🔹 YAML" -> {
-                    String keyword = adminSearchKeyword.get(userId);
-                    List<Map<String, Object>> results;
-                    try {
-                        results = CatalogUpdater.searchProductsByKeywords(keyword);
-                    } catch (java.io.IOException e) {
-                        sendText(chatId, "❌ Помилка при пошуку у YAML: " + e.getMessage());
-                        break;
-                    }
-
-                    if (results.isEmpty()) {
-                        sendText(chatId, "❌ Товар не знайдено: " + keyword);
-                    } else {
-                        StringBuilder sb = new StringBuilder("🔎 Знайдено товари у YAML:\n\n");
-                        for (int i = 0; i < results.size(); i++) {
-                            sb.append(i + 1).append(". ").append(results.get(i).get("name")).append("\n");
-                        }
-                        sendText(chatId, sb.toString());
-                    }
+                    adminSearchSource.put(userId, "yaml");
+                    userStates.put(userId, "awaiting_yaml_keyword");
+                    sendText(chatId, "Введіть ключові слова для пошуку у YAML:");
                 }
 
                 case "Редагувати категорії" -> {
@@ -1031,6 +1017,63 @@ public class StoreBot extends TelegramLongPollingBot {
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                     sendText(chatId, "❌ Помилка при пошуку товару.");
+                }
+            }
+
+            case "awaiting_yaml_keyword" -> {
+                String keyword = text.trim();
+
+                List<Map<String, Object>> results;
+                try {
+                    results = CatalogUpdater.searchProductsByKeywords(keyword);
+                } catch (IOException e) {
+                    sendText(chatId, "❌ Помилка при пошуку у YAML: " + e.getMessage());
+                    break;
+                }
+
+                if (results.isEmpty()) {
+                    sendText(chatId, "❌ Товар не знайдено: " + keyword);
+                } else {
+                    StringBuilder sb = new StringBuilder("🔎 Знайдено товари у YAML:\n\n");
+                    for (int i = 0; i < results.size(); i++) {
+                        sb.append(i + 1)
+                                .append(". ")
+                                .append(results.get(i).get("name"))
+                                .append("\n");
+                    }
+                    sendText(chatId, sb.toString());
+
+                    // Зберігаємо результати, щоб можна було вибрати номер
+                    adminMatchList.put(userId, results);
+
+                    // Перемикаємо користувача у стан вибору товару
+                    userStates.put(userId, "choose_yaml_product");
+                }
+            }
+
+            case "choose_yaml_product" -> {
+                try {
+                    int index = Integer.parseInt(text) - 1;
+                    List<Map<String, Object>> matches = adminMatchList.get(userId);
+
+                    if (matches == null || index < 0 || index >= matches.size()) {
+                        sendText(chatId, "❌ Невірний номер. Спробуйте ще раз.");
+                        return;
+                    }
+
+                    Map<String, Object> selected = matches.get(index);
+                    String productName = (String) selected.get("name");
+
+                    adminEditingProduct.put(userId, productName);
+
+                    // Відображаємо меню редагування товару
+                    execute(createYamlEditMenu(chatId, productName));
+
+                    // Переводимо користувача у стан редагування YAML товару
+                    userStates.put(userId, "editing_yaml_product");
+
+                } catch (Exception e) {
+                    sendText(chatId, "❌ Помилка при виборі товару.");
                 }
             }
 
@@ -2541,6 +2584,22 @@ public class StoreBot extends TelegramLongPollingBot {
                 .text("Відгук користувача " + userId + ":\n\n" + feedbackText + "\n\nОберіть дію:")
                 .replyMarkup(markup)
                 .build();
+    }
+
+    private SendMessage createYamlEditMenu(String chatId, String productName) {
+        SendMessage msg = new SendMessage(chatId, "Редагування товару: " + productName);
+        ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
+        kb.setResizeKeyboard(true);
+
+        KeyboardRow r1 = new KeyboardRow();
+        r1.add(new KeyboardButton("🗂️ Додати в підкатегорію"));
+
+        KeyboardRow r2 = new KeyboardRow();
+        r2.add(new KeyboardButton("⬅️ Назад"));
+
+        kb.setKeyboard(List.of(r1, r2));
+        msg.setReplyMarkup(kb);
+        return msg;
     }
 
     public void sendText(String chatId, String text) {
