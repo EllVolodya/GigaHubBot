@@ -97,6 +97,11 @@ public class StoreBot extends TelegramLongPollingBot {
                 .replaceAll("[\\p{Cf}\\p{Zs}]+", " ")
                 .trim();
 
+        if ("choose_yaml_product".equals(state)) {
+            handleChooseYamlProduct(userId, chatId, normalizedText);
+            return;
+        }
+
         // 🖼️ Button "Add Photo"
         if (normalizedText.contains("Додати фотографію") || normalizedText.contains("Add Photo")) {
             System.out.println("[DEBUG] Button 'Add Photo' detected for userId=" + userId);
@@ -2277,6 +2282,42 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         userStates.remove(userId);
+    }
+
+    private void handleChooseYamlProduct(Long userId, String chatId, String text) {
+        List<Map<String, Object>> matches = adminMatchList.get(userId); // список знайдених YAML товарів
+        if (matches == null || matches.isEmpty()) {
+            sendText(chatId, "❌ Помилка: список товарів порожній.");
+            userStates.remove(userId);
+            return;
+        }
+
+        try {
+            int index = Integer.parseInt(text.trim()) - 1;
+            if (index < 0 || index >= matches.size()) {
+                sendText(chatId, "❌ Некоректний номер. Спробуйте ще раз.");
+                return;
+            }
+
+            Map<String, Object> selectedProduct = matches.get(index);
+            String selectedProductName = (String) selectedProduct.get("name");
+            adminEditingProduct.put(userId, selectedProductName); // зберігаємо тільки назву
+
+            // 🟢 Встановлюємо стан YAML-редагування
+            userStates.put(userId, "yaml_edit_menu");
+            adminMatchList.remove(userId);
+
+            // Відправляємо обмежене меню для YAML
+            try {
+                execute(createYamlEditMenu(chatId, selectedProductName));
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Помилка при відправці YAML меню.");
+            }
+
+        } catch (NumberFormatException e) {
+            sendText(chatId, "❌ Будь ласка, введіть номер із списку.");
+        }
     }
 
     private void handleAwaitingPhoto(Long userId, String chatId, Update update) {
