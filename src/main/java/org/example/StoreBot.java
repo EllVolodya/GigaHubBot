@@ -781,7 +781,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔹 Показ кошика
     private void showCart(Long userId) throws TelegramApiException {
-        userStates.put(userId, "cart");
+        userStates.put(userId, "cart_menu");
         List<Map<String, Object>> cart = userCart.get(userId);
 
         if (cart == null || cart.isEmpty()) {
@@ -859,7 +859,16 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleBack(String chatId) throws TelegramApiException {
         Long userId = Long.parseLong(chatId);
 
-        // 🔹 Якщо користувач у підкатегорії → повертаємо в категорії
+        String state = userStates.get(userId);
+
+        // 🔹 Якщо користувач у кошику → повертаємо у головне меню
+        if ("cart_menu".equals(state)) {
+            clearUserState(userId);
+            sendMessage(createUserMenu(chatId, userId));
+            return;
+        }
+
+        // 🔹 Якщо користувач у підкатегорії
         if (currentSubcategory.containsKey(userId)) {
             currentSubcategory.remove(userId);
             productIndex.remove(userId);
@@ -867,30 +876,23 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 Якщо користувач у категорії → головне меню
+        // 🔹 Якщо користувач у категорії
         if (currentCategory.containsKey(userId)) {
             currentCategory.remove(userId);
             sendCategories(userId);
             return;
         }
 
-        // 🔹 Якщо користувач у меню адміністратора
+        // 🔹 Якщо користувач у адмін-меню
         if (adminOrderIndex.containsKey(userId)) {
             adminOrderIndex.remove(userId);
             sendMessage(createAdminMenu(chatId));
             return;
         }
 
-        // 🔹 Якщо користувач — розробник і був у меню розробника
-        if (DEVELOPERS.contains(userId) && userStates.getOrDefault(userId, "").equals("developer_menu")) {
+        // 🔹 Якщо користувач — розробник
+        if (DEVELOPERS.contains(userId) && "developer_menu".equals(state)) {
             sendMessage(createDeveloperMenu(chatId));
-            return;
-        }
-
-        // 🔹 Якщо користувач у кошику → головне меню
-        if (userCart.containsKey(userId)) {
-            clearUserState(userId);
-            sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
