@@ -858,11 +858,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleBack(String chatId) throws TelegramApiException {
         Long userId = Long.parseLong(chatId);
 
-        if (userCart.containsKey(userId) && !userCart.get(userId).isEmpty()) {
-            showCart(Long.parseLong(chatId));
-            return;
-        }
-
+        // Якщо користувач у підкатегорії
         if (currentSubcategory.containsKey(userId)) {
             currentSubcategory.remove(userId);
             productIndex.remove(userId);
@@ -870,23 +866,34 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // Якщо користувач у категорії
         if (currentCategory.containsKey(userId)) {
             currentCategory.remove(userId);
             sendCategories(userId);
             return;
         }
 
+        // Якщо користувач у меню адміністратора
         if (adminOrderIndex.containsKey(userId)) {
             adminOrderIndex.remove(userId);
             sendMessage(createAdminMenu(chatId));
             return;
         }
 
+        // Якщо користувач — розробник
         if (DEVELOPERS.contains(userId)) {
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
 
+        // Якщо користувач у кошику → головне меню
+        if (userCart.containsKey(userId)) {
+            clearUserState(userId);
+            sendMessage(createUserMenu(chatId, userId));
+            return;
+        }
+
+        // За замовчуванням — головне меню
         clearUserState(userId);
         sendMessage(createUserMenu(chatId, userId));
     }
