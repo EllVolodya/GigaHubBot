@@ -858,25 +858,45 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Назад
     private void handleBack(String chatId) throws TelegramApiException {
         Long userId = Long.parseLong(chatId);
-        String state = userStates.getOrDefault(userId, "main_menu");
 
-        switch (state) {
-            case "cart" -> {
-                clearUserState(userId);
-                sendMessage(createUserMenu(chatId, userId)); // повернення в головне меню
-            }
-            case "subcategories" -> {
-                sendSubcategories(userId, currentCategory.get(userId));
-                userStates.put(userId, "categories");
-            }
-            case "categories" -> {
-                sendCategories(userId);
-                userStates.put(userId, "main_menu");
-            }
-            case "admin_menu" -> sendMessage(createAdminMenu(chatId));
-            case "developer_menu" -> sendMessage(createDeveloperMenu(chatId));
-            default -> sendMessage(createUserMenu(chatId, userId)); // fallback
+        // 🔹 Якщо користувач у підкатегорії → повертаємо в категорії
+        if (currentSubcategory.containsKey(userId)) {
+            currentSubcategory.remove(userId);
+            productIndex.remove(userId);
+            sendSubcategories(userId, currentCategory.get(userId));
+            return;
         }
+
+        // 🔹 Якщо користувач у категорії → головне меню
+        if (currentCategory.containsKey(userId)) {
+            currentCategory.remove(userId);
+            sendCategories(userId);
+            return;
+        }
+
+        // 🔹 Якщо користувач у меню адміністратора
+        if (adminOrderIndex.containsKey(userId)) {
+            adminOrderIndex.remove(userId);
+            sendMessage(createAdminMenu(chatId));
+            return;
+        }
+
+        // 🔹 Якщо користувач — розробник і був у меню розробника
+        if (DEVELOPERS.contains(userId) && userStates.getOrDefault(userId, "").equals("developer_menu")) {
+            sendMessage(createDeveloperMenu(chatId));
+            return;
+        }
+
+        // 🔹 Якщо користувач у кошику → головне меню
+        if (userCart.containsKey(userId)) {
+            clearUserState(userId);
+            sendMessage(createUserMenu(chatId, userId));
+            return;
+        }
+
+        // 🔹 За замовчуванням — головне меню
+        clearUserState(userId);
+        sendMessage(createUserMenu(chatId, userId));
     }
 
     // 🔹 Показ наступного товару по id
