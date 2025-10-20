@@ -39,6 +39,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Integer> productIndex = new HashMap<>();
     private final Map<Long, Map<String, Object>> lastShownProduct = new HashMap<>();
     private final Map<Long, String> userStates = new HashMap<>();
+    private Map<Long, String> userState = new HashMap<>();
+    private Map<Long, String> previousState = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userCart = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userOrders = new HashMap<>();
 
@@ -247,9 +249,13 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "🧹 Очистити кошик" -> clearCart(userId);
-                case "⬅ Назад", "⬅️ Назад" -> {
-                    clearUserState(userId);
-                    sendMessage(createUserMenu(chatId, userId));
+                case "⬅️ Назад" -> {
+                    try {
+                        handleBack(chatId); // chatId як String
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                        sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
+                    }
                 }
                 case "➡ Далі" -> showNextProduct(userId);
                 case "🛒 Додати в кошик" -> addToCart(userId);
@@ -357,10 +363,6 @@ public class StoreBot extends TelegramLongPollingBot {
                                     "№12, Іваненко Іван Іванович, +380501234567, 4444");
                 }
 
-                case "⬅️ Назад до кошика" -> {
-                    showCart(userId); // повертаємо користувача у кошик
-                }
-
                 case "🎯 Хіт продажу" -> {
                     List<Map<String, Object>> hits = HitsManager.loadHits();
                     if (hits.isEmpty()) {
@@ -461,12 +463,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "📦 Замовлення" -> {
                     userStates.put(userId, "logs_orders");
                     handleState(userId, chatId, text, "logs_orders", update);
-                }
-
-                case "⬅️ Назад в розробника" -> {
-                    if (DEVELOPERS.contains(userId)) {
-                        sendMessage(createDeveloperMenu(chatId));
-                    } else sendText(chatId, "⛔ У вас немає доступу.");
                 }
 
                 // Адмін меню
@@ -654,34 +650,11 @@ public class StoreBot extends TelegramLongPollingBot {
                     showAdminOrder(userId, chatId);
                 }
 
-                case "⬅️ Назад (Продавець меню)" -> {
-                    // Очищаємо індекс перегляду замовлень
-                    adminOrderIndex.remove(userId);
-
-                    // Відправляємо меню продавця
-                    SendMessage menuMsg = createAdminMenu(chatId);
-                    try {
-                        execute(menuMsg);
-                    } catch (TelegramApiException e) {
-                        e.printStackTrace();
-                        sendText(chatId, "❌ Помилка при відправці меню продавця.");
-                    }
-                }
-
                 case "➡️ Далі" -> {
                     int idx = adminOrderIndex.getOrDefault(userId, 0);
                     idx++;
                     adminOrderIndex.put(userId, idx);
                     showAdminOrder(userId, chatId);
-                }
-
-                case "⬅️ Назад в адмін-меню" -> {
-                    sendMessage(createAdminMenu(chatId));
-                }
-
-                case "⬅️ Назад в головне меню" -> {
-                    clearUserState(userId);
-                    sendMessage(createUserMenu(chatId, userId));
                 }
 
                 case "⭐ Додати товар у Хіт продажу" -> {
@@ -826,16 +799,13 @@ public class StoreBot extends TelegramLongPollingBot {
         }
         sb.append("\n💰 Всього: ").append(total).append(" грн");
 
-        // Клавіатура
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
 
-        // Перший рядок – замовити товар + очистити кошик
         KeyboardRow row1 = new KeyboardRow();
         row1.add(new KeyboardButton("🛒 Замовити товар"));
         row1.add(new KeyboardButton("🧹 Очистити кошик"));
 
-        // Другий рядок – назад
         KeyboardRow row2 = new KeyboardRow();
         row2.add(new KeyboardButton("⬅ Назад"));
 
@@ -855,19 +825,17 @@ public class StoreBot extends TelegramLongPollingBot {
             currentRow.add(item);
             count++;
 
-            if (count == 3) { // максимум 3 кнопки в рядку
+            if (count == 3) {
                 keyboard.add(currentRow);
                 currentRow = new KeyboardRow();
                 count = 0;
             }
         }
 
-        // якщо залишилися кнопки
         if (!currentRow.isEmpty()) {
             keyboard.add(currentRow);
         }
 
-        // додати кнопку "Назад"
         if (withBottom) {
             KeyboardRow bottom = new KeyboardRow();
             bottom.add("⬅ Назад");
@@ -885,17 +853,40 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔹 Назад
-    private void handleBack(Long chatId) throws TelegramApiException {
-        if (currentSubcategory.containsKey(chatId)) {
-            currentSubcategory.remove(chatId);
-            productIndex.remove(chatId);
-            sendSubcategories(chatId, currentCategory.get(chatId));
-        } else if (currentCategory.containsKey(chatId)) {
-            currentCategory.remove(chatId);
-            sendCategories(chatId);
-        } else {
-            sendCategories(chatId);
+    private void handleBack(String chatId) throws TelegramApiException {
+        Long userId = Long.parseLong(chatId);
+
+        if (userCart.containsKey(userId) && !userCart.get(userId).isEmpty()) {
+            showCart(Long.parseLong(chatId));
+            return;
         }
+
+        if (currentSubcategory.containsKey(userId)) {
+            currentSubcategory.remove(userId);
+            productIndex.remove(userId);
+            sendSubcategories(userId, currentCategory.get(userId));
+            return;
+        }
+
+        if (currentCategory.containsKey(userId)) {
+            currentCategory.remove(userId);
+            sendCategories(userId);
+            return;
+        }
+
+        if (adminOrderIndex.containsKey(userId)) {
+            adminOrderIndex.remove(userId);
+            sendMessage(createAdminMenu(chatId));
+            return;
+        }
+
+        if (DEVELOPERS.contains(userId)) {
+            sendMessage(createDeveloperMenu(chatId));
+            return;
+        }
+
+        clearUserState(userId);
+        sendMessage(createUserMenu(chatId, userId));
     }
 
     // 🔹 Показ наступного товару по id
@@ -1398,13 +1389,11 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     case "⬅️ Назад" -> {
-                        // Повернення у меню кошика
-                        userStates.put(userId, "cart_menu");
                         try {
-                            showCart(userId); // тут викликаємо твій метод для показу кошика
+                            handleBack(chatId); // chatId як String
                         } catch (TelegramApiException e) {
                             e.printStackTrace();
-                            sendText(chatId, "❌ Сталася помилка при показі кошика.");
+                            sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
                         }
                     }
 
@@ -1647,10 +1636,6 @@ public class StoreBot extends TelegramLongPollingBot {
                             e.printStackTrace();
                             sendText(chatId, "❌ Сталася помилка при отриманні запрошень.");
                         }
-                    }
-                    case "⬅️ Назад в розробника" -> {
-                        sendMessage(createDeveloperMenu(chatId));
-                        userStates.remove(userId);
                     }
                     default -> sendText(chatId, "❌ Некоректна команда.");
                 }
@@ -3351,5 +3336,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
     public void startPhotoUpload(Long userId, String chatId, String productName) {
         photoHandler.requestPhotoUpload(userId, chatId, productName);
+    }
+
+    private void setState(Long userId, String newState) {
+        String current = userState.get(userId);
+        if (current != null) {
+            previousState.put(userId, current); // зберігаємо попередній
+        }
+        userState.put(userId, newState);
     }
 }
