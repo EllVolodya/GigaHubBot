@@ -761,6 +761,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // --- Категорії з MySQL ---
     private void sendCategories(Long chatId) throws TelegramApiException {
+        userStates.put(chatId, "categories");
         CatalogSearcher searcher = new CatalogSearcher();
 
         List<String> categories = searcher.getCategories();
@@ -781,6 +782,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔹 Показ кошика
     private void showCart(Long userId) throws TelegramApiException {
+        userStates.put(userId, "cart");
         List<Map<String, Object>> cart = userCart.get(userId);
 
         if (cart == null || cart.isEmpty()) {
@@ -857,45 +859,25 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Назад
     private void handleBack(String chatId) throws TelegramApiException {
         Long userId = Long.parseLong(chatId);
+        String state = userStates.getOrDefault(userId, "main_menu");
 
-        // Якщо користувач у підкатегорії
-        if (currentSubcategory.containsKey(userId)) {
-            currentSubcategory.remove(userId);
-            productIndex.remove(userId);
-            sendSubcategories(userId, currentCategory.get(userId));
-            return;
+        switch (state) {
+            case "cart" -> {
+                clearUserState(userId);
+                sendMessage(createUserMenu(chatId, userId)); // повернення в головне меню
+            }
+            case "subcategories" -> {
+                sendSubcategories(userId, currentCategory.get(userId));
+                userStates.put(userId, "categories");
+            }
+            case "categories" -> {
+                sendCategories(userId);
+                userStates.put(userId, "main_menu");
+            }
+            case "admin_menu" -> sendMessage(createAdminMenu(chatId));
+            case "developer_menu" -> sendMessage(createDeveloperMenu(chatId));
+            default -> sendMessage(createUserMenu(chatId, userId)); // fallback
         }
-
-        // Якщо користувач у категорії
-        if (currentCategory.containsKey(userId)) {
-            currentCategory.remove(userId);
-            sendCategories(userId);
-            return;
-        }
-
-        // Якщо користувач у меню адміністратора
-        if (adminOrderIndex.containsKey(userId)) {
-            adminOrderIndex.remove(userId);
-            sendMessage(createAdminMenu(chatId));
-            return;
-        }
-
-        // Якщо користувач — розробник
-        if (DEVELOPERS.contains(userId)) {
-            sendMessage(createDeveloperMenu(chatId));
-            return;
-        }
-
-        // Якщо користувач у кошику → головне меню
-        if (userCart.containsKey(userId)) {
-            clearUserState(userId);
-            sendMessage(createUserMenu(chatId, userId));
-            return;
-        }
-
-        // За замовчуванням — головне меню
-        clearUserState(userId);
-        sendMessage(createUserMenu(chatId, userId));
     }
 
     // 🔹 Показ наступного товару по id
@@ -2727,6 +2709,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // --- Показ підкатегорій ---
     private void sendSubcategories(Long chatId, String categoryName) {
+        userStates.put(chatId, "subcategories");
         try {
             Connection conn = DatabaseManager.getConnection(); // одне постійне підключення
 
