@@ -761,7 +761,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // --- Категорії з MySQL ---
     private void sendCategories(Long chatId) throws TelegramApiException {
-        userStates.put(chatId, "categories");
         CatalogSearcher searcher = new CatalogSearcher();
 
         List<String> categories = searcher.getCategories();
@@ -2709,7 +2708,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // --- Показ підкатегорій ---
     private void sendSubcategories(Long chatId, String categoryName) {
-        userStates.put(chatId, "subcategories");
         try {
             Connection conn = DatabaseManager.getConnection(); // одне постійне підключення
 
