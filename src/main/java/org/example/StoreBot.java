@@ -1052,28 +1052,33 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case "choose_yaml_product" -> {
+                List<Map<String, Object>> matches = adminMatchList.get(userId);
+                int index;
+
                 try {
-                    int index = Integer.parseInt(text) - 1;
-                    List<Map<String, Object>> matches = adminMatchList.get(userId);
+                    index = Integer.parseInt(text.trim()) - 1;
+                } catch (NumberFormatException e) {
+                    sendText(chatId, "⚠️ Введіть номер товару.");
+                    return;
+                }
 
-                    if (matches == null || index < 0 || index >= matches.size()) {
-                        sendText(chatId, "❌ Невірний номер. Спробуйте ще раз.");
-                        return;
-                    }
+                if (matches == null || index < 0 || index >= matches.size()) {
+                    sendText(chatId, "⚠️ Невірний номер. Спробуйте ще раз.");
+                    return;
+                }
 
-                    Map<String, Object> selected = matches.get(index);
-                    String productName = (String) selected.get("name");
+                Map<String, Object> selectedProduct = matches.get(index);
+                String productName = (String) selectedProduct.get("name");
 
-                    adminEditingProduct.put(userId, productName);
+                adminEditingProduct.put(userId, productName);
+                userStates.put(userId, "editing_product"); // або окремий стан, якщо потрібно
 
-                    // Відображаємо меню редагування товару
+                // Відправляємо обмежене меню для YAML
+                try {
                     execute(createYamlEditMenu(chatId, productName));
-
-                    // Переводимо користувача у стан редагування YAML товару
-                    userStates.put(userId, "editing_yaml_product");
-
-                } catch (Exception e) {
-                    sendText(chatId, "❌ Помилка при виборі товару.");
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при відправці меню.");
                 }
             }
 
