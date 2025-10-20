@@ -422,8 +422,55 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
                 }
 
-                case "✏️ Редагувати товар" -> {
+                case "🔗 Запрошувальні посилання" -> {
                     if (DEVELOPERS.contains(userId)) {
+                        userStates.put(userId, "invites_menu");
+                        sendMessage(createInvitesMenu(chatId));
+                    } else sendText(chatId, "⛔ У вас немає доступу.");
+                }
+
+                case "📜 Логирування" -> {
+                    if (DEVELOPERS.contains(userId)) sendMessage(createLogsMenu(chatId));
+                    else sendText(chatId, "⛔ У вас немає доступу.");
+                }
+
+                case "📝 Список онови" -> {
+                    if (DEVELOPERS.contains(userId)) {
+                        List<String> updates = DeveloperFileManager.getChangelog();
+                        if (updates.isEmpty()) sendText(chatId, "📝 Список оновлень поки порожній.");
+                        else sendText(chatId, "📝 Список оновлень:\n\n" + String.join("\n\n", updates));
+                    } else sendText(chatId, "⛔ У вас немає доступу.");
+                }
+
+                case "📊 Статистика запрошувань" -> {
+                    userStates.put(userId, "logs_invites");
+                    handleState(userId, chatId, text, "logs_invites", update);
+                }
+
+                case "📊 Статистика без запрошень" -> {
+                    userStates.put(userId, "logs_no_invite");
+                    handleState(userId, chatId, text, "logs_no_invite", update);
+                }
+
+                case "📦 Замовлення" -> {
+                    userStates.put(userId, "logs_orders");
+                    handleState(userId, chatId, text, "logs_orders", update);
+                }
+
+                case "⬅️ Назад в розробника" -> {
+                    if (DEVELOPERS.contains(userId)) {
+                        sendMessage(createDeveloperMenu(chatId));
+                    } else sendText(chatId, "⛔ У вас немає доступу.");
+                }
+
+                // Адмін меню
+                case "⚙️ Продавца меню" -> {
+                    if (ADMINS.contains(userId)) sendMessage(createAdminMenu(chatId));
+                    else sendText(chatId, "⛔ У вас немає доступу.");
+                }
+
+                case "✏️ Редагувати товар" -> {
+                    if (ADMINS.contains(userId)) {
                         userStates.put(userId, "edit_product"); // ставимо стан редагування
 
                         // Відразу показуємо меню вибору джерела
@@ -494,54 +541,6 @@ public class StoreBot extends TelegramLongPollingBot {
                         userStates.put(userId, "category_management");
                         sendMessage(createCategoryAdminMenu(chatId));
                     } else sendText(chatId, "⛔ У вас немає доступу до цієї функції.");
-                }
-
-
-                case "🔗 Запрошувальні посилання" -> {
-                    if (DEVELOPERS.contains(userId)) {
-                        userStates.put(userId, "invites_menu");
-                        sendMessage(createInvitesMenu(chatId));
-                    } else sendText(chatId, "⛔ У вас немає доступу.");
-                }
-
-                case "📜 Логирування" -> {
-                    if (DEVELOPERS.contains(userId)) sendMessage(createLogsMenu(chatId));
-                    else sendText(chatId, "⛔ У вас немає доступу.");
-                }
-
-                case "📝 Список онови" -> {
-                    if (DEVELOPERS.contains(userId)) {
-                        List<String> updates = DeveloperFileManager.getChangelog();
-                        if (updates.isEmpty()) sendText(chatId, "📝 Список оновлень поки порожній.");
-                        else sendText(chatId, "📝 Список оновлень:\n\n" + String.join("\n\n", updates));
-                    } else sendText(chatId, "⛔ У вас немає доступу.");
-                }
-
-                case "📊 Статистика запрошувань" -> {
-                    userStates.put(userId, "logs_invites");
-                    handleState(userId, chatId, text, "logs_invites", update);
-                }
-
-                case "📊 Статистика без запрошень" -> {
-                    userStates.put(userId, "logs_no_invite");
-                    handleState(userId, chatId, text, "logs_no_invite", update);
-                }
-
-                case "📦 Замовлення" -> {
-                    userStates.put(userId, "logs_orders");
-                    handleState(userId, chatId, text, "logs_orders", update);
-                }
-
-                case "⬅️ Назад в розробника" -> {
-                    if (DEVELOPERS.contains(userId)) {
-                        sendMessage(createDeveloperMenu(chatId));
-                    } else sendText(chatId, "⛔ У вас немає доступу.");
-                }
-
-                // Адмін меню
-                case "⚙️ Продавца меню" -> {
-                    if (ADMINS.contains(userId)) sendMessage(createAdminMenu(chatId));
-                    else sendText(chatId, "⛔ У вас немає доступу.");
                 }
 
                 case "🛒 Замовлення користувачів" -> {
