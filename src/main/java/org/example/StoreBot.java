@@ -253,7 +253,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "🧹 Очистити кошик" -> clearCart(userId);
                 case BACK_BUTTON -> {
                     try {
-                        handleBack(chatId); // chatId як String
+                        handleBack(chatId);
                     } catch (TelegramApiException e) {
                         e.printStackTrace();
                         sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
@@ -809,7 +809,7 @@ public class StoreBot extends TelegramLongPollingBot {
         row1.add(new KeyboardButton("🧹 Очистити кошик"));
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add(new KeyboardButton("⬅ Назад"));
+        row2.add(new KeyboardButton(BACK_BUTTON));
 
         markup.setKeyboard(List.of(row1, row2));
 
@@ -840,7 +840,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (withBottom) {
             KeyboardRow bottom = new KeyboardRow();
-            bottom.add("⬅ Назад");
+            bottom.add(BACK_BUTTON);
             keyboard.add(bottom);
         }
 
@@ -942,7 +942,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         List<KeyboardRow> keyboard = new ArrayList<>();
         keyboard.add(row);
-        keyboard.add(new KeyboardRow(List.of(new KeyboardButton("⬅ Назад"))));
+        keyboard.add(new KeyboardRow(List.of(new KeyboardButton(BACK_BUTTON))));
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(keyboard);
@@ -2525,9 +2525,9 @@ public class StoreBot extends TelegramLongPollingBot {
         row1.add("✉️ Написати консультанту");
         row1.add("💌 Відповіді");
         keyboard.add(row1);
-        KeyboardRow row3 = new KeyboardRow();
-        row3.add("⬅ Назад");
-        keyboard.add(row3);
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add(new KeyboardButton(BACK_BUTTON));
+        keyboard.add(row2);
         markup.setKeyboard(keyboard);
         return SendMessage.builder()
                 .chatId(chatId)
@@ -2830,7 +2830,7 @@ public class StoreBot extends TelegramLongPollingBot {
         row1.add("🛍️ Перейти в кошик");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("⬅ Назад");
+        row2.add(BACK_BUTTON);
 
         List<KeyboardRow> keyboard = new ArrayList<>();
         keyboard.add(row1);
@@ -3179,7 +3179,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         List<KeyboardRow> kb = new ArrayList<>();
         kb.add(row);
-        kb.add(new KeyboardRow(List.of(new KeyboardButton("⬅ Назад"))));
+        kb.add(new KeyboardRow(List.of(new KeyboardButton(BACK_BUTTON))));
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
