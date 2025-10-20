@@ -70,6 +70,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private final PhotoHandler photoHandler = new PhotoHandler(this, userStates, adminEditingProduct);
 
+    private static final String BACK_BUTTON = "⬅️ Назад";
+
     public StoreBot(String botToken) {
         super(botToken);
     }
@@ -249,7 +251,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "🧹 Очистити кошик" -> clearCart(userId);
-                case "⬅️ Назад" -> {
+                case BACK_BUTTON -> {
                     try {
                         handleBack(chatId); // chatId як String
                     } catch (TelegramApiException e) {
@@ -323,7 +325,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     deliveryRow.add(new KeyboardButton("📮 Доставка Новою поштою"));
 
                     KeyboardRow backRow = new KeyboardRow();
-                    backRow.add(new KeyboardButton("⬅️ Назад"));
+                    backRow.add(new KeyboardButton(BACK_BUTTON));
 
                     markup.setKeyboard(List.of(deliveryRow, backRow));
 
@@ -1388,7 +1390,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                         "№12, Іваненко Іван Іванович, +380501234567, 4444");
                     }
 
-                    case "⬅️ Назад" -> {
+                    case BACK_BUTTON -> {
                         try {
                             handleBack(chatId); // chatId як String
                         } catch (TelegramApiException e) {
@@ -2244,7 +2246,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 userStates.put(userId, "delete_category_select");
                 sendText(chatId, "🗑️ Введіть назву категорії, яку хочете видалити:");
             }
-            case "⬅️ Назад" -> {
+            case BACK_BUTTON -> {
                 userStates.remove(userId);
                 sendMessage(createAdminMenu(chatId));
             }
@@ -2436,7 +2438,7 @@ public class StoreBot extends TelegramLongPollingBot {
         r1.add(new KeyboardButton("💬 Відповісти покупцю")); // <-- нова кнопка
 
         KeyboardRow r2 = new KeyboardRow();
-        r2.add(new KeyboardButton("⬅️ Назад"));
+        r2.add(new KeyboardButton(BACK_BUTTON));
         kb.setKeyboard(List.of(r1, r2));
 
         msg.setReplyMarkup(kb);
@@ -2464,7 +2466,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row3 = new KeyboardRow();
         row3.add("💬 Відгуки користувачів");
-        row3.add("⬅️ Назад в головне меню");
+        row3.add(new KeyboardButton(BACK_BUTTON));
         keyboard.add(row3);
 
         markup.setKeyboard(keyboard);
@@ -2490,7 +2492,7 @@ public class StoreBot extends TelegramLongPollingBot {
         r3.add(new KeyboardButton("📏 Одиниця виміру"));
         KeyboardRow r4 = new KeyboardRow();
         r4.add(new KeyboardButton("🏭 Виробник"));
-        r4.add(new KeyboardButton("⬅️ Назад"));
+        r4.add(new KeyboardButton(BACK_BUTTON));
         kb.setKeyboard(List.of(r1, r2, r3, r4));
         msg.setReplyMarkup(kb);
         return msg;
@@ -2508,7 +2510,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow r2 = new KeyboardRow();
         r2.add(new KeyboardButton("🗑️ Видалити категорію"));
-        r2.add(new KeyboardButton("⬅️ Назад"));
+        r2.add(new KeyboardButton(BACK_BUTTON));
 
         kb.setKeyboard(List.of(r1, r2));
         msg.setReplyMarkup(kb);
@@ -2554,7 +2556,7 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row2);
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add("⬅️ Назад в розробника");
+        row3.add(new KeyboardButton(BACK_BUTTON));
         keyboard.add(row3);
 
         markup.setKeyboard(keyboard);
@@ -2581,7 +2583,7 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row2);
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add("⬅️ Назад в розробника");
+        row3.add(new KeyboardButton(BACK_BUTTON));
         keyboard.add(row3);
 
         markup.setKeyboard(keyboard);
@@ -2605,7 +2607,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row2 = new KeyboardRow();
         row2.add("🗑️ Видалити відгук");
-        row2.add("⬅️ Назад у меню");
+        row2.add(new KeyboardButton(BACK_BUTTON));
         keyboard.add(row2);
 
         markup.setKeyboard(keyboard);
@@ -2626,7 +2628,7 @@ public class StoreBot extends TelegramLongPollingBot {
         r1.add(new KeyboardButton("🗂️ Додати в підкатегорію"));
 
         KeyboardRow r2 = new KeyboardRow();
-        r2.add(new KeyboardButton("⬅️ Назад"));
+        r2.add(new KeyboardButton(BACK_BUTTON));
 
         kb.setKeyboard(List.of(r1, r2));
         msg.setReplyMarkup(kb);
@@ -2954,7 +2956,7 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row2);
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add("⬅️ Назад (Продавець меню)");
+        row3.add(new KeyboardButton(BACK_BUTTON));
         keyboard.add(row3);
 
         keyboardMarkup.setKeyboard(keyboard);
@@ -2986,7 +2988,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row2 = new KeyboardRow();
         row2.add("🧹 Видалити відгук");
-        row2.add("⬅️ Назад в головне меню");
+        row2.add(new KeyboardButton(BACK_BUTTON));
         keyboard.add(row2);
 
         markup.setKeyboard(keyboard);
