@@ -68,6 +68,9 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, List<String>> feedbacks = new HashMap<>();
     private final Map<Long, Long> replyTargets = new HashMap<>();
 
+    //Розробників стани
+    private final Map<Long, Boolean> developerMenuState = new HashMap<>();
+
     private final PhotoHandler photoHandler = new PhotoHandler(this, userStates, adminEditingProduct);
 
     private static final String BACK_BUTTON = "⬅️ Назад";
@@ -809,7 +812,7 @@ public class StoreBot extends TelegramLongPollingBot {
         row1.add("🧹 Очистити кошик");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add(BACK_BUTTON); // використовуємо твою константу
+        row2.add(BACK_BUTTON);
 
         markup.setKeyboard(List.of(row1, row2));
 
@@ -860,10 +863,15 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessage(createUserMenu(String.valueOf(userId), userId));
     }
 
+    private boolean isInDeveloperMenu(Long userId) {
+        return developerMenuState.getOrDefault(userId, false);
+    }
+
     // 🔹 Назад
     private void handleBack(String chatId) throws TelegramApiException {
         Long userId = Long.parseLong(chatId);
 
+        // 1️⃣ Підкатегорії → категорії
         if (currentSubcategory.containsKey(userId)) {
             currentSubcategory.remove(userId);
             productIndex.remove(userId);
@@ -871,31 +879,37 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 2️⃣ Категорії → показуємо категорії
         if (currentCategory.containsKey(userId)) {
             currentCategory.remove(userId);
             sendCategories(userId);
             return;
         }
 
+        // 3️⃣ Кошик → головне меню
         if (userCart.containsKey(userId)) {
-            sendMessage(createUserMenu(chatId, userId)); // повертаємо у головне меню
+            sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
+        // 4️⃣ Адмін-меню
         if (adminOrderIndex.containsKey(userId)) {
             adminOrderIndex.remove(userId);
             sendMessage(createAdminMenu(chatId));
             return;
         }
 
-        if (DEVELOPERS.contains(userId)) {
+        // 5️⃣ Меню розробника
+        if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
 
-        // За замовчуванням — головне меню
+        // 6️⃣ За замовчуванням → головне меню
         sendMessage(createUserMenu(chatId, userId));
     }
+
+
 
     // 🔹 Показ наступного товару по id
     private void showNextProduct(Long chatId) throws TelegramApiException {
@@ -2476,6 +2490,7 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row3);
 
         markup.setKeyboard(keyboard);
+
         return SendMessage.builder()
                 .chatId(chatId)
                 .text("👨‍💻 Меню розробника, оберіть дію:")
