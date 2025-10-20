@@ -468,11 +468,24 @@ public class StoreBot extends TelegramLongPollingBot {
                     if (ADMINS.contains(userId)) sendMessage(createAdminMenu(chatId));
                     else sendText(chatId, "⛔ У вас немає доступу.");
                 }
+
                 case "✏️ Редагувати товар" -> {
                     if (ADMINS.contains(userId)) {
-                        userStates.put(userId, "edit_product");
-                        sendText(chatId, "✏️ Введіть назву товару, який хочете редагувати:");
-                    } else sendText(chatId, "⛔ У вас немає прав.");
+                        userStates.put(userId, "edit_product"); // ставимо стан редагування
+
+                        // Відразу показуємо меню вибору джерела
+                        try {
+                            SendMessage menu = showAdminSearchSourceMenu(userId, Long.parseLong(chatId));
+                            execute(menu);
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                            sendText(chatId, "❌ Сталася помилка при показі меню вибору джерела пошуку.");
+                        }
+
+                    } else {
+                        sendText(chatId, "⛔ У вас немає прав для цієї дії.");
+                    }
+                    return;
                 }
 
                 case "🖼️ Додати фотографію" -> {
@@ -522,8 +535,6 @@ public class StoreBot extends TelegramLongPollingBot {
                         sendText(chatId, sb.toString());
                     }
                 }
-
-
 
                 case "Редагувати категорії" -> {
                     if (ADMINS.contains(userId)) {
