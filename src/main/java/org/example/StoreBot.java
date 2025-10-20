@@ -756,6 +756,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 } else {
                     sendText(chatId, "⚠️ Please select a product first.");
                 }
+                return; // 🧩 ← дуже важливо! зупиняє подальшу обробку
 
             } else if (text.contains("Редагувати товар") || text.contains("Edit Product")) {
                 if (ADMINS.contains(userId)) {
@@ -764,10 +765,12 @@ public class StoreBot extends TelegramLongPollingBot {
                 } else {
                     sendText(chatId, "⛔ You do not have permission.");
                 }
+                return;
 
             } else if (text.contains("Змінити ціну") || text.contains("Change Price")) {
                 userStates.put(userId, "editing_price");
                 sendText(chatId, "💰 Enter new price for the product:");
+                return;
 
             } else {
                 // ===== DELEGATE TO PHOTO HANDLER =====
