@@ -1013,7 +1013,32 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendText(userId, "❌ Помилка при редагуванні товару.");
                 }
             }
-            case "choose_product" -> handleChooseProduct(userId, chatId, text);
+            case "choose_product" -> {
+                try {
+                    int choice = Integer.parseInt(text.trim()) - 1;
+                    List<Map<String, Object>> results = adminMatchList.get(userId);
+
+                    if (results == null || choice < 0 || choice >= results.size()) {
+                        sendText(chatId, "⚠️ Невірний номер. Спробуйте ще раз.");
+                        return;
+                    }
+
+                    Map<String, Object> selected = results.get(choice);
+                    String productName = String.valueOf(selected.get("name"));
+                    adminEditingProduct.put(userId, productName);
+                    userStates.put(userId, "editing");
+
+                    // --- Відкриваємо меню редагування ---
+                    SendMessage menu = createEditMenu(chatId, productName);
+                    execute(menu);
+
+                } catch (NumberFormatException e) {
+                    sendText(chatId, "❌ Будь ласка, введіть лише номер товару.");
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при відкритті меню редагування.");
+                }
+            }
             case "editing" -> handleEditing(userId, chatId, text);
             case "awaiting_field_value" -> handleAwaitingField(userId, chatId, text);
             case "awaiting_subcategory" -> handleAddToSubcategory(userId, chatId, text);
@@ -2953,28 +2978,27 @@ public class StoreBot extends TelegramLongPollingBot {
         if ("🔍 Пошук у MySQL".equals(text)) {
             adminSearchSource.put(userId, "mysql");
             userStates.put(userId, "awaiting_search");
-            sendText(chatId, "Введіть ключові слова для пошуку у MySQL:");
+            sendText(chatId, "🔹 Введіть ключові слова для пошуку у <b>MySQL</b>:");
         } else if ("🔍 Пошук у YAML".equals(text)) {
             adminSearchSource.put(userId, "yaml");
             userStates.put(userId, "awaiting_search");
-            sendText(chatId, "Введіть ключові слова для пошуку у YAML:");
+            sendText(chatId, "🔹 Введіть ключові слова для пошуку у <b>YAML</b>:");
         } else {
             sendText(chatId, "❌ Невідома опція. Спробуйте ще раз.");
-            sendMessage(showAdminSearchSourceMenu(userId, Long.valueOf(chatId))); // ще раз показуємо меню
+            execute(showAdminSearchSourceMenu(userId, Long.valueOf(chatId))); // показуємо меню ще раз
         }
     }
 
     private void handleAdminSearchInput(Long userId, String chatId, String text) throws TelegramApiException {
         List<Map<String, Object>> results = new ArrayList<>();
         CatalogSearcher searcher = new CatalogSearcher();
-        String source = adminSearchSource.getOrDefault(userId, "mysql"); // обране джерело
+        String source = adminSearchSource.getOrDefault(userId, "mysql");
 
         if ("mysql".equals(source)) {
-            // пошук у MySQL
             results = searcher.searchByKeywordsAdmin(text);
         } else if ("yaml".equals(source)) {
             try {
-                results = CatalogUpdater.searchProductsSimple(text); // пошук у YAML
+                results = CatalogUpdater.searchProductsSimple(text);
             } catch (Exception e) {
                 sendText(chatId, "❌ Помилка при пошуку у YAML: " + e.getMessage());
                 return;
@@ -2986,20 +3010,20 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // --- Зберігаємо результати для вибору ---
+        // --- Зберігаємо результати ---
         adminMatchList.put(userId, results);
 
-        // --- Формуємо список для відправки адміну ---
+        // --- Формуємо список ---
         StringBuilder sb = new StringBuilder("🔎 Знайдено товари. Введіть номер для редагування:\n\n");
         for (int i = 0; i < results.size(); i++) {
             Map<String, Object> prod = results.get(i);
             sb.append(i + 1).append(". ").append(prod.get("name"));
-            if (prod.get("price") != null) sb.append(" | Ціна: ").append(prod.get("price"));
+            if (prod.get("price") != null) sb.append(" | 💰 Ціна: ").append(prod.get("price"));
             sb.append("\n");
         }
 
         sendText(chatId, sb.toString());
-        userStates.put(userId, "choose_product"); // стан очікування введення номера
+        userStates.put(userId, "choose_product");
     }
 
     // Головний метод створення меню відгуку
