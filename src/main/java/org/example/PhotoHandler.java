@@ -1,8 +1,9 @@
 package org.example;
 
-import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.Update;
 
+import java.io.File;
 import java.util.Map;
 
 public class PhotoHandler {
@@ -17,16 +18,16 @@ public class PhotoHandler {
         this.adminEditingProduct = adminEditingProduct;
     }
 
-    // === MAIN ENTRY POINT ===
+    // === ENTRY POINT ===
     public void handleUpdate(Long userId, String chatId, Update update) {
         String state = userStates.get(userId);
         System.out.println("[DEBUG] handleUpdate() called for userId=" + userId + ", state=" + state);
 
         if ("awaiting_photo".equals(state)) {
-            System.out.println("[DEBUG] User is in 'awaiting_photo' state. Calling handleAwaitingPhoto...");
+            System.out.println("[DEBUG] User is in 'awaiting_photo' state, delegating to handleAwaitingPhoto...");
             handleAwaitingPhoto(userId, chatId, update);
         } else {
-            System.out.println("[DEBUG] handleAwaitingPhoto not called. Current state: " + state);
+            System.out.println("[DEBUG] User not in 'awaiting_photo', waiting for other actions.");
         }
     }
 
@@ -37,54 +38,89 @@ public class PhotoHandler {
         userStates.put(userId, "awaiting_photo");
         adminEditingProduct.put(userId, productName);
 
-        bot.sendText(chatId, "📷 Please send an image URL for the product '" + productName + "'.");
+        bot.sendText(chatId, "📷 Please send a photo, document, or an image URL for the product '" + productName + "'.");
     }
 
-    // === HANDLE AWAITING PHOTO STATE ===
+    // === HANDLE AWAITING PHOTO ===
     public void handleAwaitingPhoto(Long userId, String chatId, Update update) {
         System.out.println("[DEBUG] handleAwaitingPhoto triggered for userId=" + userId);
 
         String productName = adminEditingProduct.get(userId);
         if (productName == null || productName.isEmpty()) {
-            bot.sendText(chatId, "⚠️ No product found to attach the photo.");
+            bot.sendText(chatId, "⚠️ No product selected.");
             userStates.remove(userId);
             return;
         }
 
         if (!update.hasMessage()) {
-            bot.sendText(chatId, "❌ Please send a valid image URL as text.");
+            bot.sendText(chatId, "❌ Please send a valid photo, document, or image URL.");
             return;
         }
 
         Message msg = update.getMessage();
-        if (!msg.hasText()) {
-            bot.sendText(chatId, "❌ Please send an image link as text.");
-            return;
+
+        try {
+            String imageUrl = null;
+
+            // === PHOTO ===
+            if (msg.hasPhoto()) {
+                var photos = msg.getPhoto();
+                var largestPhoto = photos.get(photos.size() - 1);
+                File file = bot.downloadTelegramFile(largestPhoto.getFileId());
+                imageUrl = CloudinaryManager.uploadImage(file, "products");
+                System.out.println("[DEBUG] Photo uploaded for userId=" + userId);
+
+            }
+            // === DOCUMENT ===
+            else if (msg.hasDocument()) {
+                File file = bot.downloadTelegramFile(msg.getDocument().getFileId());
+                imageUrl = CloudinaryManager.uploadImage(file, "products");
+                System.out.println("[DEBUG] Document uploaded for userId=" + userId);
+
+            }
+            // === TEXT URL ===
+            else if (msg.hasText()) {
+                imageUrl = msg.getText().trim();
+
+                if (imageUrl.isEmpty()) {
+                    bot.sendText(chatId, "❌ Please send a non-empty image URL.");
+                    return;
+                }
+
+                if (imageUrl.startsWith("blob:") || imageUrl.startsWith("file://") || imageUrl.matches("^[a-zA-Z]:\\\\.*")) {
+                    bot.sendText(chatId, "❌ Local or blob URLs are not supported. Please send a proper internet URL.");
+                    return;
+                }
+
+                if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
+                    bot.sendText(chatId, "❌ This does not look like a valid URL. Please send a proper image URL.");
+                    return;
+                }
+
+                System.out.println("[DEBUG] Text URL received: " + imageUrl);
+            }
+            // === NOTHING VALID ===
+            else {
+                bot.sendText(chatId, "📎 Please send a photo, document, or an image URL.");
+                return;
+            }
+
+            // === SAVE IMAGE ===
+            if (imageUrl != null) {
+                boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
+                if (updated) {
+                    bot.sendText(chatId, "✅ Photo successfully updated for product '" + productName + "'.");
+                } else {
+                    bot.sendText(chatId, "⚠️ Received the image, but failed to update the database.");
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            bot.sendText(chatId, "❌ Error processing the image: " + e.getMessage());
+        } finally {
+            userStates.remove(userId);
+            adminEditingProduct.remove(userId);
         }
-
-        String imageUrl = msg.getText().trim();
-
-        // === Validate link type ===
-        if (imageUrl.startsWith("blob:") || imageUrl.startsWith("file://") || imageUrl.matches("^[a-zA-Z]:\\\\.*")) {
-            bot.sendText(chatId, "❌ Local or blob URLs are not supported. Please send an internet image link (http/https).");
-            return;
-        }
-
-        if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
-            bot.sendText(chatId, "❌ This doesn’t look like a valid link. Please send a proper image URL.");
-            return;
-        }
-
-        // === Save link ===
-        boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
-        if (updated) {
-            bot.sendText(chatId, "✅ Photo successfully updated for product '" + productName + "'.");
-        } else {
-            bot.sendText(chatId, "⚠️ Received the link but failed to update the database.");
-        }
-
-        // === Cleanup ===
-        userStates.remove(userId);
-        adminEditingProduct.remove(userId);
     }
 }

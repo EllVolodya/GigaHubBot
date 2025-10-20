@@ -76,7 +76,7 @@ public class StoreBot extends TelegramLongPollingBot {
         return botUsername;
     }
 
-    private java.io.File downloadTelegramFile(String fileId) throws TelegramApiException {
+    public java.io.File downloadTelegramFile(String fileId) throws TelegramApiException {
         org.telegram.telegrambots.meta.api.objects.File tgFile = execute(new GetFile(fileId));
         return downloadFile(tgFile);
     }
