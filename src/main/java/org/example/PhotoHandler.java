@@ -1,111 +1,90 @@
 package org.example;
 
-import java.util.Map;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
+import org.telegram.telegrambots.meta.api.objects.Message;
+
+import java.util.Map;
 
 public class PhotoHandler {
 
-    private final Map<Long, String> userStates;          // userId -> state
-    private final Map<Long, String> adminEditingProduct; // userId -> productName
+    private final StoreBot bot;
+    private final Map<Long, String> userStates;
+    private final Map<Long, String> adminEditingProduct;
 
-    public PhotoHandler(Map<Long, String> userStates, Map<Long, String> adminEditingProduct) {
+    public PhotoHandler(StoreBot bot, Map<Long, String> userStates, Map<Long, String> adminEditingProduct) {
+        this.bot = bot;
         this.userStates = userStates;
         this.adminEditingProduct = adminEditingProduct;
     }
 
-    // Основний метод для обробки повідомлень
+    // === MAIN ENTRY POINT ===
     public void handleUpdate(Long userId, String chatId, Update update) {
-        String state = userStates.getOrDefault(userId, "editing");
-
-        if (update.hasMessage()) {
-            Message msg = update.getMessage();
-
-            System.out.println("[DEBUG] Message class: " + msg.getClass().getSimpleName());
-            System.out.println("[DEBUG] Message content type:");
-            System.out.println("  hasText=" + msg.hasText());
-            System.out.println("  hasPhoto=" + msg.hasPhoto());
-            System.out.println("  hasDocument=" + msg.hasDocument());
-            System.out.println("  hasAnimation=" + msg.hasAnimation());
-            System.out.println("  hasSticker=" + msg.hasSticker());
-            System.out.println("  hasVideo=" + msg.hasVideo());
-            System.out.println("  hasVideoNote=" + msg.hasVideoNote());
-            System.out.println("  hasVoice=" + msg.hasVoice());
-
-            if (msg.hasText() && isInvalidLink(msg.getText())) {
-                sendText(chatId, "❌ Local or blob URLs are not supported. Please send an internet image URL.");
-                return;
-            }
-        }
-
-        System.out.println("[DEBUG] Current user state: " + state);
+        String state = userStates.get(userId);
+        System.out.println("[DEBUG] handleUpdate() called for userId=" + userId + ", state=" + state);
 
         if ("awaiting_photo".equals(state)) {
-            System.out.println("[DEBUG] User state is 'awaiting_photo' — calling handleAwaitingPhoto");
+            System.out.println("[DEBUG] User is in 'awaiting_photo' state. Calling handleAwaitingPhoto...");
             handleAwaitingPhoto(userId, chatId, update);
         } else {
             System.out.println("[DEBUG] handleAwaitingPhoto not called. Current state: " + state);
         }
     }
 
-    // Переведення користувача в стан очікування фото
+    // === START PHOTO UPLOAD ===
     public void requestPhotoUpload(Long userId, String chatId, String productName) {
         System.out.println("[DEBUG] requestPhotoUpload called: userId=" + userId + ", productName=" + productName);
 
-        adminEditingProduct.put(userId, productName);
         userStates.put(userId, "awaiting_photo");
-        sendText(chatId, "📎 Please send an image URL for the product '" + productName + "'.");
+        adminEditingProduct.put(userId, productName);
+
+        bot.sendText(chatId, "📷 Please send an image URL for the product '" + productName + "'.");
     }
 
-    // Обробка очікуваного фото
-    private void handleAwaitingPhoto(Long userId, String chatId, Update update) {
-        System.out.println("[DEBUG] Entered handleAwaitingPhoto for userId=" + userId);
+    // === HANDLE AWAITING PHOTO STATE ===
+    public void handleAwaitingPhoto(Long userId, String chatId, Update update) {
+        System.out.println("[DEBUG] handleAwaitingPhoto triggered for userId=" + userId);
 
         String productName = adminEditingProduct.get(userId);
         if (productName == null || productName.isEmpty()) {
-            sendText(chatId, "⚠️ Не знайдено товар для збереження фото.");
+            bot.sendText(chatId, "⚠️ No product found to attach the photo.");
             userStates.remove(userId);
             return;
         }
 
-        if (!update.hasMessage() || update.getMessage().getText() == null) {
-            sendText(chatId, "❌ Будь ласка, надішліть посилання на фото у вигляді тексту.");
+        if (!update.hasMessage()) {
+            bot.sendText(chatId, "❌ Please send a valid image URL as text.");
             return;
         }
 
-        String imageUrl = update.getMessage().getText().trim();
+        Message msg = update.getMessage();
+        if (!msg.hasText()) {
+            bot.sendText(chatId, "❌ Please send an image link as text.");
+            return;
+        }
 
-        if (isInvalidLink(imageUrl)) {
-            sendText(chatId, "❌ Локальні або blob-посилання не підтримуються. Надішліть URL зображення з інтернету.");
+        String imageUrl = msg.getText().trim();
+
+        // === Validate link type ===
+        if (imageUrl.startsWith("blob:") || imageUrl.startsWith("file://") || imageUrl.matches("^[a-zA-Z]:\\\\.*")) {
+            bot.sendText(chatId, "❌ Local or blob URLs are not supported. Please send an internet image link (http/https).");
             return;
         }
 
         if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
-            sendText(chatId, "❌ Це не виглядає як посилання на фото. Надішліть правильне URL.");
+            bot.sendText(chatId, "❌ This doesn’t look like a valid link. Please send a proper image URL.");
             return;
         }
 
+        // === Save link ===
         boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
         if (updated) {
-            sendText(chatId, "✅ Фото оновлено у хмарі для товару '" + productName + "'.");
+            bot.sendText(chatId, "✅ Photo successfully updated for product '" + productName + "'.");
         } else {
-            sendText(chatId, "⚠️ Не вдалося оновити базу даних.");
+            bot.sendText(chatId, "⚠️ Received the link but failed to update the database.");
         }
 
-        userStates.put(userId, "editing");
+        // === Cleanup ===
+        userStates.remove(userId);
         adminEditingProduct.remove(userId);
-    }
-
-    // Перевірка посилань
-    private boolean isInvalidLink(String link) {
-        if (link == null) return true;
-        link = link.trim();
-        return link.startsWith("blob:") || link.startsWith("file://") || link.matches("^[a-zA-Z]:\\\\.*");
-    }
-
-    // Відправка повідомлення
-    private void sendText(String chatId, String text) {
-        System.out.println("[SEND TO " + chatId + "]: " + text);
-        // тут код для фактичної відправки через Telegram API
     }
 }

@@ -65,11 +65,10 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, List<String>> feedbacks = new HashMap<>();
     private final Map<Long, Long> replyTargets = new HashMap<>();
 
-    private final PhotoHandler photoHandler;
+    private final PhotoHandler photoHandler = new PhotoHandler(this, userStates, adminEditingProduct);
 
     public StoreBot(String botToken) {
         super(botToken);
-        photoHandler = new PhotoHandler(userStates, adminEditingProduct);
     }
 
     @Override
@@ -84,67 +83,48 @@ public class StoreBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        // ====== BASIC SAFETY CHECK ======
-        if (update == null || update.getMessage() == null) {
-            System.out.println("[DEBUG] Update or message is null, skipping.");
-            return;
-        }
+        if (update == null || update.getMessage() == null) return;
 
-        // ====== BASIC DATA EXTRACTION ======
         Long userId = update.getMessage().getFrom().getId();
         String chatId = update.getMessage().getChatId().toString();
         String text = update.getMessage().getText() != null ? update.getMessage().getText().trim() : "";
         String state = userStates.get(userId);
 
-        // ====== DEBUG LOGS ======
         System.out.println("[DEBUG] Received message from userId=" + userId + ": '" + text + "' (state=" + state + ")");
 
-        // Normalize text to handle invisible Unicode symbols and emoji variations
         String normalizedText = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKC)
-                .replaceAll("[\\p{Cf}\\p{Zs}]+", " ") // remove zero-width and special spaces
+                .replaceAll("[\\p{Cf}\\p{Zs}]+", " ")
                 .trim();
 
-        System.out.println("[DEBUG] Normalized text: '" + normalizedText + "'");
-
-        // ====== BUTTON HANDLING ======
+        // 🖼️ Button "Add Photo"
         if (normalizedText.contains("Додати фотографію") || normalizedText.contains("Add Photo")) {
             System.out.println("[DEBUG] Button 'Add Photo' detected for userId=" + userId);
 
             String productName = adminEditingProduct.get(userId);
             if (productName != null) {
-                startPhotoUpload(userId, chatId, productName); // delegate to PhotoHandler
+                photoHandler.requestPhotoUpload(userId, chatId, productName); // set state & ask for URL
             } else {
                 sendText(chatId, "⚠️ Please select a product first.");
             }
             return;
         }
 
-        else if (normalizedText.contains("Редагувати товар") || normalizedText.contains("Edit Product")) {
-            if (ADMINS.contains(userId)) {
-                userStates.put(userId, "edit_product");
-                sendText(chatId, "✏️ Enter the product name you want to edit:");
-            } else {
-                sendText(chatId, "⛔ You do not have permission.");
-            }
+        // 🧩 User in awaiting_photo state
+        if ("awaiting_photo".equals(state)) {
+            System.out.println("[DEBUG] User is in awaiting_photo state, delegating to PhotoHandler...");
+            photoHandler.handleAwaitingPhoto(userId, chatId, update);
             return;
         }
 
-        else if (normalizedText.contains("Змінити ціну") || normalizedText.contains("Change Price")) {
-            userStates.put(userId, "editing_price");
-            sendText(chatId, "💰 Enter new price for the product:");
-            return;
-        }
-
-        // ====== DELEGATE TO PHOTO HANDLER (DEFAULT) ======
+        // 🔹 DEFAULT DELEGATION TO PHOTO HANDLER
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
-        photoHandler.handleUpdate(userId, chatId, update);
+        photoHandler.handleUpdate(userId, chatId, update); // ← вставлено сюди
 
+        // ===== Optional: handle feedback / other states =====
         if (update.getMessage().hasText()) {
-            text = update.getMessage().getText(); // просто присвоюємо, без String
-            text = text.trim(); // обрізаємо пробіли
+            text = update.getMessage().getText().trim();
         }
 
-        // 🔹 Якщо користувач у стані – передаємо в handleState
         if (state != null) {
             try {
                 handleFeedbackState(userId, chatId, text, state);
@@ -498,9 +478,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "🖼️ Додати фотографію" -> {
                     System.out.println("[DEBUG] Button 'Add Photo' clicked by userId=" + userId);
 
-                    String productName = adminEditingProduct.get(userId); // присвоєння без String
+                    String productName = adminEditingProduct.get(userId);
                     if (productName != null) {
-                        startPhotoUpload(userId, chatId, productName); // делегуємо PhotoHandler
+                        photoHandler.requestPhotoUpload(userId, chatId, productName);
                     } else {
                         sendText(chatId, "⚠️ Please select a product first.");
                     }
@@ -2552,13 +2532,13 @@ public class StoreBot extends TelegramLongPollingBot {
                 .build();
     }
 
-    private void sendText(String chatId, String text) {
+    public void sendText(String chatId, String text) {
         int maxLength = 4000;
         try {
             for (int start = 0; start < text.length(); start += maxLength) {
                 int end = Math.min(start + maxLength, text.length());
                 SendMessage msg = new SendMessage(chatId, text.substring(start, end));
-                msg.setParseMode("HTML"); // ✅ Вмикаємо HTML форматування
+                msg.setParseMode("HTML"); // ✅ HTML formatting
                 execute(msg);
             }
         } catch (TelegramApiException e) {
