@@ -1071,7 +1071,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 String productName = (String) selectedProduct.get("name");
 
                 adminEditingProduct.put(userId, productName);
-                userStates.put(userId, "editing_product"); // або окремий стан, якщо потрібно
+                userStates.put(userId, "yaml_edit_menu"); // ← окремий стан для YAML
 
                 // Відправляємо обмежене меню для YAML
                 try {
