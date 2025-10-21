@@ -118,12 +118,4 @@ public class ProductSearchManager {
         );
         bot.sendProductWithAddToCartRow(userId, chatId, productText);
     }
-
-    private void addToCart(Long userId, Map<String, Object> product) {
-        String chatId = String.valueOf(userId);
-        bot.getUserCart().computeIfAbsent(userId, k -> new ArrayList<>());
-        bot.getUserCart().get(userId).add(product);
-
-        bot.sendText(chatId, "✅ Товар додано до кошика: " + product.get("name"));
-    }
 }

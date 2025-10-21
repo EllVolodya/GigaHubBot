@@ -904,61 +904,60 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Назад
     private void handleBack(String chatId) throws TelegramApiException {
         Long userId = Long.parseLong(chatId);
-        System.out.println("[handleBack] Back button pressed by user " + userId);
 
-        // 🟩 Якщо користувач дивиться товар після пошуку
-        if (getLastShownProduct().containsKey(userId)) {
-            getLastShownProduct().remove(userId);
-            getSearchResults().remove(userId); // очищаємо знайдені товари
-            getUserStates().put(userId, "waiting_for_search");
+        System.out.println("[handleBack] User " + userId + " pressed Back.");
 
-            sendText(chatId, "🔎 Введіть назву товару, який хочете знайти:");
-            System.out.println("[handleBack] Returned to search mode.");
-            return;
-        }
+        // 🔸 1. Повне очищення тимчасових станів
+        getUserStates().remove(userId);
+        getLastShownProduct().remove(userId);
+        adminMatchList.remove(userId);
+        productIndex.remove(userId);
 
-        // 1️⃣ Підкатегорії → категорії
+        // 🔸 2. Якщо користувач був у підкатегорії
         if (currentSubcategory.containsKey(userId)) {
             currentSubcategory.remove(userId);
-            productIndex.remove(userId);
-            sendSubcategories(userId, currentCategory.get(userId));
-            System.out.println("[handleBack] Returned to categories list.");
+            System.out.println("[handleBack] Returning user " + userId + " to categories from subcategory.");
+            if (currentCategory.containsKey(userId)) {
+                sendSubcategories(userId, currentCategory.get(userId));
+            } else {
+                sendCategories(userId);
+            }
             return;
         }
 
-        // 2️⃣ Категорії → показуємо категорії
+        // 🔸 3. Якщо користувач був у категорії
         if (currentCategory.containsKey(userId)) {
             currentCategory.remove(userId);
-            sendCategories(userId);
-            System.out.println("[handleBack] Returned to main categories.");
-            return;
-        }
-
-        // 3️⃣ Кошик → головне меню
-        if (userCart.containsKey(userId)) {
+            System.out.println("[handleBack] Returning user " + userId + " to main menu from category.");
             sendMessage(createUserMenu(chatId, userId));
-            System.out.println("[handleBack] Returned from cart to main menu.");
             return;
         }
 
-        // 4️⃣ Адмін-меню
+        // 🔸 4. Якщо користувач у кошику
+        if (userCart.containsKey(userId)) {
+            System.out.println("[handleBack] Returning user " + userId + " from cart to main menu.");
+            sendMessage(createUserMenu(chatId, userId));
+            return;
+        }
+
+        // 🔸 5. Якщо користувач у адмін-меню
         if (adminOrderIndex.containsKey(userId)) {
             adminOrderIndex.remove(userId);
+            System.out.println("[handleBack] Returning admin " + userId + " to admin menu.");
             sendMessage(createAdminMenu(chatId));
-            System.out.println("[handleBack] Returned to admin menu.");
             return;
         }
 
-        // 5️⃣ Меню розробника
+        // 🔸 6. Якщо користувач у меню розробника
         if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
+            System.out.println("[handleBack] Returning developer " + userId + " to developer menu.");
             sendMessage(createDeveloperMenu(chatId));
-            System.out.println("[handleBack] Returned to developer menu.");
             return;
         }
 
-        // 6️⃣ За замовчуванням → головне меню
+        // 🔸 7. За замовчуванням — головне меню
+        System.out.println("[handleBack] Default: Returning user " + userId + " to main menu.");
         sendMessage(createUserMenu(chatId, userId));
-        System.out.println("[handleBack] Returned to main menu (default).");
     }
 
     // 🔹 Показ наступного товару по id
@@ -1999,10 +1998,24 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
         text = text.trim();
 
+        // ⬅️ Назад → вихід у головне меню
+        if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
+            getUserStates().remove(userId); // вихід зі стану пошуку
+            try {
+                execute(createUserMenu(chatId, userId)); // показуємо головне меню
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                System.out.println("[handleWaitingForSearch] Failed to send main menu to user " + userId);
+            }
+            System.out.println("[handleWaitingForSearch] User " + userId + " exited search mode.");
+            return;
+        }
+
+        // 🛠 Додати в кошик
         if (text.equals("🛠 Додати в кошик")) {
             Map<String, Object> product = getLastShownProduct().get(userId);
             if (product != null) {
-                addToCartTool(userId); // твій метод додавання в кошик
+                addToCartTool(userId);
             } else {
                 sendText(chatId, "❌ Товар не знайдено для додавання в кошик.");
             }
@@ -2012,14 +2025,17 @@ public class StoreBot extends TelegramLongPollingBot {
         ProductSearchManager searchManager = new ProductSearchManager(this);
 
         try {
+            // Якщо користувач ввів номер товару зі списку
             if (text.matches("\\d+")) {
                 searchManager.handleSearchNumber(userId, chatId, text);
             } else {
+                // Якщо користувач ввів текст → пошук
                 searchManager.performSearch(userId, chatId, text);
+                getUserStates().put(userId, "waiting_for_search"); // ставимо стан пошуку
             }
         } catch (TelegramApiException e) {
             e.printStackTrace();
-            sendText(chatId, "⚠️ Сталася помилка під час обробки пошуку.");
+            sendText(chatId, "⚠️ Сталася помилка при обробці пошуку товару.");
         }
     }
 
@@ -2436,7 +2452,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    public SendMessage createUserMenu(String chatId, Long userId) {
+    private SendMessage createUserMenu(String chatId, Long userId) {
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
 
