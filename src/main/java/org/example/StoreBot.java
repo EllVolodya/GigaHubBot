@@ -74,6 +74,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private final PhotoHandler photoHandler = new PhotoHandler(this, userStates, adminEditingProduct);
 
     private static final String BACK_BUTTON = "⬅️ Назад";
+    private static final String ADD_TO_CART_BUTTON = "🛠 Додати в кошик";
+    private static final String VIEW_CART_BUTTON = "🛍️ Перейти в кошик";
 
     public StoreBot(String botToken) {
         super(botToken);
@@ -212,6 +214,20 @@ public class StoreBot extends TelegramLongPollingBot {
                         userStates.remove(userId);
                         sendText(chatId, "✅ Ваше замовлення на самовивіз успішно оформлено!\nКод замовлення: " + orderCode);
                     }
+
+                    case "waiting_for_search" -> {
+                        userStates.put(userId, "selecting_product");
+                        ProductSearchManager searchHandler = new ProductSearchManager(this);
+                        searchHandler.performSearch(userId, chatId, text);
+                    }
+                    case "selecting_product" -> {
+                        ProductSearchManager searchHandler = new ProductSearchManager(this);
+                        searchHandler.handleSearchNumber(userId, chatId, text);
+                    }
+                    default -> {
+                        sendText(chatId, "🔎 Введіть назву товару для пошуку:");
+                        userStates.put(userId, "waiting_for_search");
+                    }
                 }
             }
 
@@ -264,13 +280,6 @@ public class StoreBot extends TelegramLongPollingBot {
                         e.printStackTrace();
                     }
                 }
-                case "🛍️ Перейти в кошик" -> {
-                    try {
-                        showCart(userId);
-                    } catch (TelegramApiException e) {
-                        e.printStackTrace();
-                    }
-                }
 
                 case "🧹 Очистити кошик" -> clearCart(userId);
                 case BACK_BUTTON -> {
@@ -281,8 +290,16 @@ public class StoreBot extends TelegramLongPollingBot {
                         sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
                     }
                 }
+                case ADD_TO_CART_BUTTON -> {
+                    addToCartTool(userId);
+                    return;
+                }
+                case VIEW_CART_BUTTON -> {
+                    showCart(userId);
+                    return;
+                }
+
                 case "➡ Далі" -> showNextProduct(userId);
-                case "🛠 Додати в кошик" -> addToCartTool(userId);
                 case "🛒 Додати в кошик" -> addToCart(userId);
                 case "📍 Адреси та Контакти" -> {
                     SendMessage message = new SendMessage();
@@ -1017,27 +1034,18 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     public void addToCartTool(Long userId) {
-        Map<String, Object> product = getLastShownProduct().get(userId); // ✅ звертаємося через bot
+        Map<String, Object> product = lastShownProduct.get(userId);
         String chatId = String.valueOf(userId);
 
-        // Логи для дебагу
-        System.out.println("[addToCartTool] userId=" + userId);
-        System.out.println("[addToCartTool] lastShownProduct=" + getLastShownProduct());
-        System.out.println("[addToCartTool] product=" + product);
-
         if (product == null) {
-            System.out.println("[addToCartTool] ❌ No product found for userId=" + userId);
             sendText(chatId, "❌ Товар не знайдено для додавання в кошик.");
             return;
         }
 
-        // Ініціалізація кошика, якщо його ще немає
-        getUserCart().computeIfAbsent(userId, k -> new ArrayList<>());
-        getUserCart().get(userId).add(product);
-
-        System.out.println("[addToCartTool] ✅ Product added to cart: " + product.get("name"));
+        userCart.computeIfAbsent(userId, k -> new ArrayList<>()).add(product);
         sendText(chatId, "✅ Товар додано до кошика: " + product.get("name"));
         sendText(chatId, "🔎 Введіть назву нового товару або оберіть інший товар з попереднього списку:");
+        userStates.put(userId, "waiting_for_search");
     }
 
     private final UserManager userManager = new UserManager();
@@ -2532,26 +2540,24 @@ public class StoreBot extends TelegramLongPollingBot {
         message.setChatId(chatId);
         message.setText(productText);
 
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        keyboardMarkup.setResizeKeyboard(true);
-        keyboardMarkup.setOneTimeKeyboard(true);
+        ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
+        keyboard.setResizeKeyboard(true);
+        keyboard.setOneTimeKeyboard(true);
 
-        KeyboardRow addRow = new KeyboardRow();
-        addRow.add(new KeyboardButton("🛠 Додати в кошик"));
+        KeyboardRow row = new KeyboardRow();
+        row.add(ADD_TO_CART_BUTTON);
 
-        KeyboardRow backCartRow = new KeyboardRow();
-        backCartRow.add(new KeyboardButton(BACK_BUTTON));
-        backCartRow.add(new KeyboardButton("🛍️ Перейти в кошик"));
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add(BACK_BUTTON);
+        row2.add(VIEW_CART_BUTTON);
 
-        keyboardMarkup.setKeyboard(List.of(addRow, backCartRow));
-
-        message.setReplyMarkup(keyboardMarkup);
+        keyboard.setKeyboard(List.of(row, row2));
+        message.setReplyMarkup(keyboard);
 
         try {
             execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
-            System.out.println("[sendProductWithAddToCartRow] Failed for user " + userId);
         }
     }
 
