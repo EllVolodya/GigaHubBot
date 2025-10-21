@@ -2765,20 +2765,47 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔹 Обробка текстових кнопок
     private void handleText(Long chatId, String text) throws TelegramApiException {
-        List<String> categories = catalogSearcher.getCategories();
+        text = text.trim();
+        System.out.println("[handleText] User " + chatId + " sent: " + text);
 
+        // 🔹 1. Кнопка Назад
+        if (text.equals("⬅️ Назад")) {
+            System.out.println("[handleText] Back button pressed");
+            handleBack(String.valueOf(chatId));
+            return;
+        }
+
+        // 🔹 2. Кнопка Перейти в кошик
+        if (text.equals("🛍️ Перейти в кошик")) {
+            System.out.println("[handleText] Open cart button pressed");
+            showCart(chatId);
+            return;
+        }
+
+        // 🔹 3. Кнопка Додати в кошик
+        if (text.equals("🛠 Додати в кошик")) {
+            System.out.println("[handleText] Add to cart button pressed");
+            addToCartTool(chatId);
+            return;
+        }
+
+        // 🔹 4. Категорії
+        List<String> categories = catalogSearcher.getCategories();
         if (categories.contains(text)) {
+            System.out.println("[handleText] Category selected: " + text);
             currentCategory.put(chatId, text);
             currentSubcategory.remove(chatId);
             sendSubcategories(chatId, text);
             return;
         }
 
+        // 🔹 5. Підкатегорії
         if (currentCategory.containsKey(chatId)) {
             String cat = currentCategory.get(chatId);
             List<String> subcats = catalogSearcher.getSubcategories(cat);
 
             if (subcats.contains(text)) {
+                System.out.println("[handleText] Subcategory selected: " + text);
                 currentSubcategory.put(chatId, text);
                 productIndex.put(chatId, 0);
                 sendProduct(chatId);
@@ -2786,6 +2813,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
+        // 🔹 6. Якщо нічого не підійшло — повідомлення
         sendText(chatId, "Невідома команда 😅 Натисніть /start або виберіть із меню.");
     }
 
