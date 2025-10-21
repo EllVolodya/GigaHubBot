@@ -3,6 +3,7 @@ package org.example;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.Map;
 
 public class DatabaseManager {
 
@@ -34,6 +35,40 @@ public class DatabaseManager {
             throw new SQLException("❌ Не вдалося підключитися до БД", e);
         }
         return connection;
+    }
+
+    public static String getCategoryInfoForProduct(Map<String, Object> product) {
+        String name = String.valueOf(product.get("name"));
+        String category = "❓";
+        String subcategory = "❓";
+
+        String query = """
+            SELECT c.name AS category, s.name AS subcategory
+            FROM categories c
+            JOIN subcategories s ON s.category_id = c.id
+            JOIN products p ON p.subcategory_id = s.id
+            WHERE p.name = ? LIMIT 1
+        """;
+
+        try (Connection conn = getConnection();
+             var ps = conn.prepareStatement(query)) {
+
+            ps.setString(1, name);
+            var rs = ps.executeQuery();
+
+            if (rs.next()) {
+                category = rs.getString("category");
+                subcategory = rs.getString("subcategory");
+            } else {
+                System.out.println("⚠️ Category info not found for product: " + name);
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error while getting category info for " + name);
+            e.printStackTrace();
+        }
+
+        return "📂 " + category + " → " + subcategory;
     }
 
     public static void disconnect() {

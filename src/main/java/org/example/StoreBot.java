@@ -37,7 +37,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, String> currentCategory = new HashMap<>();
     private final Map<Long, String> currentSubcategory = new HashMap<>();
     private final Map<Long, Integer> productIndex = new HashMap<>();
-    private final Map<Long, Map<String, Object>> lastShownProduct = new HashMap<>();
+    protected Map<Long, Map<String, Object>> lastShownProduct = new HashMap<>();
     private final Map<Long, String> userStates = new HashMap<>();
     private Map<Long, String> userState = new HashMap<>();
     private Map<Long, String> previousState = new HashMap<>();
@@ -63,7 +63,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<String, Object> tempStorage = new HashMap<>();
 
     private final CatalogSearcher catalogSearcher = new CatalogSearcher();
-    private final Map<Long, List<Map<String, Object>>> searchResults = new HashMap<>();
+    protected Map<Long, List<Map<String, Object>>> searchResults = new HashMap<>();
 
     private final Map<Long, List<String>> feedbacks = new HashMap<>();
     private final Map<Long, Long> replyTargets = new HashMap<>();
@@ -1917,78 +1917,32 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
-        text = text.trim();
+        ProductSearchManager.handleSearch(this, userId, chatId, text);
+    }
 
-        // 1️⃣ Користувач вводить номер товару з попереднього списку
-        if (text.matches("\\d+")) {
-            List<Map<String, Object>> products = searchResults.get(userId);
-            if (products != null) {
-                int index = Integer.parseInt(text) - 1;
-                if (index >= 0 && index < products.size()) {
-                    lastShownProduct.put(userId, products.get(index));
-                    sendProductDetailsWithButtons(userId);
-                    searchResults.remove(userId);
-                    return;
-                } else {
-                    sendText(chatId, "⚠️ Неправильний номер товару. Спробуйте ще раз.");
-                    return;
-                }
-            }
-        }
+    // 🔹 Надсилаємо деталі останнього показаного товару з кнопками
+    public void sendProductDetailsWithButtons(Long userId, Map<String, Object> product) {
+        String chatId = userId.toString();
 
-        // 2️⃣ Пошук по назві
-        if (text.isEmpty()) {
-            sendText(chatId, "⚠️ Введіть назву товару для пошуку.");
+        if (product == null || product.isEmpty()) {
+            sendText(chatId, "❌ Товар не знайдено.");
+            System.out.println("[sendProductDetailsWithButtons] Product is null or empty for user " + userId);
             return;
         }
 
         try {
-            CatalogSearcher searcher = new CatalogSearcher();
-            List<Map<String, Object>> foundProducts = searcher.searchMixedFromYAML(text);
+            // 🔹 Отримуємо категорію та підкатегорію з MySQL
+            String categoryInfo = DatabaseManager.getCategoryInfoForProduct(product);
 
-            if (foundProducts.isEmpty()) {
-                // ❌ Не показуємо нічого, якщо товар не знайдено
-                return;
-            }
-
-            if (foundProducts.size() > 1) {
-                StringBuilder sb = new StringBuilder("🔎 Знайдено кілька товарів:\n\n");
-                int idx = 1;
-                for (Map<String, Object> p : foundProducts) {
-                    sb.append(idx++).append(". ").append(p.get("name")).append("\n");
-                }
-                sb.append("\nВведіть номер товару, щоб побачити деталі.");
-
-                searchResults.put(userId, foundProducts);
-                sendText(chatId, sb.toString());
-                return;
-            }
-
-            // Якщо знайдено один товар
-            lastShownProduct.put(userId, foundProducts.get(0));
-            sendProductDetailsWithButtons(userId);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendText(chatId, "⚠️ Помилка під час пошуку товару.");
-        }
-    }
-
-    // 🔹 Надсилаємо деталі останнього показаного товару з кнопками
-    private void sendProductDetailsWithButtons(Long userId) {
-        String chatId = userId.toString();
-        Map<String, Object> product = lastShownProduct.get(userId);
-        if (product == null) return;
-
-        try {
+            // 🔹 Формуємо повідомлення
             String message = String.format(
-                    "📦 %s\n💰 Ціна: %s грн за шт\n📂 %s → %s\n\n🔎 Виберіть дію нижче або введіть інший товар для пошуку.",
-                    product.get("name"),
-                    product.get("price"),
-                    product.get("category"),
-                    product.get("subcategory")
+                    "📦 %s\n💰 Ціна: %s грн за шт\n%s\n\n🔎 Виберіть дію нижче або введіть інший товар для пошуку.",
+                    product.getOrDefault("name", "Без назви"),
+                    product.getOrDefault("price", "—"),
+                    categoryInfo
             );
 
+            // 🔹 Клавіатура
             ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
             keyboardMarkup.setResizeKeyboard(true);
             keyboardMarkup.setOneTimeKeyboard(false);
@@ -2009,14 +1963,16 @@ public class StoreBot extends TelegramLongPollingBot {
 
             keyboardMarkup.setKeyboard(keyboard);
 
-            SendMessage sendMessage = new SendMessage();
-            sendMessage.setChatId(chatId);
-            sendMessage.setText(message);
+            // 🔹 Відправка повідомлення
+            SendMessage sendMessage = new SendMessage(chatId, message);
             sendMessage.setReplyMarkup(keyboardMarkup);
 
             execute(sendMessage);
 
+            System.out.println("[sendProductDetailsWithButtons] Sent product for user " + userId + ": " + product.get("name"));
+
         } catch (TelegramApiException e) {
+            System.err.println("[sendProductDetailsWithButtons] Telegram API error for user " + userId);
             e.printStackTrace();
         }
     }
@@ -3367,5 +3323,23 @@ public class StoreBot extends TelegramLongPollingBot {
             previousState.put(userId, current); // зберігаємо попередній
         }
         userState.put(userId, newState);
+    }
+
+    // --- Доступ до пошукових результатів ---
+    public Map<Long, List<Map<String, Object>>> getSearchResults() {
+        return searchResults;
+    }
+
+    public Map<Long, Map<String, Object>> getLastShownProduct() {
+        return lastShownProduct;
+    }
+
+    public void showProductDetails(Long userId) {
+        Map<String, Object> product = lastShownProduct.get(userId);
+        if (product != null) {
+            sendProductDetailsWithButtons(userId, product);
+        } else {
+            System.out.println("[showProductDetails] No last shown product for user " + userId);
+        }
     }
 }
