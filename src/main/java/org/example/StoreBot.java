@@ -998,23 +998,17 @@ public class StoreBot extends TelegramLongPollingBot {
 
     public void addToCartTool(Long userId) {
         String chatId = String.valueOf(userId);
-        System.out.println("[addToCartTool] User " + userId + " clicked 'Add to cart'");
+        Map<String, Object> product = lastShownProduct.get(userId);
 
-        Map<String, Object> product = getLastShownProduct().get(userId);
-        System.out.println("[addToCartTool] lastShownProduct: " + product);
+        System.out.println("[addToCartTool] lastShownProduct for userId=" + userId + ": " + product);
 
         if (product == null) {
-            sendText(chatId, "❌ Товар не знайдено для додавання в кошик.");
-            System.out.println("[addToCartTool] No product found for user " + userId);
+            sendText(chatId, "❌ Немає товару для додавання в кошик. Спочатку знайдіть товар.");
             return;
         }
 
-        // Створюємо кошик, якщо його ще немає
-        getUserCart().computeIfAbsent(userId, k -> new ArrayList<>());
-        System.out.println("[addToCartTool] User cart before adding: " + getUserCart().get(userId));
-
-        getUserCart().get(userId).add(product);
-        System.out.println("[addToCartTool] User cart after adding: " +getUserCart().get(userId));
+        userCart.computeIfAbsent(userId, k -> new ArrayList<>());
+        userCart.get(userId).add(product);
 
         sendText(chatId, "✅ Товар додано до кошика: " + product.get("name"));
         sendText(chatId, "🔎 Введіть назву нового товару або оберіть інший товар з попереднього списку:");
@@ -1839,54 +1833,48 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔍 Пошук товару
-    private void handleSearch(Long userId, String chatId, String text) {
-        text = text.trim();
+    public void handleSearch(Long userId, String chatId, String text) {
+        System.out.println("[handleSearch] User " + userId + " input: '" + text + "'");
 
+        text = text.trim();
         if (text.isEmpty()) {
             sendText(chatId, "⚠️ Введіть назву товару для пошуку.");
             return;
         }
 
-        // Завантажуємо каталог
-        List<Map<String, Object>> products = loadCatalogFlat();
-        if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ Каталог порожній або не завантажився.");
-            userStates.remove(userId);
-            return;
+        try {
+            CatalogSearcher searcher = new CatalogSearcher();
+            List<Map<String, Object>> foundProducts = searcher.searchMixedFromYAML(text);
+            System.out.println("[handleSearch] Found products: " + foundProducts.size());
+
+            if (foundProducts.isEmpty()) {
+                sendText(chatId, "❌ Товар не знайдено. Спробуйте інший запит.");
+                return;
+            }
+
+            if (foundProducts.size() > 1) {
+                StringBuilder sb = new StringBuilder("🔎 Знайдено кілька товарів:\n\n");
+                int idx = 1;
+                for (Map<String, Object> p : foundProducts) {
+                    sb.append(idx++).append(". ").append(p.get("name")).append("\n");
+                }
+                sb.append("\nВведіть номер товару, щоб побачити деталі.");
+
+                searchResults.put(userId, foundProducts);
+                sendText(chatId, sb.toString());
+                return;
+            }
+
+            // ✅ Якщо знайдено один товар
+            Map<String, Object> product = foundProducts.get(0);
+            lastShownProduct.put(userId, product);
+            System.out.println("[handleSearch] lastShownProduct updated for userId=" + userId + ": " + product);
+            sendProductDetailsWithButtons(userId, product); // показуємо кнопки лише для реально знайденого товару
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendText(chatId, "⚠️ Помилка під час пошуку товару.");
         }
-
-        // Фільтруємо товари по назві
-        List<Map<String, Object>> matches = new ArrayList<>();
-        for (Map<String, Object> p : products) {
-            String name = String.valueOf(p.get("name")).toLowerCase();
-            if (name.contains(text.toLowerCase())) matches.add(p);
-        }
-
-        if (matches.isEmpty()) {
-            sendText(chatId, "❌ Товар не знайдено. Спробуйте інший запит.");
-            return;
-        }
-
-        searchResults.put(userId, matches); // Зберігаємо всі знайдені товари
-
-        if (matches.size() > 1) {
-            // Користувачу пропонуємо вибрати номер
-            StringBuilder sb = new StringBuilder("🔎 Знайдено кілька товарів:\n\n");
-            int idx = 1;
-            for (Map<String, Object> p : matches) sb.append(idx++).append(". ").append(p.get("name")).append("\n");
-            sb.append("\nВведіть номер товару, щоб побачити деталі.");
-            sendText(chatId, sb.toString());
-        } else {
-            // Якщо один товар — одразу показуємо
-            Map<String, Object> product = matches.get(0);
-            lastShownProduct.put(userId, product); // <-- важливо для кнопки 🛠
-            sendProductDetailsWithButtons(userId, product);
-        }
-
-        // Користувач чекає на вибір
-        userStates.put(userId, "waiting_for_search");
-
-        System.out.println("[handleSearch] User " + userId + " searched for: " + text + ", matches found: " + matches.size());
     }
 
     private void handleWaitingForProductNumber(Long userId, String chatId, String text) {
