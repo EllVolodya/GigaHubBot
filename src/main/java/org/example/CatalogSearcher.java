@@ -41,6 +41,9 @@ public class CatalogSearcher {
     public List<Map<String, Object>> searchMixedFromYAML(String keyword) {
         List<Map<String, Object>> results = new ArrayList<>();
 
+        // Нормалізація рядків для порівняння
+        String normKeyword = normalize(keyword);
+
         // 1️⃣ Завантаження catalog.yml через ClassLoader
         List<Map<String, Object>> yamlProducts = new ArrayList<>();
         try (InputStream input = getClass().getClassLoader().getResourceAsStream("catalog.yml")) {
@@ -62,43 +65,45 @@ public class CatalogSearcher {
         } catch (Exception e) {
             System.err.println("❌ Error loading catalog.yml: " + e.getMessage());
             e.printStackTrace();
+            return results;
         }
 
-        // 2️⃣ Фільтруємо по ключовому слову
-        yamlProducts.stream()
-                .filter(p -> p.get("name").toString().toLowerCase().contains(keyword.toLowerCase()))
-                .forEach(p -> {
-                    String name = p.get("name").toString();
-                    String price = p.get("price").toString();
+        // 2️⃣ Фільтруємо товари по ключовому слову
+        for (Map<String, Object> p : yamlProducts) {
+            String name = p.get("name") != null ? p.get("name").toString() : "";
+            String price = p.get("price") != null ? p.get("price").toString() : "?";
 
-                    // 3️⃣ Отримуємо категорію та підкатегорію з MySQL
-                    String category = "❓";
-                    String subcategory = "❓";
+            if (normalize(name).contains(normKeyword)) {
+                // 3️⃣ Отримуємо категорію та підкатегорію (якщо є в БД)
+                String category = "❓";
+                String subcategory = "❓";
 
-                    List<Map<String, Object>> dbMatches = findProductsByName(name);
-                    if (!dbMatches.isEmpty()) {
-                        Map<String, Object> match = dbMatches.get(0);
-                        category = match.get("category") != null ? match.get("category").toString() : "❓";
-                        subcategory = match.get("subcategory") != null ? match.get("subcategory").toString() : "❓";
-                    }
+                List<Map<String, Object>> dbMatches = findProductsByName(name);
+                if (!dbMatches.isEmpty()) {
+                    Map<String, Object> match = dbMatches.get(0);
+                    category = match.get("category") != null ? match.get("category").toString() : "❓";
+                    subcategory = match.get("subcategory") != null ? match.get("subcategory").toString() : "❓";
+                }
 
-                    // 4️⃣ Формуємо текст для Telegram
-                    String formattedText = String.format("""
-                        📦 %s
-                        💰 Ціна: %s грн за шт
-                        📂 %s → %s
-                        """, name, price, category, subcategory);
+                // 4️⃣ Формуємо текст для Telegram
+                String formattedText = String.format(
+                        "📦 %s\n💰 Ціна: %s грн за шт\n📂 %s → %s",
+                        name, price, category, subcategory
+                );
 
-                    // 5️⃣ Кладемо у Map для searchResults
-                    Map<String, Object> productMap = new HashMap<>();
-                    productMap.put("text", formattedText);
-                    productMap.put("name", name);
-                    productMap.put("price", price);
-                    productMap.put("category", category);
-                    productMap.put("subcategory", subcategory);
+                // 5️⃣ Створюємо Map для результатів
+                Map<String, Object> productMap = new HashMap<>();
+                productMap.put("text", formattedText);
+                productMap.put("name", name);
+                productMap.put("price", price);
+                productMap.put("category", category);
+                productMap.put("subcategory", subcategory);
 
-                    results.add(productMap);
-                });
+                results.add(productMap);
+            }
+        }
+
+        System.out.println("[searchMixedFromYAML] Keyword: '" + keyword + "' -> Found: " + results.size() + " products");
 
         return results;
     }
@@ -333,6 +338,11 @@ public class CatalogSearcher {
         }
 
         return results;
+    }
+
+    private String normalize(String s) {
+        if (s == null) return "";
+        return s.replaceAll("[^\\p{L}\\p{Nd}]", "").toLowerCase();
     }
 
     // ---------------- Допоміжний метод ----------------
