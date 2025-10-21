@@ -22,13 +22,12 @@ public class ProductSearchManager {
                 int index = Integer.parseInt(text) - 1;
                 if (index >= 0 && index < products.size()) {
                     Map<String, Object> product = products.get(index);
+
                     bot.getLastShownProduct().put(userId, product);
 
-                    // Показуємо деталі
                     bot.sendProductDetailsWithButtons(userId, product);
 
-                    // Відчищаємо пошуковий список
-                    bot.getSearchResults().remove(userId);
+                    // НЕ очищуємо searchResults, бо кнопка 🛠 ще може використовуватись
                     return;
                 } else {
                     bot.sendText(chatId, "⚠️ Неправильний номер товару. Спробуйте ще раз.");

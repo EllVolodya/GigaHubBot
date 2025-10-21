@@ -997,10 +997,10 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔹 Додати товар у кошик в пошуку
-    private void addToCartTool(Long userId) {
+    public void addToCartTool(Long userId) {
+        Map<String, Object> product = lastShownProduct.get(userId);
         String chatId = String.valueOf(userId);
 
-        Map<String, Object> product = lastShownProduct.get(userId); // беремо останній показаний товар
         if (product == null) {
             sendText(chatId, "❌ Товар не знайдено для додавання в кошик.");
             return;
