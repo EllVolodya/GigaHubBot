@@ -1999,7 +1999,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
         text = text.trim();
 
-        if (text.equals("🛠 Додати в кошик")) { //
+        if (text.equals("🛠 Додати в кошик")) {
             Map<String, Object> product = getLastShownProduct().get(userId);
             if (product != null) {
                 addToCartTool(userId); // твій метод додавання в кошик
