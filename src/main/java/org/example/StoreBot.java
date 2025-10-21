@@ -750,6 +750,12 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "№12, Іваненко Іван Іванович, +380501234567, 4444"
                 );
             }
+
+            if (text.equals("🛠 Додати в кошик")) {
+                this.handleAddToCart(userId); // або просто handleAddToCart(userId)
+                sendText(chatId, "✅ Товар додано до кошика!\n🔎 Введіть назву нового товару або оберіть інший.");
+                return;
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1813,15 +1819,22 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔍 Пошук товару
     private void handleSearch(Long userId, String chatId, String text) {
-        List<Map<String, Object>> products = loadCatalogFlat();
-        List<Map<String, Object>> matches = new ArrayList<>();
+        text = text.trim();
 
+        if (text.isEmpty()) {
+            sendText(chatId, "⚠️ Введіть назву товару для пошуку.");
+            return;
+        }
+
+        List<Map<String, Object>> products = loadCatalogFlat();
         if (products == null || products.isEmpty()) {
             sendText(chatId, "❌ Каталог порожній або не завантажився.");
             userStates.remove(userId);
             return;
         }
 
+        // Збираємо збіги по назві
+        List<Map<String, Object>> matches = new ArrayList<>();
         for (Map<String, Object> p : products) {
             String name = String.valueOf(p.get("name")).toLowerCase();
             if (name.contains(text.toLowerCase())) {
@@ -1831,18 +1844,34 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (matches.isEmpty()) {
             sendText(chatId, "❌ Товар не знайдено. Спробуйте інший запит.");
-        } else {
-            searchResults.put(Long.parseLong(chatId), matches);
-            productIndex.put(Long.parseLong(chatId), 0);
-            try {
-                sendSearchedProduct(Long.parseLong(chatId));
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-                sendText(chatId, "⚠️ Помилка під час відображення товару.");
-            }
+            return;
         }
 
-        userStates.remove(userId);
+        // Зберігаємо всі знайдені товари для користувача
+        searchResults.put(userId, matches);
+
+        if (matches.size() > 1) {
+            // Якщо кілька результатів — показуємо список з номерами
+            StringBuilder sb = new StringBuilder("🔎 Знайдено кілька товарів:\n\n");
+            int idx = 1;
+            for (Map<String, Object> p : matches) {
+                sb.append(idx++).append(". ").append(p.get("name")).append("\n");
+            }
+            sb.append("\nВведіть номер товару, щоб побачити деталі.");
+            sendText(chatId, sb.toString());
+        } else {
+            // Якщо знайдено один товар — показуємо одразу
+            Map<String, Object> product = matches.get(0);
+            lastShownProduct.put(userId, product);
+
+            // Показуємо товар з кнопками
+            sendProductDetailsWithButtons(userId, product);
+        }
+
+        // Користувач залишається у стані пошуку
+        userStates.put(userId, "waiting_for_search");
+
+        System.out.println("[handleSearch] User " + userId + " searched for: " + text + ", matches found: " + matches.size());
     }
 
     private void handleWaitingForProductNumber(Long userId, String chatId, String text) {
@@ -1893,7 +1922,7 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row2);
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add("🔙 Назад");
+        row3.add(new KeyboardButton(BACK_BUTTON));
         keyboard.add(row3);
 
         keyboardMarkup.setKeyboard(keyboard);
@@ -1950,15 +1979,15 @@ public class StoreBot extends TelegramLongPollingBot {
             List<KeyboardRow> keyboard = new ArrayList<>();
 
             KeyboardRow row1 = new KeyboardRow();
-            row1.add("🛠 Додати в кошик");
+            row1.add("🛠 Додати в кошик"); // кнопка запускає handleAddToCart
             keyboard.add(row1);
 
             KeyboardRow row2 = new KeyboardRow();
-            row2.add("🛒 Переглянути кошик");
+            row2.add("🛒 Переглянути кошик"); // показує поточний кошик
             keyboard.add(row2);
 
             KeyboardRow row3 = new KeyboardRow();
-            row3.add("🔙 Назад");
+            row3.add("🔙 Назад"); // повернення до попереднього меню
             keyboard.add(row3);
 
             keyboardMarkup.setKeyboard(keyboard);
@@ -3341,5 +3370,19 @@ public class StoreBot extends TelegramLongPollingBot {
         } else {
             System.out.println("[showProductDetails] No last shown product for user " + userId);
         }
+    }
+
+    public void handleAddToCart(Long userId) {
+        Map<String, Object> product = lastShownProduct.get(userId);
+        if (product == null) {
+            sendText(userId.toString(), "❌ Товар не знайдено для додавання в кошик.");
+            return;
+        }
+
+        userCart.computeIfAbsent(userId, k -> new ArrayList<>());
+        userCart.get(userId).add(product);
+
+        sendText(userId.toString(), "✅ Товар додано до кошика!");
+        System.out.println("[handleAddToCart] User " + userId + " added product: " + product.get("name"));
     }
 }
