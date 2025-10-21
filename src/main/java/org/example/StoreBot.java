@@ -904,60 +904,61 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Назад
     private void handleBack(String chatId) throws TelegramApiException {
         Long userId = Long.parseLong(chatId);
+        System.out.println("[handleBack] Back button pressed by user " + userId);
 
-        System.out.println("[handleBack] User " + userId + " pressed Back.");
+        // 🟩 Якщо користувач дивиться товар після пошуку
+        if (getLastShownProduct().containsKey(userId)) {
+            getLastShownProduct().remove(userId);
+            getSearchResults().remove(userId); // очищаємо знайдені товари
+            getUserStates().put(userId, "waiting_for_search");
 
-        // 🔸 1. Повне очищення тимчасових станів
-        getUserStates().remove(userId);
-        getLastShownProduct().remove(userId);
-        adminMatchList.remove(userId);
-        productIndex.remove(userId);
+            sendText(chatId, "🔎 Введіть назву товару, який хочете знайти:");
+            System.out.println("[handleBack] Returned to search mode.");
+            return;
+        }
 
-        // 🔸 2. Якщо користувач був у підкатегорії
+        // 1️⃣ Підкатегорії → категорії
         if (currentSubcategory.containsKey(userId)) {
             currentSubcategory.remove(userId);
-            System.out.println("[handleBack] Returning user " + userId + " to categories from subcategory.");
-            if (currentCategory.containsKey(userId)) {
-                sendSubcategories(userId, currentCategory.get(userId));
-            } else {
-                sendCategories(userId);
-            }
+            productIndex.remove(userId);
+            sendSubcategories(userId, currentCategory.get(userId));
+            System.out.println("[handleBack] Returned to categories list.");
             return;
         }
 
-        // 🔸 3. Якщо користувач був у категорії
+        // 2️⃣ Категорії → показуємо категорії
         if (currentCategory.containsKey(userId)) {
             currentCategory.remove(userId);
-            System.out.println("[handleBack] Returning user " + userId + " to main menu from category.");
-            sendMessage(createUserMenu(chatId, userId));
+            sendCategories(userId);
+            System.out.println("[handleBack] Returned to main categories.");
             return;
         }
 
-        // 🔸 4. Якщо користувач у кошику
+        // 3️⃣ Кошик → головне меню
         if (userCart.containsKey(userId)) {
-            System.out.println("[handleBack] Returning user " + userId + " from cart to main menu.");
             sendMessage(createUserMenu(chatId, userId));
+            System.out.println("[handleBack] Returned from cart to main menu.");
             return;
         }
 
-        // 🔸 5. Якщо користувач у адмін-меню
+        // 4️⃣ Адмін-меню
         if (adminOrderIndex.containsKey(userId)) {
             adminOrderIndex.remove(userId);
-            System.out.println("[handleBack] Returning admin " + userId + " to admin menu.");
             sendMessage(createAdminMenu(chatId));
+            System.out.println("[handleBack] Returned to admin menu.");
             return;
         }
 
-        // 🔸 6. Якщо користувач у меню розробника
+        // 5️⃣ Меню розробника
         if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
-            System.out.println("[handleBack] Returning developer " + userId + " to developer menu.");
             sendMessage(createDeveloperMenu(chatId));
+            System.out.println("[handleBack] Returned to developer menu.");
             return;
         }
 
-        // 🔸 7. За замовчуванням — головне меню
-        System.out.println("[handleBack] Default: Returning user " + userId + " to main menu.");
+        // 6️⃣ За замовчуванням → головне меню
         sendMessage(createUserMenu(chatId, userId));
+        System.out.println("[handleBack] Returned to main menu (default).");
     }
 
     // 🔹 Показ наступного товару по id
