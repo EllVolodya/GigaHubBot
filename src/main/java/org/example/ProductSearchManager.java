@@ -7,34 +7,37 @@ public class ProductSearchManager {
     public static void handleSearch(StoreBot bot, Long userId, String chatId, String text) {
         text = text.trim();
 
-        // Якщо користувач вводить номер
-        if (text.matches("\\d+")) {
-            List<Map<String, Object>> products = bot.getSearchResults().get(userId);
-            if (products != null) {
-                int index = Integer.parseInt(text) - 1;
-                if (index >= 0 && index < products.size()) {
-                    Map<String, Object> product = products.get(index);
-                    bot.getLastShownProduct().put(userId, product);
+        try {
+            // --- Якщо користувач ввів номер товару з попереднього списку ---
+            if (text.matches("\\d+")) {
+                List<Map<String, Object>> products = bot.getSearchResults().get(userId);
+                if (products != null) {
+                    int index = Integer.parseInt(text) - 1;
+                    if (index >= 0 && index < products.size()) {
+                        Map<String, Object> product = products.get(index);
 
-                    // ✅ Показуємо деталі товару
-                    bot.sendProductDetailsWithButtons(userId, product);
+                        // Запам'ятовуємо останній показаний товар
+                        bot.getLastShownProduct().put(userId, product);
 
-                    bot.getSearchResults().remove(userId);
-                    return;
-                } else {
-                    bot.sendText(chatId, "⚠️ Неправильний номер товару. Спробуйте ще раз.");
-                    return;
+                        // Показуємо деталі
+                        bot.sendProductDetailsWithButtons(userId, product);
+
+                        // Видаляємо результати пошуку, якщо потрібно
+                        bot.getSearchResults().remove(userId);
+                        return;
+                    } else {
+                        bot.sendText(chatId, "⚠️ Неправильний номер товару. Спробуйте ще раз.");
+                        return;
+                    }
                 }
             }
-        }
 
-        // Якщо користувач просто ввів назву
-        if (text.isEmpty()) {
-            bot.sendText(chatId, "⚠️ Введіть назву товару для пошуку.");
-            return;
-        }
+            // --- Якщо користувач ввів назву товару ---
+            if (text.isEmpty()) {
+                bot.sendText(chatId, "⚠️ Введіть назву товару для пошуку.");
+                return;
+            }
 
-        try {
             CatalogSearcher searcher = new CatalogSearcher();
             List<Map<String, Object>> foundProducts = searcher.searchMixedFromYAML(text);
 
@@ -56,11 +59,11 @@ public class ProductSearchManager {
                 return;
             }
 
-            // Якщо знайдено один товар
+            // --- Якщо знайдено лише один товар ---
             Map<String, Object> product = foundProducts.get(0);
             bot.getLastShownProduct().put(userId, product);
 
-            // ✅ Показуємо деталі товару
+            // Показуємо деталі товару з кнопками
             bot.sendProductDetailsWithButtons(userId, product);
 
         } catch (Exception e) {

@@ -792,9 +792,12 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Показ кошика
     private void showCart(Long userId) throws TelegramApiException {
         List<Map<String, Object>> cart = userCart.get(userId);
+        String chatId = String.valueOf(userId);
 
         if (cart == null || cart.isEmpty()) {
-            sendMessage(createUserMenu(String.valueOf(userId), userId));
+            sendText(chatId, "🛒 Ваш кошик порожній.");
+            // Можна додати кнопку назад у меню
+            sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
@@ -813,18 +816,19 @@ public class StoreBot extends TelegramLongPollingBot {
         // Клавіатура
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
+        markup.setOneTimeKeyboard(false);
 
         KeyboardRow row1 = new KeyboardRow();
         row1.add("🛒 Замовити товар");
         row1.add("🧹 Очистити кошик");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add(BACK_BUTTON);
+        row2.add("🔙 Назад"); // Якщо BACK_BUTTON не оголошено
 
         markup.setKeyboard(List.of(row1, row2));
 
         SendMessage msg = SendMessage.builder()
-                .chatId(String.valueOf(userId))
+                .chatId(chatId)
                 .text(sb.toString())
                 .replyMarkup(markup)
                 .build();
@@ -1003,23 +1007,17 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Додати товар у кошик в пошуку
     private void addToCartTool(Long userId) {
         String chatId = String.valueOf(userId);
-
-        // Беремо останній показаний товар
         Map<String, Object> product = lastShownProduct.get(userId);
+
         if (product == null) {
             sendText(chatId, "❌ Товар не знайдено для додавання в кошик.");
-            System.out.println("[addToCartTool] No product for user " + userId);
             return;
         }
 
-        // Ініціалізуємо кошик користувача, якщо його ще немає
         userCart.computeIfAbsent(userId, k -> new ArrayList<>());
         userCart.get(userId).add(product);
 
         sendText(chatId, "✅ Товар додано до кошика: " + product.get("name"));
-        System.out.println("[addToCartTool] User " + userId + " added product: " + product.get("name"));
-
-        // Користувач залишається у стані пошуку, можна продовжити
         sendText(chatId, "🔎 Введіть назву нового товару або оберіть інший товар з попереднього списку:");
     }
 
@@ -1850,20 +1848,17 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        List<Map<String, Object>> products = loadCatalogFlat();
+        List<Map<String, Object>> products = loadCatalogFlat(); // Завантажуємо catalog.yml
         if (products == null || products.isEmpty()) {
             sendText(chatId, "❌ Каталог порожній або не завантажився.");
             userStates.remove(userId);
             return;
         }
 
-        // Збираємо збіги по назві
         List<Map<String, Object>> matches = new ArrayList<>();
         for (Map<String, Object> p : products) {
             String name = String.valueOf(p.get("name")).toLowerCase();
-            if (name.contains(text.toLowerCase())) {
-                matches.add(p);
-            }
+            if (name.contains(text.toLowerCase())) matches.add(p);
         }
 
         if (matches.isEmpty()) {
@@ -1871,30 +1866,21 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // Зберігаємо всі знайдені товари для користувача
         searchResults.put(userId, matches);
 
         if (matches.size() > 1) {
-            // Якщо кілька результатів — показуємо список з номерами
             StringBuilder sb = new StringBuilder("🔎 Знайдено кілька товарів:\n\n");
             int idx = 1;
-            for (Map<String, Object> p : matches) {
-                sb.append(idx++).append(". ").append(p.get("name")).append("\n");
-            }
+            for (Map<String, Object> p : matches) sb.append(idx++).append(". ").append(p.get("name")).append("\n");
             sb.append("\nВведіть номер товару, щоб побачити деталі.");
             sendText(chatId, sb.toString());
         } else {
-            // Якщо знайдено один товар — показуємо одразу
             Map<String, Object> product = matches.get(0);
             lastShownProduct.put(userId, product);
-
-            // Показуємо товар з кнопками
             sendProductDetailsWithButtons(userId, product);
         }
 
-        // Користувач залишається у стані пошуку
         userStates.put(userId, "waiting_for_search");
-
         System.out.println("[handleSearch] User " + userId + " searched for: " + text + ", matches found: " + matches.size());
     }
 
@@ -1975,57 +1961,42 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔹 Надсилаємо деталі останнього показаного товару з кнопками
     public void sendProductDetailsWithButtons(Long userId, Map<String, Object> product) {
-        String chatId = userId.toString();
+        String chatId = String.valueOf(userId);
 
-        if (product == null || product.isEmpty()) {
-            sendText(chatId, "❌ Товар не знайдено.");
-            System.out.println("[sendProductDetailsWithButtons] Product is null or empty for user " + userId);
-            return;
-        }
+        String message = String.format(
+                "📦 %s\n💰 Ціна: %s грн за шт\n📂 %s → %s\n\n🔎 Виберіть дію нижче або введіть інший товар для пошуку.",
+                product.get("name"),
+                product.get("price"),
+                product.getOrDefault("category", "❓"),
+                product.getOrDefault("subcategory", "❓")
+        );
+
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        keyboardMarkup.setResizeKeyboard(true);
+        keyboardMarkup.setOneTimeKeyboard(false);
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("🛠 Додати в кошик");
+        keyboard.add(row1);
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("🛒 Переглянути кошик");
+        keyboard.add(row2);
+
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add("🔙 Назад");
+        keyboard.add(row3);
+
+        keyboardMarkup.setKeyboard(keyboard);
+
+        SendMessage sendMessage = new SendMessage(chatId, message);
+        sendMessage.setReplyMarkup(keyboardMarkup);
 
         try {
-            // 🔹 Отримуємо категорію та підкатегорію з MySQL
-            String categoryInfo = DatabaseManager.getCategoryInfoForProduct(product);
-
-            // 🔹 Формуємо повідомлення
-            String message = String.format(
-                    "📦 %s\n💰 Ціна: %s грн за шт\n%s\n\n🔎 Виберіть дію нижче або введіть інший товар для пошуку.",
-                    product.getOrDefault("name", "Без назви"),
-                    product.getOrDefault("price", "—"),
-                    categoryInfo
-            );
-
-            // 🔹 Клавіатура
-            ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-            keyboardMarkup.setResizeKeyboard(true);
-            keyboardMarkup.setOneTimeKeyboard(false);
-
-            List<KeyboardRow> keyboard = new ArrayList<>();
-
-            KeyboardRow row1 = new KeyboardRow();
-            row1.add("🛠 Додати в кошик"); // кнопка запускає handleAddToCart
-            keyboard.add(row1);
-
-            KeyboardRow row2 = new KeyboardRow();
-            row2.add("🛒 Переглянути кошик"); // показує поточний кошик
-            keyboard.add(row2);
-
-            KeyboardRow row3 = new KeyboardRow();
-            row3.add("🔙 Назад"); // повернення до попереднього меню
-            keyboard.add(row3);
-
-            keyboardMarkup.setKeyboard(keyboard);
-
-            // 🔹 Відправка повідомлення
-            SendMessage sendMessage = new SendMessage(chatId, message);
-            sendMessage.setReplyMarkup(keyboardMarkup);
-
             execute(sendMessage);
-
-            System.out.println("[sendProductDetailsWithButtons] Sent product for user " + userId + ": " + product.get("name"));
-
         } catch (TelegramApiException e) {
-            System.err.println("[sendProductDetailsWithButtons] Telegram API error for user " + userId);
             e.printStackTrace();
         }
     }
