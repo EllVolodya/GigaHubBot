@@ -1958,15 +1958,26 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
-        ProductSearchManager searchManager = new ProductSearchManager(this);
-
         text = text.trim();
 
-        // Перевіряємо, чи користувач ввів номер товару
+        if (text.equals("🛠 Додати в кошик")) {
+            // Беремо останній показаний товар
+            Map<String, Object> product = getLastShownProduct().get(userId);
+            if (product != null) {
+                addToCartTool(userId); // твій метод додавання в кошик
+            } else {
+                sendText(chatId, "❌ Товар не знайдено для додавання в кошик.");
+            }
+            return;
+        }
+
+        ProductSearchManager searchManager = new ProductSearchManager(this);
+
+        // Якщо користувач ввів номер товару зі списку
         if (text.matches("\\d+")) {
             searchManager.handleSearchNumber(userId, chatId, text);
         } else {
-            // Якщо це текст — виконуємо пошук
+            // Якщо користувач ввів текст → пошук
             searchManager.performSearch(userId, chatId, text);
         }
     }
