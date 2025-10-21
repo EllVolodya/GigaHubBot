@@ -2505,25 +2505,29 @@ public class StoreBot extends TelegramLongPollingBot {
                 .build();
     }
 
+    // Меню в пошуку товару
     public void sendProductWithAddToCartRow(Long userId, String chatId, String productText) {
         SendMessage message = new SendMessage();
         message.setChatId(chatId);
         message.setText(productText);
 
-        // Створюємо клавіатуру
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        keyboardMarkup.setResizeKeyboard(true);       // компактна клавіатура
-        keyboardMarkup.setOneTimeKeyboard(true);      // ховається після натискання
+        keyboardMarkup.setResizeKeyboard(true);
+        keyboardMarkup.setOneTimeKeyboard(true);
 
-        // Один рядок з кнопкою
-        KeyboardRow row = new KeyboardRow();
-        row.add("🛠 Додати в кошик"); // текст кнопки
+        KeyboardRow addRow = new KeyboardRow();
+        addRow.add(new KeyboardButton("🛠 Додати в кошик"));
 
-        keyboardMarkup.setKeyboard(List.of(row));
+        KeyboardRow backCartRow = new KeyboardRow();
+        backCartRow.add(new KeyboardButton(BACK_BUTTON));
+        backCartRow.add(new KeyboardButton("🛍️ Перейти в кошик"));
+
+        keyboardMarkup.setKeyboard(List.of(addRow, backCartRow));
+
         message.setReplyMarkup(keyboardMarkup);
 
         try {
-            execute(message); // надсилаємо повідомлення
+            execute(message);
         } catch (TelegramApiException e) {
             e.printStackTrace();
             System.out.println("[sendProductWithAddToCartRow] Failed for user " + userId);
