@@ -1,6 +1,7 @@
 package org.example;
 
 import java.util.*;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 public class ProductSearchManager {
 

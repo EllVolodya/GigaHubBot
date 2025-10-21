@@ -93,6 +93,19 @@ public class StoreBot extends TelegramLongPollingBot {
         return userCart;
     }
 
+    public Map<Long, String> getUserStates() {
+        return userStates;
+    }
+
+    // і для зручності можна додати методи зміни стану
+    public void setUserState(Long userId, String state) {
+        userStates.put(userId, state);
+    }
+
+    public String getUserState(Long userId) {
+        return userStates.getOrDefault(userId, "default");
+    }
+
     @Override
     public void onUpdateReceived(Update update) {
         if (update == null || update.getMessage() == null) return;
@@ -875,13 +888,11 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleBack(String chatId) throws TelegramApiException {
         Long userId = Long.parseLong(chatId);
 
-        // 🔹 Якщо користувач у пошуку або перегляді товару → повертаємо в головне меню
-        if ("waiting_for_search".equals(userStates.get(userId)) || "viewing_product".equals(userStates.get(userId))) {
-            userStates.remove(userId);              // очищаємо стан пошуку
-            getSearchResults().remove(userId);  // очищаємо тимчасові результати пошуку
+        // Якщо користувач дивиться продукт після пошуку
+        if (getLastShownProduct().containsKey(userId)) {
             getLastShownProduct().remove(userId);
-
-            sendMessage(createUserMenu(chatId, userId));
+            getUserStates().put(userId, "waiting_for_search");
+            sendText(chatId, "🔎 Введіть назву товару для пошуку:");
             return;
         }
 
