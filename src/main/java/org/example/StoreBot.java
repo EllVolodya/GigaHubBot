@@ -269,7 +269,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
                 case "➡ Далі" -> showNextProduct(userId);
                 case "🛒 Додати в кошик" -> addToCart(userId);
-                case "🛠 Додати в кошик" -> searchManager.addToCart(userId);
+                case "🛠 Додати в кошик" -> addToCartTool(userId);
                 case "📍 Адреси та Контакти" -> {
                     SendMessage message = new SendMessage();
                     message.setChatId(chatId);
@@ -997,13 +997,14 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Додати товар у кошик в пошуку
     private void addToCartTool(Long userId) {
         String chatId = String.valueOf(userId);
-        Map<String, Object> product = lastShownProduct.get(userId); // останній показаний товар
+        Map<String, Object> product = lastShownProduct.get(userId); // беремо останній показаний товар
 
         if (product == null) {
             sendText(chatId, "❌ Товар не знайдено для додавання в кошик.");
             return;
         }
 
+        // Ініціалізуємо кошик користувача, якщо його ще немає
         userCart.computeIfAbsent(userId, k -> new ArrayList<>());
         userCart.get(userId).add(product);
 
