@@ -751,12 +751,6 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "№12, Іваненко Іван Іванович, +380501234567, 4444"
                 );
             }
-
-            if (text.equals("🛠 Додати в кошик")) {
-                this.handleAddToCart(userId); // або просто handleAddToCart(userId)
-                sendText(chatId, "✅ Товар додано до кошика!\n🔎 Введіть назву нового товару або оберіть інший.");
-                return;
-            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -792,12 +786,9 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Показ кошика
     private void showCart(Long userId) throws TelegramApiException {
         List<Map<String, Object>> cart = userCart.get(userId);
-        String chatId = String.valueOf(userId);
 
         if (cart == null || cart.isEmpty()) {
-            sendText(chatId, "🛒 Ваш кошик порожній.");
-            // Можна додати кнопку назад у меню
-            sendMessage(createUserMenu(chatId, userId));
+            sendMessage(createUserMenu(String.valueOf(userId), userId));
             return;
         }
 
@@ -813,22 +804,20 @@ public class StoreBot extends TelegramLongPollingBot {
         }
         sb.append("\n💰 Всього: ").append(total).append(" грн");
 
-        // Клавіатура
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
-        markup.setOneTimeKeyboard(false);
 
         KeyboardRow row1 = new KeyboardRow();
         row1.add("🛒 Замовити товар");
         row1.add("🧹 Очистити кошик");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("🔙 Назад"); // Якщо BACK_BUTTON не оголошено
+        row2.add(BACK_BUTTON);
 
         markup.setKeyboard(List.of(row1, row2));
 
         SendMessage msg = SendMessage.builder()
-                .chatId(chatId)
+                .chatId(String.valueOf(userId))
                 .text(sb.toString())
                 .replyMarkup(markup)
                 .build();
@@ -920,8 +909,6 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessage(createUserMenu(chatId, userId));
     }
 
-
-
     // 🔹 Показ наступного товару по id
     private void showNextProduct(Long chatId) throws TelegramApiException {
         String category = currentCategory.get(chatId);
@@ -1007,7 +994,7 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Додати товар у кошик в пошуку
     private void addToCartTool(Long userId) {
         String chatId = String.valueOf(userId);
-        Map<String, Object> product = lastShownProduct.get(userId);
+        Map<String, Object> product = lastShownProduct.get(userId); // останній показаний товар
 
         if (product == null) {
             sendText(chatId, "❌ Товар не знайдено для додавання в кошик.");
@@ -1956,19 +1943,22 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
-        ProductSearchManager.handleSearch(this, userId, chatId, text);
+        ProductSearchManager searchManager = new ProductSearchManager(this);
+        searchManager.handleSearch(userId, chatId, text); // ✅ виклик через об'єкт
     }
 
     // 🔹 Надсилаємо деталі останнього показаного товару з кнопками
     public void sendProductDetailsWithButtons(Long userId, Map<String, Object> product) {
         String chatId = String.valueOf(userId);
 
+        String name = String.valueOf(product.getOrDefault("name", "Без назви"));
+        String price = String.valueOf(product.getOrDefault("price", "N/A"));
+        String category = String.valueOf(product.getOrDefault("category", "❓"));
+        String subcategory = String.valueOf(product.getOrDefault("subcategory", "❓"));
+
         String message = String.format(
                 "📦 %s\n💰 Ціна: %s грн за шт\n📂 %s → %s\n\n🔎 Виберіть дію нижче або введіть інший товар для пошуку.",
-                product.get("name"),
-                product.get("price"),
-                product.getOrDefault("category", "❓"),
-                product.getOrDefault("subcategory", "❓")
+                name, price, category, subcategory
         );
 
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
@@ -1991,7 +1981,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
         keyboardMarkup.setKeyboard(keyboard);
 
-        SendMessage sendMessage = new SendMessage(chatId, message);
+        SendMessage sendMessage = new SendMessage();
+        sendMessage.setChatId(chatId);
+        sendMessage.setText(message);
         sendMessage.setReplyMarkup(keyboardMarkup);
 
         try {
