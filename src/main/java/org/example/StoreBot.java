@@ -72,6 +72,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Boolean> developerMenuState = new HashMap<>();
 
     private final PhotoHandler photoHandler = new PhotoHandler(this, userStates, adminEditingProduct);
+    private final ProductSearchManager searchManager = new ProductSearchManager(this);
 
     private static final String BACK_BUTTON = "⬅️ Назад";
 
@@ -87,6 +88,10 @@ public class StoreBot extends TelegramLongPollingBot {
     public java.io.File downloadTelegramFile(String fileId) throws TelegramApiException {
         org.telegram.telegrambots.meta.api.objects.File tgFile = execute(new GetFile(fileId));
         return downloadFile(tgFile);
+    }
+
+    public Map<Long, List<Map<String, Object>>> getUserCart() {
+        return userCart;
     }
 
     @Override
@@ -264,7 +269,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
                 case "➡ Далі" -> showNextProduct(userId);
                 case "🛒 Додати в кошик" -> addToCart(userId);
-                case "🛠 Додати в кошик" -> addToCartTool(userId);
+                case "🛠 Додати в кошик" -> searchManager.addToCart(userId);
                 case "📍 Адреси та Контакти" -> {
                     SendMessage message = new SendMessage();
                     message.setChatId(chatId);
@@ -309,8 +314,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "🔍 Пошук товару" -> {
                     userStates.put(userId, "waiting_for_search");
                     sendText(chatId, "🔎 Введіть назву товару, який хочете знайти:");
-                    System.out.println("🟢 User " + userId + " встановив стан waiting_for_search");
-                    return;
                 }
 
                 case "🛒 Замовити товар" -> {
@@ -2634,7 +2637,7 @@ public class StoreBot extends TelegramLongPollingBot {
             for (int start = 0; start < text.length(); start += maxLength) {
                 int end = Math.min(start + maxLength, text.length());
                 SendMessage msg = new SendMessage(chatId, text.substring(start, end));
-                msg.setParseMode("HTML"); // ✅ HTML formatting
+                msg.setParseMode("HTML");
                 execute(msg);
             }
         } catch (TelegramApiException e) {
