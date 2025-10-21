@@ -908,8 +908,8 @@ public class StoreBot extends TelegramLongPollingBot {
         // Якщо користувач дивиться продукт після пошуку
         if (getLastShownProduct().containsKey(userId)) {
             getLastShownProduct().remove(userId);
-            getUserStates().put(userId, "waiting_for_search");
-            sendText(chatId, "🔎 Введіть назву товару для пошуку:");
+            getUserStates().remove(userId); // ✅ очищаємо стан
+            sendMessage(createUserMenu(chatId, userId)); // ✅ повертаємось у головне меню
             return;
         }
 
