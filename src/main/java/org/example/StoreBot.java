@@ -1840,8 +1840,31 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 1️⃣ Якщо користувач ввів номер товару з попереднього списку
+        if (text.matches("\\d+")) {
+            List<Map<String, Object>> products = searchResults.get(userId);
+            if (products != null) {
+                int index = Integer.parseInt(text) - 1;
+                if (index >= 0 && index < products.size()) {
+                    Map<String, Object> product = products.get(index);
+                    lastShownProduct.put(userId, product);
+                    System.out.println("[handleSearch] Selected product: " + product);
+                    sendProductDetailsWithButtons(userId, product);
+                    return; // ✅ номер оброблено, далі пошук не виконується
+                } else {
+                    sendText(chatId, "⚠️ Неправильний номер товару. Спробуйте ще раз.");
+                    return;
+                }
+            } else {
+                sendText(chatId, "⚠️ Список попередніх товарів порожній. Введіть текст для пошуку.");
+                return;
+            }
+        }
+
+        // 2️⃣ Якщо користувач ввів текст для пошуку
         try {
             CatalogSearcher searcher = new CatalogSearcher();
+            System.out.println("[handleSearch] Searching products for keyword: '" + text + "'");
             List<Map<String, Object>> foundProducts = searcher.searchMixedFromYAML(text);
             System.out.println("[handleSearch] Found products: " + foundProducts.size());
 
@@ -1860,14 +1883,15 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 searchResults.put(userId, foundProducts);
                 sendText(chatId, sb.toString());
+                System.out.println("[handleSearch] Multiple products saved in searchResults for userId=" + userId);
                 return;
             }
 
-            // ✅ Якщо знайдено один товар
+            // 3️⃣ Якщо знайдено один товар
             Map<String, Object> product = foundProducts.get(0);
             lastShownProduct.put(userId, product);
             System.out.println("[handleSearch] lastShownProduct updated for userId=" + userId + ": " + product);
-            sendProductDetailsWithButtons(userId, product); // показуємо кнопки лише для реально знайденого товару
+            sendProductDetailsWithButtons(userId, product);
 
         } catch (Exception e) {
             e.printStackTrace();
