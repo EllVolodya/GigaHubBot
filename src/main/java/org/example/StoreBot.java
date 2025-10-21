@@ -996,18 +996,25 @@ public class StoreBot extends TelegramLongPollingBot {
         sendText(chatId, "✅ Товар \"" + product.get("name") + "\" додано до кошика!");
     }
 
-    // 🔹 Додати товар у кошик в пошуку
     public void addToCartTool(Long userId) {
-        Map<String, Object> product = lastShownProduct.get(userId);
         String chatId = String.valueOf(userId);
+        System.out.println("[addToCartTool] User " + userId + " clicked 'Add to cart'");
+
+        Map<String, Object> product = getLastShownProduct().get(userId);
+        System.out.println("[addToCartTool] lastShownProduct: " + product);
 
         if (product == null) {
             sendText(chatId, "❌ Товар не знайдено для додавання в кошик.");
+            System.out.println("[addToCartTool] No product found for user " + userId);
             return;
         }
 
-        userCart.computeIfAbsent(userId, k -> new ArrayList<>());
-        userCart.get(userId).add(product);
+        // Створюємо кошик, якщо його ще немає
+        getUserCart().computeIfAbsent(userId, k -> new ArrayList<>());
+        System.out.println("[addToCartTool] User cart before adding: " + getUserCart().get(userId));
+
+        getUserCart().get(userId).add(product);
+        System.out.println("[addToCartTool] User cart after adding: " +getUserCart().get(userId));
 
         sendText(chatId, "✅ Товар додано до кошика: " + product.get("name"));
         sendText(chatId, "🔎 Введіть назву нового товару або оберіть інший товар з попереднього списку:");
