@@ -264,6 +264,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
                 case "➡ Далі" -> showNextProduct(userId);
                 case "🛒 Додати в кошик" -> addToCart(userId);
+                case "🛠 Додати в кошик" -> addToCartTool(userId);
                 case "📍 Адреси та Контакти" -> {
                     SendMessage message = new SendMessage();
                     message.setChatId(chatId);
@@ -997,6 +998,29 @@ public class StoreBot extends TelegramLongPollingBot {
 
         userCart.computeIfAbsent(chatId, k -> new ArrayList<>()).add(product);
         sendText(chatId, "✅ Товар \"" + product.get("name") + "\" додано до кошика!");
+    }
+
+    // 🔹 Додати товар у кошик в пошуку
+    private void addToCartTool(Long userId) {
+        String chatId = String.valueOf(userId);
+
+        // Беремо останній показаний товар
+        Map<String, Object> product = lastShownProduct.get(userId);
+        if (product == null) {
+            sendText(chatId, "❌ Товар не знайдено для додавання в кошик.");
+            System.out.println("[addToCartTool] No product for user " + userId);
+            return;
+        }
+
+        // Ініціалізуємо кошик користувача, якщо його ще немає
+        userCart.computeIfAbsent(userId, k -> new ArrayList<>());
+        userCart.get(userId).add(product);
+
+        sendText(chatId, "✅ Товар додано до кошика: " + product.get("name"));
+        System.out.println("[addToCartTool] User " + userId + " added product: " + product.get("name"));
+
+        // Користувач залишається у стані пошуку, можна продовжити
+        sendText(chatId, "🔎 Введіть назву нового товару або оберіть інший товар з попереднього списку:");
     }
 
     private final UserManager userManager = new UserManager();
