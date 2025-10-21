@@ -875,6 +875,16 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleBack(String chatId) throws TelegramApiException {
         Long userId = Long.parseLong(chatId);
 
+        // 🔹 Якщо користувач у пошуку або перегляді товару → повертаємо в головне меню
+        if ("waiting_for_search".equals(userStates.get(userId)) || "viewing_product".equals(userStates.get(userId))) {
+            userStates.remove(userId);              // очищаємо стан пошуку
+            getSearchResults().remove(userId);  // очищаємо тимчасові результати пошуку
+            getLastShownProduct().remove(userId);
+
+            sendMessage(createUserMenu(chatId, userId));
+            return;
+        }
+
         // 1️⃣ Підкатегорії → категорії
         if (currentSubcategory.containsKey(userId)) {
             currentSubcategory.remove(userId);
