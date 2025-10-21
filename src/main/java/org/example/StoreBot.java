@@ -1958,9 +1958,11 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
-        // Використовуємо новий handler
+        text = text.trim();
+
+        // Викликаємо performSearch лише для текстового пошуку
         ProductSearchManager searchHandler = new ProductSearchManager(this);
-        searchHandler.performSearch(userId, chatId, text); // ✅ новий метод
+        searchHandler.performSearch(userId, chatId, text);
     }
 
     // 🔹 Надсилаємо деталі останнього показаного товару з кнопками
@@ -2493,21 +2495,19 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // Створюємо клавіатуру
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        keyboardMarkup.setResizeKeyboard(true); // щоб клавіатура була компактною
-        keyboardMarkup.setOneTimeKeyboard(true); // клавіатура зникає після натискання
+        keyboardMarkup.setResizeKeyboard(true);       // компактна клавіатура
+        keyboardMarkup.setOneTimeKeyboard(true);      // ховається після натискання
 
-        // Створюємо один рядок з кнопкою
+        // Один рядок з кнопкою
         KeyboardRow row = new KeyboardRow();
         row.add("🛠 Додати в кошик"); // текст кнопки
 
-        // Додаємо рядок у клавіатуру
         keyboardMarkup.setKeyboard(List.of(row));
-
         message.setReplyMarkup(keyboardMarkup);
 
         try {
-            execute(message); // Надсилаємо повідомлення
-        } catch (Exception e) {
+            execute(message); // надсилаємо повідомлення
+        } catch (TelegramApiException e) {
             e.printStackTrace();
             System.out.println("[sendProductWithAddToCartRow] Failed for user " + userId);
         }

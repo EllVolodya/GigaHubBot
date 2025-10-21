@@ -17,7 +17,6 @@ public class ProductSearchManager {
 
         if (text.isEmpty()) {
             bot.sendText(chatId, "⚠️ Введіть назву товару для пошуку.");
-            System.out.println("[performSearch] Empty input for user " + userId);
             return;
         }
 
@@ -28,13 +27,13 @@ public class ProductSearchManager {
 
             if (foundProducts.isEmpty()) {
                 bot.sendText(chatId, "❌ Товар не знайдено. Спробуйте інший запит.");
-                System.out.println("[performSearch] No products found for '" + text + "'");
                 return;
             }
 
             bot.getSearchResults().put(userId, foundProducts);
 
             for (Map<String, Object> product : foundProducts) {
+                // Формуємо текст товару
                 String productText = String.format(
                         "📦 %s\n💰 Ціна: %s грн за шт\n📂 %s → %s",
                         product.get("name"),
@@ -43,13 +42,16 @@ public class ProductSearchManager {
                         product.get("subcategory")
                 );
 
+                // Зберігаємо останній показаний товар для додавання в кошик
+                bot.getLastShownProduct().put(userId, product);
+
+                // Надсилаємо повідомлення з кнопкою в рядку
                 bot.sendProductWithAddToCartRow(userId, chatId, productText);
             }
 
         } catch (Exception e) {
             e.printStackTrace();
             bot.sendText(chatId, "⚠️ Помилка під час пошуку товару.");
-            System.out.println("[performSearch] Exception for user " + userId + ": " + e.getMessage());
         }
     }
 
