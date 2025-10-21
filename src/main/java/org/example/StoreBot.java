@@ -1958,11 +1958,17 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
+        ProductSearchManager searchManager = new ProductSearchManager(this);
+
         text = text.trim();
 
-        // Викликаємо performSearch лише для текстового пошуку
-        ProductSearchManager searchHandler = new ProductSearchManager(this);
-        searchHandler.performSearch(userId, chatId, text);
+        // Перевіряємо, чи користувач ввів номер товару
+        if (text.matches("\\d+")) {
+            searchManager.handleSearchNumber(userId, chatId, text);
+        } else {
+            // Якщо це текст — виконуємо пошук
+            searchManager.performSearch(userId, chatId, text);
+        }
     }
 
     // 🔹 Надсилаємо деталі останнього показаного товару з кнопками
