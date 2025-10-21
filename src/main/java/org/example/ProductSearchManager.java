@@ -12,9 +12,24 @@ public class ProductSearchManager {
     }
 
     // Основний метод пошуку
-    public void performSearch(Long userId, String chatId, String text) {
+    public void performSearch(Long userId, String chatId, String text) throws TelegramApiException {
         text = text.trim();
         System.out.println("[performSearch] User " + userId + " input: '" + text + "'");
+
+        // ⛔ Якщо користувач натиснув "Назад" — виходимо з пошуку
+        if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
+            bot.getUserStates().remove(userId);
+            bot.execute(bot.createUserMenu(chatId, userId));
+            System.out.println("[performSearch] User " + userId + " exited search mode.");
+            return;
+        }
+
+        // ⛔ Якщо користувач не у стані пошуку — не шукаємо
+        String state = bot.getUserStates().get(userId);
+        if (state == null || !state.equals("waiting_for_search")) {
+            System.out.println("[performSearch] User " + userId + " not in search mode, ignoring input.");
+            return;
+        }
 
         if (text.isEmpty()) {
             bot.sendText(chatId, "⚠️ Введіть назву товару для пошуку.");
@@ -35,7 +50,7 @@ public class ProductSearchManager {
             bot.getSearchResults().put(userId, foundProducts);
 
             if (foundProducts.size() > 1) {
-                // Показуємо список товарів з номерами
+                // Показуємо список товарів
                 StringBuilder sb = new StringBuilder("🔎 Знайдено кілька товарів:\n\n");
                 int idx = 1;
                 for (Map<String, Object> p : foundProducts) {
@@ -44,7 +59,7 @@ public class ProductSearchManager {
                 sb.append("\nВведіть номер товару, щоб побачити деталі.");
                 bot.sendText(chatId, sb.toString());
             } else {
-                // Якщо один товар — одразу показуємо з кнопкою
+                // Якщо один товар — показуємо відразу
                 Map<String, Object> product = foundProducts.get(0);
                 bot.getLastShownProduct().put(userId, product);
                 String productText = String.format(
@@ -65,6 +80,21 @@ public class ProductSearchManager {
 
     // Метод для обробки введення номера
     public void handleSearchNumber(Long userId, String chatId, String text) {
+        // ⛔ Якщо користувач натиснув "Назад" — вийти
+        if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
+            bot.getUserStates().remove(userId);
+            bot.sendMainMenu(chatId);
+            System.out.println("[handleSearchNumber] User " + userId + " exited search mode.");
+            return;
+        }
+
+        // ⛔ Якщо користувач не у пошуку — ігноруємо
+        String state = bot.getUserStates().get(userId);
+        if (state == null || !state.equals("waiting_for_search")) {
+            System.out.println("[handleSearchNumber] User " + userId + " not in search mode, ignoring input.");
+            return;
+        }
+
         if (!text.matches("\\d+")) return;
 
         List<Map<String, Object>> products = bot.getSearchResults().get(userId);

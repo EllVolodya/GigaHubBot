@@ -2000,7 +2000,6 @@ public class StoreBot extends TelegramLongPollingBot {
         text = text.trim();
 
         if (text.equals("🛠 Додати в кошик")) {
-            // Беремо останній показаний товар
             Map<String, Object> product = getLastShownProduct().get(userId);
             if (product != null) {
                 addToCartTool(userId); // твій метод додавання в кошик
@@ -2012,12 +2011,15 @@ public class StoreBot extends TelegramLongPollingBot {
 
         ProductSearchManager searchManager = new ProductSearchManager(this);
 
-        // Якщо користувач ввів номер товару зі списку
-        if (text.matches("\\d+")) {
-            searchManager.handleSearchNumber(userId, chatId, text);
-        } else {
-            // Якщо користувач ввів текст → пошук
-            searchManager.performSearch(userId, chatId, text);
+        try {
+            if (text.matches("\\d+")) {
+                searchManager.handleSearchNumber(userId, chatId, text);
+            } else {
+                searchManager.performSearch(userId, chatId, text);
+            }
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+            sendText(chatId, "⚠️ Сталася помилка під час обробки пошуку.");
         }
     }
 
@@ -2434,7 +2436,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    private SendMessage createUserMenu(String chatId, Long userId) {
+    public SendMessage createUserMenu(String chatId, Long userId) {
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
 
