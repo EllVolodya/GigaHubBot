@@ -72,7 +72,6 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Boolean> developerMenuState = new HashMap<>();
 
     private final PhotoHandler photoHandler = new PhotoHandler(this, userStates, adminEditingProduct);
-    private final ProductSearchManager searchManager = new ProductSearchManager(this);
 
     private static final String BACK_BUTTON = "⬅️ Назад";
 
@@ -1959,8 +1958,9 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
-        ProductSearchManager searchManager = new ProductSearchManager(this);
-        searchManager.handleSearch(userId, chatId, text); // ✅ виклик через об'єкт
+        // Використовуємо новий handler
+        ProductSearchManager searchHandler = new ProductSearchManager(this);
+        searchHandler.performSearch(userId, chatId, text); // ✅ новий метод
     }
 
     // 🔹 Надсилаємо деталі останнього показаного товару з кнопками
@@ -2484,6 +2484,33 @@ public class StoreBot extends TelegramLongPollingBot {
                 .text("👨‍💻 Меню розробника, оберіть дію:")
                 .replyMarkup(markup)
                 .build();
+    }
+
+    public void sendProductWithAddToCartRow(Long userId, String chatId, String productText) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText(productText);
+
+        // Створюємо клавіатуру
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        keyboardMarkup.setResizeKeyboard(true); // щоб клавіатура була компактною
+        keyboardMarkup.setOneTimeKeyboard(true); // клавіатура зникає після натискання
+
+        // Створюємо один рядок з кнопкою
+        KeyboardRow row = new KeyboardRow();
+        row.add("🛠 Додати в кошик"); // текст кнопки
+
+        // Додаємо рядок у клавіатуру
+        keyboardMarkup.setKeyboard(List.of(row));
+
+        message.setReplyMarkup(keyboardMarkup);
+
+        try {
+            execute(message); // Надсилаємо повідомлення
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("[sendProductWithAddToCartRow] Failed for user " + userId);
+        }
     }
 
     private SendMessage createEditMenu(String chatId, String productName) {
