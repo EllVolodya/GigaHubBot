@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -38,8 +39,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Integer> productIndex = new HashMap<>();
     protected Map<Long, Map<String, Object>> lastShownProduct = new HashMap<>();
     private final Map<Long, String> userStates = new HashMap<>();
-    private Map<Long, String> userState = new HashMap<>();
-    private Map<Long, String> previousState = new HashMap<>();
+    private final Map<Long, String> userState = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userCart = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userOrders = new HashMap<>();
 
@@ -54,7 +54,6 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, String> adminEditingField = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> adminMatchList = new HashMap<>();
     private final Map<Long, String> adminNewCategory = new HashMap<>();
-    private final List<String> hitItems = new ArrayList<>();
     private final Map<Long, List<String>> supportAnswers = new HashMap<>();
     private final Map<Long, Integer> adminOrderIndex = new HashMap<>();
     private final Map<Long, String> adminSearchSource = new HashMap<>();  // джерело пошуку для кожного користувача
@@ -65,7 +64,14 @@ public class StoreBot extends TelegramLongPollingBot {
     protected Map<Long, List<Map<String, Object>>> searchResults = new HashMap<>();
 
     private final Map<Long, List<String>> feedbacks = new HashMap<>();
+
+    @SuppressWarnings("unused")
+    private final Map<Long, String> previousState = new HashMap<>();
+    @SuppressWarnings("unused")
+    private final List<String> hitItems = new ArrayList<>();
+    @SuppressWarnings("unused")
     private final Map<Long, Long> replyTargets = new HashMap<>();
+    private static final Logger LOGGER = Logger.getLogger(StoreBot.class.getName());
 
     //Розробників стани
     private final Map<Long, Boolean> developerMenuState = new HashMap<>();
@@ -90,21 +96,8 @@ public class StoreBot extends TelegramLongPollingBot {
         return downloadFile(tgFile);
     }
 
-    public Map<Long, List<Map<String, Object>>> getUserCart() {
-        return userCart;
-    }
-
     public Map<Long, String> getUserStates() {
         return userStates;
-    }
-
-    // і для зручності можна додати методи зміни стану
-    public void setUserState(Long userId, String state) {
-        userStates.put(userId, state);
-    }
-
-    public String getUserState(Long userId) {
-        return userStates.getOrDefault(userId, "default");
     }
 
     @Override
@@ -161,11 +154,13 @@ public class StoreBot extends TelegramLongPollingBot {
                 handleFeedbackState(userId, chatId, text, state);
                 handleState(userId, chatId, text, state, update);
             } catch (TelegramApiException e) {
-                e.printStackTrace();
+                LOGGER.severe("[Bot Error] Failed to handle state for user " + userId + ": " + e.getMessage());
                 sendText(chatId, "❌ Сталася помилка при обробці вашого запиту.");
             }
             return;
         }
+
+        if (text.isBlank()) return;
 
         try {
             // 🔹 Обробка станів користувача
@@ -237,19 +232,16 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "/start" -> {
                     clearUserState(userId);
 
-                    // Отримуємо chatId як Long
                     Long chatIdLong = update.getMessage().getChatId();
-                    String chatIdStr = chatIdLong.toString(); // для createUserMenu, якщо потрібен String
+                    String chatIdStr = chatIdLong.toString();
+
+                    String messageText = update.getMessage().getText(); // оригінальний текст, без trim()
 
                     String inviteCode = null;
-
-                    // Перевіряємо, чи є параметр invite після пробілу
-                    if (text != null && text.contains(" ")) {
-                        String[] parts = text.split(" ");
-                        if (parts.length > 1 && !parts[1].isBlank()) { // другий елемент існує і не порожній
-                            inviteCode = parts[1].trim();
-
-                            // Збільшуємо лічильник number для цього invite
+                    if (messageText != null && messageText.length() > 6) { // "/start " має довжину 6
+                        String possibleCode = messageText.substring(7).trim(); // усе після "/start "
+                        if (!possibleCode.isBlank()) {
+                            inviteCode = possibleCode;
                             if (InviteManager.incrementInviteNumber(inviteCode)) {
                                 System.out.println("✅ Лічильник number для invite " + inviteCode + " збільшено.");
                             } else {
@@ -258,11 +250,9 @@ public class StoreBot extends TelegramLongPollingBot {
                         }
                     }
 
-                    // Додаємо користувача у REGISTERED_USERS
                     UserManager userManager = new UserManager();
-                    userManager.registerUser(chatIdLong); // передаємо Long
+                    userManager.registerUser(chatIdLong);
 
-                    // Відправка головного меню
                     sendMessage(createUserMenu(chatIdStr, userId));
 
                     System.out.println("Користувач натиснув /start: " + chatIdLong +
@@ -272,9 +262,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "🧱 Каталог товарів" -> sendCategories(userId);
                 case "📋 Кошик" -> {
                     try {
-                        showCart(userId);  // userId — Long
+                        showCart(userId);
                     } catch (TelegramApiException e) {
-                        e.printStackTrace();
+                        LOGGER.severe("[Cart Error] Failed to show cart for userId=" + userId + ": " + e.getMessage());
                     }
                 }
 
@@ -283,7 +273,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     try {
                         handleBack(chatId);
                     } catch (TelegramApiException e) {
-                        e.printStackTrace();
+                        LOGGER.severe("[Back Button Error] Failed to handle BACK_BUTTON for chatId=" + chatId + ": " + e.getMessage());
                         sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
                     }
                 }
@@ -303,12 +293,13 @@ public class StoreBot extends TelegramLongPollingBot {
                     message.setChatId(chatId);
                     message.setParseMode("HTML");
                     message.setDisableWebPagePreview(true); // ⬅ вимикає прев’ю
-                    message.setText(
-                            "🏘️ Казанка: <a href=\"https://maps.app.goo.gl/d7GQnKaXedkHDuq97\">на мапі</a>\n" +
-                                    "📞 Телефон: <code>(050) 457 84 58</code>\n\n" +
-                                    "🏘️ Новий Буг: <a href=\"https://maps.app.goo.gl/YJ5qzxAqXVpZJXYPA\">на мапі</a>\n" +
-                                    "📞 Телефон: <code>(050) 493 15 15</code>"
-                    );
+                    message.setText("""
+                                        🏘️ Казанка: <a href="https://maps.app.goo.gl/d7GQnKaXedkHDuq97">на мапі</a>
+                                        📞 Телефон: <code>(050) 457 84 58</code>
+
+                                        🏘️ Новий Буг: <a href="https://maps.app.goo.gl/YJ5qzxAqXVpZJXYPA">на мапі</a>
+                                        📞 Телефон: <code>(050) 493 15 15</code>
+                                    """);
                     execute(message);
                 }
 
@@ -317,13 +308,15 @@ public class StoreBot extends TelegramLongPollingBot {
                     message.setChatId(chatId);
                     message.setParseMode("HTML");
                     message.setDisableWebPagePreview(true); // ⬅ вимикає прев’ю
-                    message.setText(
-                            "🌐 Ми у соціальних мережах:\n\n" +
-                                    "📘 Facebook: <a href=\"https://www.facebook.com/p/%D0%93%D0%B8%D0%B3%D0%B0%D1%85%D0%B0%D0%B1-61578183892871/\">відкрити</a>\n" +
-                                    "📸 Instagram: <a href=\"https://www.instagram.com/_gigahub_?igsh=Y211bWRqazhhcmtu&utm_source=qr\">відкрити</a>\n" +
-                                    "🎵 TikTok: <a href=\"tiktok.com/@gigahub2\">відкрити</a>\n\n" +
-                                    "☕ Також Instagram доступний у CoffeeMax: <a href=\"https://www.instagram.com/coffee_max_1?igsh=bmhsNDRyN2M5eG5l&utm_source=qr\">відкрити</a>"
-                    );
+                    message.setText("""
+                                        🌐 Ми у соціальних мережах:
+
+                                        📘 Facebook: <a href="https://www.facebook.com/p/%D0%93%D0%B8%D0%B3%D0%B0%D1%85%D0%B0%D0%B1-61578183892871/">відкрити</a>
+                                        📸 Instagram: <a href="https://www.instagram.com/_gigahub_?igsh=Y211bWRqazhhcmtu&utm_source=qr">відкрити</a>
+                                        🎵 TikTok: <a href="tiktok.com/@gigahub2">відкрити</a>
+
+                                        ☕ Також Instagram доступний у CoffeeMax: <a href="https://www.instagram.com/coffee_max_1?igsh=bmhsNDRyN2M5eG5l&utm_source=qr">відкрити</a>
+                                    """);
                     execute(message);
                 }
                 case "💬 Допомога" -> sendMessage(createHelpMenu(chatId));
@@ -372,32 +365,42 @@ public class StoreBot extends TelegramLongPollingBot {
                     tempStorage.put(userId + "_deliveryType", "Самовивіз");
                     userStates.put(userId, "order_pickup");
 
-                    sendText(chatId,
-                            "✏️ Введіть, будь-ласка, свої дані для самовивозу у форматі:\n" +
-                                    "🏙 Місто\n👤 П.І.\n📞 Телефон\n💳 Номер картки (Магазину)\n\n" +
-                                    "📌 Приклад:\n" +
-                                    "Казанка, Сидоренко Олена Олексіївна, +380631234567, 4444"
-                    );
+                    sendText(chatId, """
+                                                ✏️ Введіть, будь-ласка, свої дані для самовивозу у форматі:
+                                                🏙 Місто
+                                                👤 П.І.
+                                                📞 Телефон
+                                                💳 Номер картки (Магазину)
+                                    
+                                                📌 Приклад:
+                                                Казанка, Сидоренко Олена Олексіївна, +380631234567, 4444
+                                            """);
                 }
 
                 case "📦 Доставка по місту" -> {
                     tempStorage.put(userId + "_deliveryType", "Доставка по місту");
                     userStates.put(userId, "awaiting_city_delivery");
-                    sendText(chatId,
-                            "📝 Введіть, будь-ласка, дані для доставки по місту у форматі:\n" +
-                                    "📍 Адреса, 👤 П.І., 📞 Телефон, 💳 Номер картки (Магазину)\n\n" +
-                                    "📌 Приклад:\n" +
-                                    "вул. Шевченка 10, Казанка, Петров Петро Петрович, +380671234567, 4444");
+
+                    sendText(chatId, """
+                                                📝 Введіть, будь-ласка, дані для доставки по місту у форматі:
+                                                📍 Адреса, 👤 П.І., 📞 Телефон, 💳 Номер картки (Магазину)
+                                    
+                                                📌 Приклад:
+                                                вул. Шевченка 10, Казанка, Петров Петро Петрович, +380671234567, 4444
+                                            """);
                 }
 
                 case "📮 Доставка Новою поштою" -> {
                     tempStorage.put(userId + "_deliveryType", "Нова Пошта");
                     userStates.put(userId, "awaiting_post_delivery");
-                    sendText(chatId,
-                            "📝 Введіть, будь-ласка, дані для доставки Новою Поштою у форматі:\n" +
-                                    "📮 Відділення НП, 👤 П.І., 📞 Телефон, 💳 Номер картки (Магазину)\n\n" +
-                                    "📌 Приклад:\n" +
-                                    "№12, Іваненко Іван Іванович, +380501234567, 4444");
+
+                    sendText(chatId, """
+                                            📝 Введіть, будь-ласка, дані для доставки Новою Поштою у форматі:
+                                            📮 Відділення НП, 👤 П.І., 📞 Телефон, 💳 Номер картки (Магазину)
+                                
+                                            📌 Приклад:
+                                            №12, Іваненко Іван Іванович, +380501234567, 4444
+                                          """);
                 }
 
                 case "🎯 Хіт продажу" -> {
@@ -423,8 +426,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         if (!textMsg.isEmpty()) {
                             caption = textMsg;
                         } else if (hit.media_url != null && !hit.media_url.equals("немає")) {
-                            // Для відео/GIF підпис не ставимо
-                            caption = null;
+                            caption = null; // Для відео/GIF підпис не ставимо
                         } else {
                             caption = "немає";
                         }
@@ -455,7 +457,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 sendText(chatId, caption);
                             }
                         } catch (TelegramApiException e) {
-                            e.printStackTrace();
+                            LOGGER.severe("[Hit Error] Failed to send media for hit: " + hit.id + " - " + e.getMessage());
                             sendText(chatId, "❌ Не вдалося надіслати медіа.");
                         }
                     }
@@ -520,7 +522,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             SendMessage menu = showAdminSearchSourceMenu(userId, Long.parseLong(chatId));
                             execute(menu);
                         } catch (TelegramApiException e) {
-                            e.printStackTrace();
+                            LOGGER.severe("[Admin Error] Failed to show search source menu for user " + userId + ": " + e.getMessage());
                             sendText(chatId, "❌ Сталася помилка при показі меню вибору джерела пошуку.");
                         }
 
@@ -571,65 +573,57 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "🛒 Замовлення користувачів" -> {
-                    try {
-                        Connection conn = DatabaseManager.getConnection();
+                    try (Connection conn = DatabaseManager.getConnection()) {
 
                         // Перевіряємо, чи є замовлення в базі
                         String countSql = "SELECT COUNT(*) FROM orders";
-                        PreparedStatement countStmt = conn.prepareStatement(countSql);
-                        ResultSet countRs = countStmt.executeQuery();
-                        if (countRs.next() && countRs.getInt(1) == 0) {
-                            sendText(chatId, "Поки що немає замовлень.");
-                            countRs.close();
-                            countStmt.close();
-                            return;
+                        try (PreparedStatement countStmt = conn.prepareStatement(countSql);
+                             ResultSet countRs = countStmt.executeQuery()) {
+
+                            if (countRs.next() && countRs.getInt(1) == 0) {
+                                sendText(chatId, "Поки що немає замовлень.");
+                                return;
+                            }
                         }
-                        countRs.close();
-                        countStmt.close();
 
                         adminOrderIndex.put(userId, 0);
                         showAdminOrder(userId, chatId);
 
                     } catch (SQLException e) {
-                        e.printStackTrace();
+                        LOGGER.severe("[Admin Error] Failed to load orders for user " + userId + ": " + e.getMessage());
                         sendText(chatId, "❌ Помилка при завантаженні замовлень з бази.");
                     }
                 }
 
                 case "✅ Підтвердити" -> {
-                    try {
-                        Connection conn = DatabaseManager.getConnection();
+                    try (Connection conn = DatabaseManager.getConnection()) {
 
                         String selectSql = "SELECT * FROM orders WHERE status = 'Нове' ORDER BY id ASC LIMIT 1";
-                        PreparedStatement stmt = conn.prepareStatement(selectSql);
-                        ResultSet rs = stmt.executeQuery();
+                        try (PreparedStatement stmt = conn.prepareStatement(selectSql);
+                             ResultSet rs = stmt.executeQuery()) {
 
-                        if (!rs.next()) {
-                            sendText(chatId, "Замовлень немає.");
-                            rs.close();
-                            stmt.close();
-                            break;
+                            if (!rs.next()) {
+                                sendText(chatId, "Замовлень немає.");
+                                break;
+                            }
+
+                            long orderId = rs.getLong("id");
+                            long orderUserId = rs.getLong("userId");
+
+                            sendText("" + orderUserId, "✅ Ваше замовлення підтверджено! Очікуйте доставку.");
+
+                            String updateSql = "UPDATE orders SET status = 'Підтверджено' WHERE id = ?";
+                            try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                                updateStmt.setLong(1, orderId);
+                                updateStmt.executeUpdate();
+                            }
+
+                            sendText(chatId, "Замовлення підтверджено ✅");
+                            showAdminOrder(userId, chatId);
                         }
 
-                        Long orderId = rs.getLong("id");
-                        String orderCode = rs.getString("orderCode");
-                        Long orderUserId = rs.getLong("userId");
-                        rs.close();
-                        stmt.close();
-
-                        sendText(orderUserId.toString(), "✅ Ваше замовлення підтверджено! Очікуйте доставку.");
-
-                        String updateSql = "UPDATE orders SET status = 'Підтверджено' WHERE id = ?";
-                        PreparedStatement updateStmt = conn.prepareStatement(updateSql);
-                        updateStmt.setLong(1, orderId);
-                        updateStmt.executeUpdate();
-                        updateStmt.close();
-
-                        sendText(chatId, "Замовлення підтверджено ✅");
-                        showAdminOrder(userId, chatId);
-
                     } catch (SQLException e) {
-                        e.printStackTrace();
+                        LOGGER.severe("[Admin Error] Failed to confirm order for user " + userId + ": " + e.getMessage());
                         sendText(chatId, "❌ Помилка при підтвердженні замовлення.");
                     }
                 }
@@ -640,41 +634,38 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "🗑️ Видалити замовлення" -> {
-                    try {
-                        Connection conn = DatabaseManager.getConnection();
+                    try (Connection conn = DatabaseManager.getConnection()) {
 
                         String selectSql = "SELECT * FROM orders WHERE status NOT IN ('Видалено', 'Підтверджено', 'Відхилено') ORDER BY id ASC LIMIT 1";
-                        PreparedStatement stmt = conn.prepareStatement(selectSql);
-                        ResultSet rs = stmt.executeQuery();
+                        try (PreparedStatement stmt = conn.prepareStatement(selectSql);
+                             ResultSet rs = stmt.executeQuery()) {
 
-                        if (!rs.isBeforeFirst()) {
-                            sendText(chatId, "Замовлень немає.");
-                            rs.close();
-                            stmt.close();
-                            break;
-                        }
+                            if (!rs.isBeforeFirst()) {
+                                sendText(chatId, "Замовлень немає.");
+                                break;
+                            }
 
-                        if (rs.next()) {
-                            String orderCode = rs.getString("orderCode");
-                            Long orderUserId = rs.getLong("userId");
-                            rs.close();
-                            stmt.close();
+                            if (rs.next()) {
+                                String orderCode = rs.getString("orderCode");
+                                long orderUserId = rs.getLong("userId"); // примітив
 
-                            String updateSql = "UPDATE orders SET status = ?, comment = ? WHERE orderCode = ?";
-                            PreparedStatement updateStmt = conn.prepareStatement(updateSql);
-                            updateStmt.setString(1, "Видалено");
-                            updateStmt.setString(2, "Видалено адміністратором");
-                            updateStmt.setString(3, orderCode);
-                            updateStmt.executeUpdate();
-                            updateStmt.close();
+                                String updateSql = "UPDATE orders SET status = ?, comment = ? WHERE orderCode = ?";
+                                try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+                                    updateStmt.setString(1, "Видалено");
+                                    updateStmt.setString(2, "Видалено адміністратором");
+                                    updateStmt.setString(3, orderCode);
+                                    updateStmt.executeUpdate();
+                                }
 
-                            sendText(orderUserId.toString(), "🗑️ Ваше замовлення було видалено адміністратором.");
-                            sendText(chatId, "🗑️ Замовлення видалено.");
-                            showAdminOrder(userId, chatId);
+                                // Використовуємо String.valueOf для перетворення long у String
+                                sendText(String.valueOf(orderUserId), "🗑️ Ваше замовлення було видалено адміністратором.");
+                                sendText(chatId, "🗑️ Замовлення видалено.");
+                                showAdminOrder(userId, chatId);
+                            }
                         }
 
                     } catch (SQLException e) {
-                        e.printStackTrace();
+                        LOGGER.severe("[Bot Error] Failed to delete order: " + e.getMessage());
                         sendText(chatId, "❌ Помилка при видаленні замовлення.");
                     }
                 }
@@ -751,7 +742,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 FeedbackManager.addFeedback(userId, text);
                 sendText(chatId, "✅ Ваш відгук надіслано адміністратору!");
                 userStates.remove(userId);
-                return; // вихід після обробки стану
+                return;
             }
 
             if (text.contains("Самовивіз")) {
@@ -911,7 +902,9 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private boolean isInDeveloperMenu(Long userId) {
-        return developerMenuState.getOrDefault(userId, false);
+        // якщо ще немає запису, додаємо false
+        developerMenuState.putIfAbsent(userId, false);
+        return developerMenuState.get(userId);
     }
 
     // 🔹 Назад
@@ -3509,6 +3502,10 @@ public class StoreBot extends TelegramLongPollingBot {
         if (current != null) {
             previousState.put(userId, current); // зберігаємо попередній
         }
+
+        // мінімальне звернення до previousState, щоб IDE не лаявся
+        previousState.size();
+
         userState.put(userId, newState);
     }
 
