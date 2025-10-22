@@ -1,85 +1,135 @@
 package org.example;
 
-import org.yaml.snakeyaml.DumperOptions;
-import org.yaml.snakeyaml.Yaml;
-import org.yaml.snakeyaml.constructor.SafeConstructor;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import org.telegram.telegrambots.meta.api.objects.File;
+import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
+import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.IOException;
+import java.net.URL;
+import java.sql.*;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class HitsManager {
 
-    private static final String RESOURCE_FOLDER = "src/main/resources";
-    private static final String FILE_PATH = RESOURCE_FOLDER + "/hits.yml";
-
-    private static final Yaml YAML;
-
+    // --- Cloudinary ---
+    private static final Cloudinary cloudinary;
     static {
-        DumperOptions options = new DumperOptions();
-        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK);
-        options.setPrettyFlow(true);
-        options.setDefaultScalarStyle(DumperOptions.ScalarStyle.DOUBLE_QUOTED); // щоб рядки обгортались у лапки
-        YAML = new Yaml(options); // тут просто передаємо DumperOptions
-
-        initFile();
+        cloudinary = new Cloudinary(ObjectUtils.asMap(
+                "cloud_name", "dru76f7hj",
+                "api_key", "512831249592811",
+                "api_secret", "FHs737cSf4akCFLuJQJcK70p9VU",
+                "secure", true
+        ));
     }
 
-    private static void initFile() {
+    // --- Завантаження медіа з Telegram у Cloudinary ---
+    public static String uploadFromTelegram(TelegramLongPollingBot bot, Message message) {
         try {
-            File folder = new File(RESOURCE_FOLDER);
-            if (!folder.exists()) folder.mkdirs();
+            String fileId = null;
 
-            File file = new File(FILE_PATH);
-            if (!file.exists()) {
-                file.createNewFile();
-                // Записуємо порожній список
-                FileWriter writer = new FileWriter(file);
-                YAML.dump(new ArrayList<>(), writer);
-                writer.close();
+            if (message.hasPhoto()) {
+                List<PhotoSize> photos = message.getPhoto();
+                fileId = photos.get(photos.size() - 1).getFileId(); // найкраща якість
+            } else if (message.hasVideo()) {
+                fileId = message.getVideo().getFileId();
             }
+
+            if (fileId == null) return null;
+
+            // Отримуємо Telegram File
+            File tgFile = bot.execute(new org.telegram.telegrambots.meta.api.methods.GetFile(fileId));
+            String filePath = tgFile.getFilePath();
+
+            // Завантажуємо файл у тимчасову папку
+            java.io.File tempFile = java.io.File.createTempFile("tgfile_", filePath.replaceAll("[^a-zA-Z0-9\\.]", "_"));
+            try (InputStream is = new URL("https://api.telegram.org/file/bot" + bot.getBotToken() + "/" + filePath).openStream();
+                 FileOutputStream fos = new FileOutputStream(tempFile)) {
+                byte[] buffer = new byte[4096];
+                int n;
+                while ((n = is.read(buffer)) > 0) fos.write(buffer, 0, n);
+            }
+
+            // Завантажуємо на Cloudinary
+            String cloudUrl = uploadToCloudinary(tempFile);
+
+            // Видаляємо тимчасовий файл
+            tempFile.delete();
+
+            return cloudUrl;
+
         } catch (Exception e) {
             e.printStackTrace();
+            System.err.println("[HitsManager] Failed to upload from Telegram: " + e.getMessage());
+            return null;
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public static List<Map<String, Object>> loadHits() {
-        try (FileReader reader = new FileReader(FILE_PATH)) {
-            Object obj = YAML.load(reader);
-            if (obj instanceof List) {
-                return (List<Map<String, Object>>) obj;
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return new ArrayList<>();
-    }
-
-    public static void saveHit(String title, String description, String media) {
+    // --- Збереження медіа на Cloudinary ---
+    public static String uploadToCloudinary(java.io.File file) {
         try {
-            List<Map<String, Object>> hits = loadHits();
-
-            int nextId = hits.size() + 1;
-
-            Map<String, Object> hit = new LinkedHashMap<>();
-            hit.put("id", nextId);
-            hit.put("title", title);
-            hit.put("description", description);
-            hit.put("media", media != null ? media : "немає"); // 👈 завжди є поле
-
-            hits.add(hit);
-
-            FileWriter writer = new FileWriter(FILE_PATH);
-            YAML.dump(hits, writer);
-            writer.close();
-
-        } catch (Exception e) {
+            var result = cloudinary.uploader().upload(file, ObjectUtils.asMap("overwrite", true));
+            return result.get("secure_url").toString();
+        } catch (IOException e) {
             e.printStackTrace();
+            System.err.println("[Cloudinary] Upload failed: " + e.getMessage());
+            return null;
         }
+    }
+
+    // --- Збереження нового хіта у MySQL ---
+    public static void saveHit(String title, String description, String mediaUrl) {
+        String sql = "INSERT INTO hits (title, description, media) VALUES (?, ?, ?)";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, title != null ? title : "немає");
+            ps.setString(2, description != null ? description : "немає");
+            ps.setString(3, mediaUrl != null ? mediaUrl : "немає");
+
+            ps.executeUpdate();
+            System.out.println("[HitsManager] Hit saved successfully.");
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.err.println("[HitsManager] Failed to save hit: " + e.getMessage());
+        }
+    }
+
+    // --- Отримати всі хіти ---
+    public static List<Hit> loadHits() {
+        List<Hit> hits = new ArrayList<>();
+        String sql = "SELECT * FROM hits ORDER BY id ASC";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            while (rs.next()) {
+                Hit hit = new Hit();
+                hit.id = rs.getInt("id");
+                hit.title = rs.getString("title");
+                hit.description = rs.getString("description");
+                hit.media = rs.getString("media");
+                hits.add(hit);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            System.err.println("[HitsManager] Failed to load hits: " + e.getMessage());
+        }
+        return hits;
+    }
+
+    // --- Клас для зручності ---
+    public static class Hit {
+        public int id;
+        public String title;
+        public String description;
+        public String media;
     }
 }

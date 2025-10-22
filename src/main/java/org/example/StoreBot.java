@@ -402,15 +402,15 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "🎯 Хіт продажу" -> {
-                    List<Map<String, Object>> hits = HitsManager.loadHits();
+                    List<HitsManager.Hit> hits = HitsManager.loadHits();
                     if (hits.isEmpty()) {
                         sendText(chatId, "❌ Поки що немає хітів продажу.");
                         return;
                     }
 
-                    for (Map<String, Object> hit : hits) {
-                        String title = hit.get("title") != null ? hit.get("title").toString() : "";
-                        String description = hit.get("description") != null ? hit.get("description").toString() : "";
+                    for (HitsManager.Hit hit : hits) {
+                        String title = hit.title != null ? hit.title : "";
+                        String description = hit.description != null ? hit.description : "";
 
                         // Формуємо текст для повідомлення
                         String textMsg = "";
@@ -420,41 +420,38 @@ public class StoreBot extends TelegramLongPollingBot {
                             textMsg += description;
                         }
 
-                        // Якщо текст порожній і є медіа, залишаємо caption пустим
-                        Object mediaObj = hit.get("media");
-                        String caption = textMsg;
-                        if (caption.isEmpty() && mediaObj != null && !"немає".equals(mediaObj.toString())) {
-                            caption = null; // порожній підпис для фото/відео
-                        } else if (caption.isEmpty()) {
-                            caption = "немає"; // для випадків, коли немає і медіа
-                        }
+                        // Обробка медіа з Cloudinary
+                        String mediaUrl = hit.media != null ? hit.media : null;
+                        String caption = textMsg.isEmpty() ? (mediaUrl != null ? null : "немає") : textMsg;
 
-                        if (mediaObj != null && !"немає".equals(mediaObj.toString())) {
-                            String fileId = mediaObj.toString();
-                            try {
-                                if (fileId.startsWith("BAAC")) { // відео
+                        try {
+                            if (mediaUrl != null && !mediaUrl.equals("немає")) {
+                                if (mediaUrl.endsWith(".mp4") || mediaUrl.contains("video")) {
+                                    // Відео
                                     SendVideo video = SendVideo.builder()
                                             .chatId(chatId)
-                                            .video(new InputFile(fileId))
+                                            .video(new InputFile(mediaUrl))
                                             .caption(caption)
                                             .parseMode("Markdown")
                                             .build();
                                     execute(video);
-                                } else { // фото
+                                } else {
+                                    // Фото
                                     SendPhoto photo = SendPhoto.builder()
                                             .chatId(chatId)
-                                            .photo(new InputFile(fileId))
+                                            .photo(new InputFile(mediaUrl))
                                             .caption(caption)
                                             .parseMode("Markdown")
                                             .build();
                                     execute(photo);
                                 }
-                            } catch (TelegramApiException e) {
-                                e.printStackTrace();
-                                sendText(chatId, "❌ Не вдалося надіслати медіа.");
+                            } else {
+                                // Якщо медіа немає
+                                sendText(chatId, caption);
                             }
-                        } else {
-                            sendText(chatId, caption);
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                            sendText(chatId, "❌ Не вдалося надіслати медіа.");
                         }
                     }
                 }
@@ -1389,20 +1386,12 @@ public class StoreBot extends TelegramLongPollingBot {
             case "awaiting_hit_media" -> {
                 String title = tempStorage.getOrDefault(userId + "_hit_title", "немає").toString();
                 String description = tempStorage.getOrDefault(userId + "_hit_description", "немає").toString();
-                String media = "немає";
 
-                if (update.getMessage().hasPhoto()) {
-                    List<PhotoSize> photos = update.getMessage().getPhoto();
-                    media = photos.get(photos.size() - 1).getFileId();
-                } else if (update.getMessage().hasVideo()) {
-                    media = update.getMessage().getVideo().getFileId();
-                } else if (text != null && text.equalsIgnoreCase("немає")) {
-                    media = "немає";
-                } else if (text != null && !text.isBlank()) {
-                    media = text;
-                }
+                // Завантаження медіа з Telegram на Cloudinary
+                String mediaUrl = HitsManager.uploadFromTelegram(this, update.getMessage());
+                if (mediaUrl == null) mediaUrl = "немає";
 
-                HitsManager.saveHit(title, description, media);
+                HitsManager.saveHit(title, description, mediaUrl);
 
                 // Очищення
                 userStates.remove(userId);
@@ -1422,21 +1411,11 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case "awaiting_hit_media_only" -> {
-                String media = null;
+                // Завантаження медіа з Telegram на Cloudinary
+                String mediaUrl = HitsManager.uploadFromTelegram(this, update.getMessage());
+                if (mediaUrl == null) mediaUrl = "немає";
 
-                if (update.getMessage().hasPhoto()) {
-                    List<PhotoSize> photos = update.getMessage().getPhoto();
-                    media = photos.get(photos.size() - 1).getFileId();
-                } else if (update.getMessage().hasVideo()) {
-                    media = update.getMessage().getVideo().getFileId();
-                } else if (text != null && text.equalsIgnoreCase("немає")) {
-                    media = "немає";
-                } else {
-                    sendText(chatId, "❌ Будь ласка, надішліть фото або відео, або напишіть 'немає'.");
-                    return;
-                }
-
-                HitsManager.saveHit(null, "немає", media); // title=null, description="немає"
+                HitsManager.saveHit(null, "немає", mediaUrl); // title=null, description="немає"
 
                 userStates.remove(userId);
                 tempStorage.remove(userId + "_hit_media");
