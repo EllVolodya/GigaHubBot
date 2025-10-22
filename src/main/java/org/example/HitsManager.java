@@ -114,7 +114,7 @@ public class HitsManager {
                 hit.id = rs.getInt("id");
                 hit.title = rs.getString("title");
                 hit.description = rs.getString("description");
-                hit.media_url = rs.getString("media");
+                hit.media_url = rs.getString("media_url"); // <- тут правильна колонка
                 hits.add(hit);
             }
 
