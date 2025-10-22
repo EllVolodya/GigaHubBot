@@ -231,8 +231,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-
-
             // 🔹 Основні команди (кнопки)
             if (text == null) return;
 
@@ -904,6 +902,11 @@ public class StoreBot extends TelegramLongPollingBot {
         showCart(userId);          // приватний метод всередині класу
     }
 
+    // Очистити кошик користувача
+    public void clearUserCart(Long userId) throws TelegramApiException {
+        userStates.remove(userId);
+        clearCart(userId);         // приватний метод всередині класу
+    }
 
     private boolean isInDeveloperMenu(Long userId) {
         return developerMenuState.getOrDefault(userId, false);
@@ -2458,6 +2461,12 @@ public class StoreBot extends TelegramLongPollingBot {
             e.printStackTrace();
             return new ArrayList<>();
         }
+    }
+
+    // Відправити меню користувача
+    public void sendUserMenu(Long userId) throws TelegramApiException {
+        SendMessage menu = createUserMenu(String.valueOf(userId), userId);
+        execute(menu); // приватний метод execute вже доступний тут
     }
 
     public SendMessage createUserMenu(String chatId, Long userId) {

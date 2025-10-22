@@ -16,7 +16,7 @@ public class ProductSearchManager {
         text = text.trim();
         System.out.println("[performSearch] User " + userId + " input: '" + text + "'");
 
-        // 🛍️ Якщо користувач хоче перейти в кошик
+        // 🛍️ Перейти в кошик
         if (text.equalsIgnoreCase("🛍️ Перейти в кошик") || text.equalsIgnoreCase("Перейти в кошик")) {
             bot.openCartForUser(userId);
             System.out.println("[performSearch] User " + userId + " opened the cart.");
@@ -25,19 +25,12 @@ public class ProductSearchManager {
 
         // ⬅️ Назад
         if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
-            bot.getUserStates().remove(userId);
-            bot.execute(bot.createUserMenu(chatId, userId));
+            bot.sendUserMenu(userId);
             System.out.println("[performSearch] User " + userId + " exited search mode.");
             return;
         }
 
-        // ⛔ Якщо користувач не у стані пошуку — не шукаємо
-        String state = bot.getUserStates().get(userId);
-        if (state == null || !state.equals("waiting_for_search")) {
-            System.out.println("[performSearch] User " + userId + " not in search mode, ignoring input.");
-            return;
-        }
-
+        // Якщо користувач нічого не ввів
         if (text.isEmpty()) {
             bot.sendText(chatId, "⚠️ Введіть назву товару для пошуку.");
             return;
@@ -50,6 +43,9 @@ public class ProductSearchManager {
 
             if (foundProducts.isEmpty()) {
                 bot.sendText(chatId, "❌ Товар не знайдено. Спробуйте інший запит.");
+
+                // Після невдалого пошуку показуємо меню користувача
+                bot.sendUserMenu(userId);
                 return;
             }
 
@@ -69,6 +65,7 @@ public class ProductSearchManager {
                 // Якщо один товар — показуємо відразу
                 Map<String, Object> product = foundProducts.get(0);
                 bot.getLastShownProduct().put(userId, product);
+
                 String productText = String.format(
                         "📦 %s\n💰 Ціна: %s грн за шт\n📂 %s → %s",
                         product.get("name"),
@@ -82,6 +79,9 @@ public class ProductSearchManager {
         } catch (Exception e) {
             e.printStackTrace();
             bot.sendText(chatId, "⚠️ Помилка під час пошуку товару.");
+
+            // Після помилки теж показуємо меню користувача
+            bot.sendUserMenu(userId);
         }
     }
 
@@ -89,8 +89,7 @@ public class ProductSearchManager {
     public void handleSearchNumber(Long userId, String chatId, String text) throws TelegramApiException {
         // ⬅️ Назад
         if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
-            bot.getUserStates().remove(userId);
-            bot.execute(bot.createUserMenu(chatId, userId));
+            bot.sendUserMenu(userId);
             System.out.println("[handleSearchNumber] User " + userId + " exited search mode.");
             return;
         }
