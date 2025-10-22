@@ -56,3 +56,15 @@ CREATE TABLE hits (
     media_url TEXT,
     date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    telegram_id BIGINT NOT NULL UNIQUE,
+    name TEXT,
+    city TEXT,
+    number TEXT,
+    number_carts INT DEFAULT 0,
+    bonus INT DEFAULT 0,
+    is_admin TEXT DEFAULT 'NO',
+    is_developer TEXT DEFAULT 'NO'
+);

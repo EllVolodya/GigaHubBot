@@ -231,18 +231,16 @@ public class StoreBot extends TelegramLongPollingBot {
             switch (text) {
                 case "/start" -> {
                     clearUserState(userId);
-
                     Long chatIdLong = update.getMessage().getChatId();
                     String chatIdStr = chatIdLong.toString();
 
-                    String messageText = update.getMessage().getText(); // оригінальний текст, без trim()
-
-                    String inviteCode = null;
-                    if (messageText != null && messageText.length() > 6) { // "/start " має довжину 6
-                        String possibleCode = messageText.substring(7).trim(); // усе після "/start "
-                        if (!possibleCode.isBlank()) {
-                            inviteCode = possibleCode;
-                            if (InviteManager.incrementInviteNumber(inviteCode)) {
+                    // --- Перевірка коду інвайту
+                    String messageText = update.getMessage().getText();
+                    if (messageText != null && messageText.length() > 6) {
+                        String inviteCode = messageText.substring(7).trim(); // усе після "/start "
+                        if (!inviteCode.isBlank()) {
+                            boolean incremented = new InviteManager().incrementInviteNumber(inviteCode);
+                            if (incremented) {
                                 System.out.println("✅ Лічильник number для invite " + inviteCode + " збільшено.");
                             } else {
                                 System.out.println("❌ Invite не знайдено: " + inviteCode);
@@ -250,13 +248,29 @@ public class StoreBot extends TelegramLongPollingBot {
                         }
                     }
 
+                    // --- Реєстрація користувача
                     UserManager userManager = new UserManager();
-                    userManager.registerUser(chatIdLong);
+                    userManager.registerUser(chatIdLong, update.getMessage().getFrom().getFirstName());
 
-                    sendMessage(createUserMenu(chatIdStr, userId));
+                    // --- Відправка стартового повідомлення, якщо новий користувач
+                    SendMessage startMsg = userManager.sendStartMessageIfNewUser(chatIdStr, chatIdLong);
+                    if (startMsg != null) {
+                        try {
+                            execute(startMsg);
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                            sendText(chatIdStr, "❌ Помилка надсилання стартового повідомлення.");
+                        }
+                    } else {
+                        try {
+                            execute(createUserMenu(chatIdStr, userId));
+                        } catch (TelegramApiException e) {
+                            e.printStackTrace();
+                            sendText(chatIdStr, "❌ Помилка надсилання меню користувача.");
+                        }
+                    }
 
-                    System.out.println("Користувач натиснув /start: " + chatIdLong +
-                            (inviteCode != null ? " (Invite: " + inviteCode + ")" : ""));
+                    System.out.println("Користувач натиснув /start: " + chatIdLong);
                 }
 
                 case "🧱 Каталог товарів" -> sendCategories(userId);
@@ -1715,24 +1729,29 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // --- Додати нове запрошення
             case "add_invite" -> {
                 String[] parts = text.split(";");
                 if (parts.length < 3) {
                     sendText(chatId, "❌ Некоректний формат! Використовуйте Name;Kasa;City");
                 } else {
-                    boolean success = InviteManager.addInvite(parts[0], parts[1], parts[2], botUsername);
-                    if (success) sendText(chatId, "✅ Запрошення додано!");
-                    else sendText(chatId, "❌ Сталася помилка при додаванні запрошення.");
+                    try {
+                        InviteManager inviteManager = new InviteManager(); // SQLException
+                        boolean success = inviteManager.addInvite(parts[0], parts[1], parts[2], botUsername);
+                        if (success) sendText(chatId, "✅ Запрошення додано!");
+                        else sendText(chatId, "❌ Сталася помилка при додаванні запрошення.");
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        sendText(chatId, "❌ Помилка доступу до бази даних.");
+                    }
                 }
                 userStates.remove(userId);
             }
 
-            // --- Видалити запрошення
             case "delete_invite" -> {
                 try {
                     int id = Integer.parseInt(text.trim());
-                    boolean deleted = InviteManager.deleteInvite(id); // потрібно додати метод InviteManager
+                    InviteManager inviteManager = new InviteManager();
+                    boolean deleted = inviteManager.deleteInvite(id);
                     if (deleted) sendText(chatId, "✅ Запрошення видалено!");
                     else sendText(chatId, "❌ Запрошення не знайдено.");
                 } catch (Exception e) {
@@ -1741,7 +1760,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 userStates.remove(userId);
             }
 
-            // --- Редагувати запрошення
             case "edit_invite" -> {
                 String[] parts = text.split(";");
                 if (parts.length < 4) {
@@ -1749,7 +1767,8 @@ public class StoreBot extends TelegramLongPollingBot {
                 } else {
                     try {
                         int id = Integer.parseInt(parts[0]);
-                        boolean edited = InviteManager.editInvite(id, parts[1], parts[2], parts[3]);
+                        InviteManager inviteManager = new InviteManager();
+                        boolean edited = inviteManager.editInvite(id, parts[1], parts[2], parts[3]);
                         if (edited) sendText(chatId, "✅ Запрошення відредаговано!");
                         else sendText(chatId, "❌ Запрошення не знайдено!");
                     } catch (Exception e) {
@@ -1758,7 +1777,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
                 userStates.remove(userId);
             }
-
 
             case "logs_invites" -> {
                 Map<Integer, Map<String, Object>> invites = DeveloperFileManager.getAllInvites();
