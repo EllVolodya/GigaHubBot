@@ -33,18 +33,25 @@ public class HitsManager {
         try {
             String fileId = null;
 
+            // Фото
             if (message.hasPhoto()) {
                 List<PhotoSize> photos = message.getPhoto();
                 fileId = photos.get(photos.size() - 1).getFileId();
-            } else if (message.hasVideo()) {
+            }
+            // Класичне відео
+            else if (message.hasVideo()) {
                 fileId = message.getVideo().getFileId();
-            } else if (message.hasDocument()) {
+            }
+            // GIF або MP4 як animation
+            else if (message.hasAnimation()) {
+                fileId = message.getAnimation().getFileId();
+            }
+            // Документ, перевіряємо на MP4
+            else if (message.hasDocument()) {
                 String mime = message.getDocument().getMimeType();
-                if (mime != null && mime.startsWith("video/")) {
+                if (mime != null && mime.equals("video/mp4")) {
                     fileId = message.getDocument().getFileId();
                 }
-            } else if (message.hasAnimation()) {
-                fileId = message.getAnimation().getFileId();
             }
 
             if (fileId == null) {
@@ -52,7 +59,9 @@ public class HitsManager {
                 return null;
             }
 
-            // Отримання Telegram File
+            System.out.println("[HitsManager] fileId: " + fileId);
+
+            // Отримуємо файл Telegram
             File tgFile = bot.execute(new org.telegram.telegrambots.meta.api.methods.GetFile(fileId));
             String filePath = tgFile.getFilePath();
 
