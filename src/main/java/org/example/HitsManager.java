@@ -35,12 +35,12 @@ public class HitsManager {
 
             if (message.hasPhoto()) {
                 List<PhotoSize> photos = message.getPhoto();
-                fileId = photos.get(photos.size() - 1).getFileId(); // найкраща якість
+                fileId = photos.get(photos.size() - 1).getFileId();
             } else if (message.hasVideo()) {
                 fileId = message.getVideo().getFileId();
             } else if (message.hasDocument()) {
                 String mime = message.getDocument().getMimeType();
-                if (mime != null && (mime.startsWith("video/") || mime.equals("application/octet-stream"))) {
+                if (mime != null && mime.startsWith("video/")) {
                     fileId = message.getDocument().getFileId();
                 }
             } else if (message.hasAnimation()) {
@@ -52,8 +52,7 @@ public class HitsManager {
                 return null;
             }
 
-            System.out.println("[HitsManager] fileId: " + fileId);
-
+            // Отримання Telegram File
             File tgFile = bot.execute(new org.telegram.telegrambots.meta.api.methods.GetFile(fileId));
             String filePath = tgFile.getFilePath();
 
@@ -68,7 +67,7 @@ public class HitsManager {
             String cloudUrl = uploadToCloudinary(tempFile);
             tempFile.delete();
 
-            System.out.println("[HitsManager] cloudUrl: " + cloudUrl);
+            System.out.println("[HitsManager] Uploaded media to Cloudinary: " + cloudUrl);
             return cloudUrl;
 
         } catch (Exception e) {

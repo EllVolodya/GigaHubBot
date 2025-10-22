@@ -8,7 +8,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
-import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
@@ -943,7 +942,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔸 5. Якщо користувач у адмін-меню
+        // 🔸 5. Якщо користувач в адмін-меню
         if (adminOrderIndex.containsKey(userId)) {
             adminOrderIndex.remove(userId);
             System.out.println("[handleBack] Returning admin " + userId + " to admin menu.");
