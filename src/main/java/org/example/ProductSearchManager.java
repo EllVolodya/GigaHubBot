@@ -11,10 +11,17 @@ public class ProductSearchManager {
         this.bot = bot;
     }
 
-    // Основний метод пошуку
     public void performSearch(Long userId, String chatId, String text) throws TelegramApiException {
         text = text.trim();
         System.out.println("[performSearch] User " + userId + " input: '" + text + "'");
+
+        // 🛍️ Якщо користувач хоче перейти в кошик
+        if (text.equalsIgnoreCase("🛍️ Перейти в кошик") || text.equalsIgnoreCase("Перейти в кошик")) {
+            bot.getUserStates().remove(userId);
+            bot.showCart(Long.valueOf(chatId));
+            System.out.println("[performSearch] User " + userId + " opened the cart.");
+            return;
+        }
 
         // ⛔ Якщо користувач натиснув "Назад" — виходимо з пошуку
         if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {

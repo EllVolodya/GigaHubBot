@@ -818,7 +818,7 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔹 Показ кошика
-    private void showCart(Long userId) throws TelegramApiException {
+    public void showCart(Long userId) throws TelegramApiException {
         List<Map<String, Object>> cart = userCart.get(userId);
 
         if (cart == null || cart.isEmpty()) {
