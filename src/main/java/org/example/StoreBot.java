@@ -2452,7 +2452,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    private SendMessage createUserMenu(String chatId, Long userId) {
+    public SendMessage createUserMenu(String chatId, Long userId) {
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
 

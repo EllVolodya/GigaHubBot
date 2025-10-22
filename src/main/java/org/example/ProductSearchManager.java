@@ -83,7 +83,7 @@ public class ProductSearchManager {
         // ⛔ Якщо користувач натиснув "Назад" — вийти
         if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
             bot.getUserStates().remove(userId);
-            bot.sendMainMenu(chatId);
+            bot.createUserMenu(chatId, userId);
             System.out.println("[handleSearchNumber] User " + userId + " exited search mode.");
             return;
         }
