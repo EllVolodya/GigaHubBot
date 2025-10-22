@@ -817,7 +817,7 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("DEBUG: Categories sent in ID order: " + categories);
     }
 
-    // 🔹 Показ кошика
+    // 🔹    Показ кошика
     public void showCart(Long userId) throws TelegramApiException {
         List<Map<String, Object>> cart = userCart.get(userId);
 
@@ -2801,14 +2801,21 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 3. Кнопка Додати в кошик
+        // 🔹 3. Кнопка Очистити кошик
+        if (text.equals("🧹 Очистити кошик")) {
+            System.out.println("[handleText] Clear cart button pressed");
+            clearCart(chatId); // 🧹 Виклик твого методу
+            return;
+        }
+
+        // 🔹 4. Кнопка Додати в кошик
         if (text.equals("🛠 Додати в кошик")) {
             System.out.println("[handleText] Add to cart button pressed");
             addToCartTool(chatId);
             return;
         }
 
-        // 🔹 4. Категорії
+        // 🔹 5. Категорії
         List<String> categories = catalogSearcher.getCategories();
         if (categories.contains(text)) {
             System.out.println("[handleText] Category selected: " + text);
@@ -2818,7 +2825,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 5. Підкатегорії
+        // 🔹 6. Підкатегорії
         if (currentCategory.containsKey(chatId)) {
             String cat = currentCategory.get(chatId);
             List<String> subcats = catalogSearcher.getSubcategories(cat);
@@ -2832,7 +2839,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        // 🔹 6. Якщо нічого не підійшло — повідомлення
+        // 🔹 7. Якщо нічого не підійшло — повідомлення
         sendText(chatId, "Невідома команда 😅 Натисніть /start або виберіть із меню.");
     }
 
