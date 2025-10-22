@@ -409,20 +409,15 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     for (HitsManager.Hit hit : hits) {
-                        String title = hit.title != null ? hit.title : "";
-                        String description = hit.description != null ? hit.description : "";
+                        String title = (hit.title != null && !hit.title.isEmpty()) ? hit.title : "немає";
+                        String description = (hit.description != null && !hit.description.isEmpty()) ? hit.description : "";
 
-                        // Формуємо текст для повідомлення
-                        String textMsg = "";
-                        if (!title.isEmpty()) textMsg += "⭐ *" + title + "*";
+                        String textMsg = "⭐️ *" + title + "*";
                         if (!description.isEmpty() && !"немає".equals(description)) {
-                            if (!textMsg.isEmpty()) textMsg += "\n\n";
-                            textMsg += description;
+                            textMsg += "\n\n" + description;
                         }
 
-                        // Обробка медіа з Cloudinary через media_url
                         String mediaUrl = hit.media_url != null ? hit.media_url : null;
-                        String caption = textMsg.isEmpty() ? (mediaUrl != null ? null : "немає") : textMsg;
 
                         try {
                             if (mediaUrl != null && !mediaUrl.equals("немає")) {
@@ -431,7 +426,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                     SendVideo video = SendVideo.builder()
                                             .chatId(chatId)
                                             .video(new InputFile(mediaUrl))
-                                            .caption(caption)
+                                            .caption(textMsg)
                                             .parseMode("Markdown")
                                             .build();
                                     execute(video);
@@ -440,14 +435,14 @@ public class StoreBot extends TelegramLongPollingBot {
                                     SendPhoto photo = SendPhoto.builder()
                                             .chatId(chatId)
                                             .photo(new InputFile(mediaUrl))
-                                            .caption(caption)
+                                            .caption(textMsg)
                                             .parseMode("Markdown")
                                             .build();
                                     execute(photo);
                                 }
                             } else {
                                 // Якщо медіа немає
-                                sendText(chatId, caption);
+                                sendText(chatId, textMsg);
                             }
                         } catch (TelegramApiException e) {
                             e.printStackTrace();
