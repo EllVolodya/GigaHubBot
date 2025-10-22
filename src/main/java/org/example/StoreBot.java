@@ -2798,6 +2798,7 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔹 2. Кнопка Перейти в кошик
         if (text.equals("🛍️ Перейти в кошик")) {
             System.out.println("[handleText] Open cart button pressed");
+            userStates.remove(chatId); // 🔹 Очищуємо стан пошуку
             showCart(chatId);
             return;
         }
@@ -2805,7 +2806,8 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔹 3. Кнопка Очистити кошик
         if (text.equals("🧹 Очистити кошик")) {
             System.out.println("[handleText] Clear cart button pressed");
-            clearCart(chatId); // 🧹 Виклик твого методу
+            userStates.remove(chatId); // 🔹 Вихід із пошуку
+            clearCart(chatId);
             return;
         }
 
