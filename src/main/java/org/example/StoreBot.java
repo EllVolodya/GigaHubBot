@@ -898,6 +898,13 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessage(createUserMenu(String.valueOf(userId), userId));
     }
 
+    // Викликаємо кошик з іншого класу
+    public void openCartForUser(Long userId) throws TelegramApiException {
+        userStates.remove(userId); // вихід з пошуку
+        showCart(userId);          // приватний метод всередині класу
+    }
+
+
     private boolean isInDeveloperMenu(Long userId) {
         return developerMenuState.getOrDefault(userId, false);
     }

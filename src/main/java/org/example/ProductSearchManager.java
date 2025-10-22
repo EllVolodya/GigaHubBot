@@ -11,19 +11,19 @@ public class ProductSearchManager {
         this.bot = bot;
     }
 
+    // 🔹 Основний метод пошуку
     public void performSearch(Long userId, String chatId, String text) throws TelegramApiException {
         text = text.trim();
         System.out.println("[performSearch] User " + userId + " input: '" + text + "'");
 
         // 🛍️ Якщо користувач хоче перейти в кошик
         if (text.equalsIgnoreCase("🛍️ Перейти в кошик") || text.equalsIgnoreCase("Перейти в кошик")) {
-            bot.getUserStates().remove(userId);
-            bot.showCart(Long.valueOf(chatId));
+            bot.openCartForUser(userId);
             System.out.println("[performSearch] User " + userId + " opened the cart.");
             return;
         }
 
-        // ⛔ Якщо користувач натиснув "Назад" — виходимо з пошуку
+        // ⬅️ Назад
         if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
             bot.getUserStates().remove(userId);
             bot.execute(bot.createUserMenu(chatId, userId));
@@ -85,12 +85,12 @@ public class ProductSearchManager {
         }
     }
 
-    // Метод для обробки введення номера
-    public void handleSearchNumber(Long userId, String chatId, String text) {
-        // ⛔ Якщо користувач натиснув "Назад" — вийти
+    // 🔹 Метод для обробки введення номера
+    public void handleSearchNumber(Long userId, String chatId, String text) throws TelegramApiException {
+        // ⬅️ Назад
         if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
             bot.getUserStates().remove(userId);
-            bot.createUserMenu(chatId, userId);
+            bot.execute(bot.createUserMenu(chatId, userId));
             System.out.println("[handleSearchNumber] User " + userId + " exited search mode.");
             return;
         }
