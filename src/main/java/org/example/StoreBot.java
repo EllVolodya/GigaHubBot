@@ -893,6 +893,7 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Очистити кошик
     private void clearCart(Long userId) throws TelegramApiException {
         userCart.remove(userId);
+        userStates.remove(userId);
         sendText(String.valueOf(userId), "🧹 Кошик очищено!");
         sendMessage(createUserMenu(String.valueOf(userId), userId));
     }
