@@ -420,8 +420,8 @@ public class StoreBot extends TelegramLongPollingBot {
                             textMsg += description;
                         }
 
-                        // Обробка медіа з Cloudinary
-                        String mediaUrl = hit.media != null ? hit.media : null;
+                        // Обробка медіа з Cloudinary через media_url
+                        String mediaUrl = hit.media_url != null ? hit.media_url : null;
                         String caption = textMsg.isEmpty() ? (mediaUrl != null ? null : "немає") : textMsg;
 
                         try {

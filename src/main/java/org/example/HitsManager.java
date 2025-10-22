@@ -114,7 +114,7 @@ public class HitsManager {
                 hit.id = rs.getInt("id");
                 hit.title = rs.getString("title");
                 hit.description = rs.getString("description");
-                hit.media = rs.getString("media");
+                hit.media_url = rs.getString("media");
                 hits.add(hit);
             }
 
@@ -130,6 +130,6 @@ public class HitsManager {
         public int id;
         public String title;
         public String description;
-        public String media;
+        public String media_url;
     }
 }
