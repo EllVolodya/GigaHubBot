@@ -38,15 +38,25 @@ public class HitsManager {
                 fileId = photos.get(photos.size() - 1).getFileId(); // найкраща якість
             } else if (message.hasVideo()) {
                 fileId = message.getVideo().getFileId();
+            } else if (message.hasDocument()) {
+                String mime = message.getDocument().getMimeType();
+                if (mime != null && (mime.startsWith("video/") || mime.equals("application/octet-stream"))) {
+                    fileId = message.getDocument().getFileId();
+                }
+            } else if (message.hasAnimation()) {
+                fileId = message.getAnimation().getFileId();
             }
 
-            if (fileId == null) return null;
+            if (fileId == null) {
+                System.out.println("[HitsManager] No valid media found in message.");
+                return null;
+            }
 
-            // Отримуємо Telegram File
+            System.out.println("[HitsManager] fileId: " + fileId);
+
             File tgFile = bot.execute(new org.telegram.telegrambots.meta.api.methods.GetFile(fileId));
             String filePath = tgFile.getFilePath();
 
-            // Завантажуємо файл у тимчасову папку
             java.io.File tempFile = java.io.File.createTempFile("tgfile_", filePath.replaceAll("[^a-zA-Z0-9\\.]", "_"));
             try (InputStream is = new URL("https://api.telegram.org/file/bot" + bot.getBotToken() + "/" + filePath).openStream();
                  FileOutputStream fos = new FileOutputStream(tempFile)) {
@@ -55,12 +65,10 @@ public class HitsManager {
                 while ((n = is.read(buffer)) > 0) fos.write(buffer, 0, n);
             }
 
-            // Завантажуємо на Cloudinary
             String cloudUrl = uploadToCloudinary(tempFile);
-
-            // Видаляємо тимчасовий файл
             tempFile.delete();
 
+            System.out.println("[HitsManager] cloudUrl: " + cloudUrl);
             return cloudUrl;
 
         } catch (Exception e) {
