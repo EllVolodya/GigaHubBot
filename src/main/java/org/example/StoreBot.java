@@ -408,24 +408,35 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     for (HitsManager.Hit hit : hits) {
-                        String title = (hit.title != null && !hit.title.isEmpty()) ? hit.title : "немає";
-                        String description = (hit.description != null && !hit.description.isEmpty()) ? hit.description : "";
+                        String title = hit.title != null ? hit.title : "";
+                        String description = hit.description != null ? hit.description : "";
 
-                        String textMsg = "⭐️ *" + title + "*";
+                        // Формуємо текст для повідомлення
+                        String textMsg = "";
+                        if (!title.isEmpty()) textMsg += "⭐ *" + title + "*";
                         if (!description.isEmpty() && !"немає".equals(description)) {
-                            textMsg += "\n\n" + description;
+                            if (!textMsg.isEmpty()) textMsg += "\n\n";
+                            textMsg += description;
                         }
 
-                        String mediaUrl = hit.media_url != null ? hit.media_url : null;
+                        String caption;
+                        if (!textMsg.isEmpty()) {
+                            caption = textMsg;
+                        } else if (hit.media_url != null && !hit.media_url.equals("немає")) {
+                            // Для відео/GIF підпис не ставимо
+                            caption = null;
+                        } else {
+                            caption = "немає";
+                        }
 
                         try {
-                            if (mediaUrl != null && !mediaUrl.equals("немає")) {
-                                if (mediaUrl.endsWith(".mp4") || mediaUrl.contains("video")) {
-                                    // Відео
+                            if (hit.media_url != null && !hit.media_url.equals("немає")) {
+                                if (hit.media_url.endsWith(".mp4") || hit.media_url.contains("video")) {
+                                    // Відео або GIF
                                     SendVideo video = SendVideo.builder()
                                             .chatId(chatId)
-                                            .video(new InputFile(mediaUrl))
-                                            .caption(textMsg)
+                                            .video(new InputFile(hit.media_url))
+                                            .caption(caption)
                                             .parseMode("Markdown")
                                             .build();
                                     execute(video);
@@ -433,15 +444,15 @@ public class StoreBot extends TelegramLongPollingBot {
                                     // Фото
                                     SendPhoto photo = SendPhoto.builder()
                                             .chatId(chatId)
-                                            .photo(new InputFile(mediaUrl))
-                                            .caption(textMsg)
+                                            .photo(new InputFile(hit.media_url))
+                                            .caption(caption)
                                             .parseMode("Markdown")
                                             .build();
                                     execute(photo);
                                 }
                             } else {
                                 // Якщо медіа немає
-                                sendText(chatId, textMsg);
+                                sendText(chatId, caption);
                             }
                         } catch (TelegramApiException e) {
                             e.printStackTrace();
