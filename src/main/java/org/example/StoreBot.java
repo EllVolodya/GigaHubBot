@@ -2011,14 +2011,27 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // ⬅️ Назад → вихід у головне меню
         if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
-            getUserStates().remove(userId); // вихід зі стану пошуку
+            getUserStates().remove(userId);
             try {
-                execute(createUserMenu(chatId, userId)); // показуємо головне меню
+                execute(createUserMenu(chatId, userId));
             } catch (TelegramApiException e) {
                 e.printStackTrace();
                 System.out.println("[handleWaitingForSearch] Failed to send main menu to user " + userId);
             }
             System.out.println("[handleWaitingForSearch] User " + userId + " exited search mode.");
+            return;
+        }
+
+        // 🛍️ Перейти в кошик → вимикаємо пошук перед відкриттям
+        if (text.equalsIgnoreCase("🛍️ Перейти в кошик") || text.equalsIgnoreCase("Перейти в кошик")) {
+            getUserStates().remove(userId);
+            try {
+                openCartForUser(userId);
+                System.out.println("[handleWaitingForSearch] User " + userId + " opened the cart.");
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(String.valueOf(userId), "⚠️ Не вдалося відкрити кошик.");
+            }
             return;
         }
 
@@ -2039,10 +2052,11 @@ public class StoreBot extends TelegramLongPollingBot {
             // Якщо користувач ввів номер товару зі списку
             if (text.matches("\\d+")) {
                 searchManager.handleSearchNumber(userId, chatId, text);
+                // стан залишаємо тільки якщо користувач справді шукає номер
             } else {
                 // Якщо користувач ввів текст → пошук
+                getUserStates().put(userId, "waiting_for_search"); // ставимо стан пошуку перед пошуком
                 searchManager.performSearch(userId, chatId, text);
-                getUserStates().put(userId, "waiting_for_search"); // ставимо стан пошуку
             }
         } catch (TelegramApiException e) {
             e.printStackTrace();
