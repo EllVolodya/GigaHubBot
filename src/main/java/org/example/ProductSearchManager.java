@@ -18,6 +18,7 @@ public class ProductSearchManager {
 
         // 🛍️ Перейти в кошик
         if (text.equalsIgnoreCase("🛍️ Перейти в кошик") || text.equalsIgnoreCase("Перейти в кошик")) {
+            bot.getUserStates().remove(userId);
             bot.openCartForUser(userId);
             System.out.println("[performSearch] User " + userId + " opened the cart.");
             return;
