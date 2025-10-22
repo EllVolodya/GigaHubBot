@@ -36,35 +36,25 @@ public class HitsManager {
             // Фото
             if (message.hasPhoto()) {
                 List<PhotoSize> photos = message.getPhoto();
-                fileId = photos.get(photos.size() - 1).getFileId();
+                fileId = photos.get(photos.size() - 1).getFileId(); // найкраща якість
             }
-            // Класичне відео
+            // Відео
             else if (message.hasVideo()) {
                 fileId = message.getVideo().getFileId();
             }
-            // GIF або MP4 як animation
+            // Анімація (GIF)
             else if (message.hasAnimation()) {
                 fileId = message.getAnimation().getFileId();
             }
-            // Документ, перевіряємо на MP4
-            else if (message.hasDocument()) {
-                String mime = message.getDocument().getMimeType();
-                if (mime != null && mime.equals("video/mp4")) {
-                    fileId = message.getDocument().getFileId();
-                }
-            }
 
-            if (fileId == null) {
-                System.out.println("[HitsManager] No valid media found in message.");
-                return null;
-            }
+            // Якщо нічого немає
+            if (fileId == null) return null;
 
-            System.out.println("[HitsManager] fileId: " + fileId);
-
-            // Отримуємо файл Telegram
+            // Отримуємо Telegram File
             File tgFile = bot.execute(new org.telegram.telegrambots.meta.api.methods.GetFile(fileId));
             String filePath = tgFile.getFilePath();
 
+            // Завантажуємо файл у тимчасову папку
             java.io.File tempFile = java.io.File.createTempFile("tgfile_", filePath.replaceAll("[^a-zA-Z0-9\\.]", "_"));
             try (InputStream is = new URL("https://api.telegram.org/file/bot" + bot.getBotToken() + "/" + filePath).openStream();
                  FileOutputStream fos = new FileOutputStream(tempFile)) {
@@ -73,10 +63,12 @@ public class HitsManager {
                 while ((n = is.read(buffer)) > 0) fos.write(buffer, 0, n);
             }
 
+            // Завантажуємо на Cloudinary з resource_type="auto"
             String cloudUrl = uploadToCloudinary(tempFile);
+
+            // Видаляємо тимчасовий файл
             tempFile.delete();
 
-            System.out.println("[HitsManager] Uploaded media to Cloudinary: " + cloudUrl);
             return cloudUrl;
 
         } catch (Exception e) {
@@ -86,12 +78,12 @@ public class HitsManager {
         }
     }
 
-    // --- Збереження медіа на Cloudinary ---
+    // --- Завантаження на Cloudinary ---
     public static String uploadToCloudinary(java.io.File file) {
         try {
             var result = cloudinary.uploader().upload(file, ObjectUtils.asMap(
                     "overwrite", true,
-                    "resource_type", "auto" // <-- важливо для відео та GIF
+                    "resource_type", "auto"  // важливо для відео та GIF
             ));
             return result.get("secure_url").toString();
         } catch (IOException e) {
