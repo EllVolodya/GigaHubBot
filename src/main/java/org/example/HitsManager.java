@@ -89,7 +89,10 @@ public class HitsManager {
     // --- Збереження медіа на Cloudinary ---
     public static String uploadToCloudinary(java.io.File file) {
         try {
-            var result = cloudinary.uploader().upload(file, ObjectUtils.asMap("overwrite", true));
+            var result = cloudinary.uploader().upload(file, ObjectUtils.asMap(
+                    "overwrite", true,
+                    "resource_type", "auto" // <-- важливо для відео та GIF
+            ));
             return result.get("secure_url").toString();
         } catch (IOException e) {
             e.printStackTrace();
