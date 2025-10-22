@@ -84,7 +84,7 @@ public class HitsManager {
 
     // --- Збереження нового хіта у MySQL ---
     public static void saveHit(String title, String description, String mediaUrl) {
-        String sql = "INSERT INTO hits (title, description, media) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO hits (title, description, media_url) VALUES (?, ?, ?)";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
