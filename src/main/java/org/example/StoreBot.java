@@ -1480,7 +1480,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // 🔹 Order Pickup
+            // Самовивіз товару
             case "order_pickup" -> {
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
@@ -1512,32 +1512,44 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 try (Connection conn = DatabaseManager.getConnection()) {
                     PreparedStatement stmt = conn.prepareStatement(
-                            "INSERT INTO orders (orderCode, deliveryType, city, fullName, phone, card, status, item, total, date) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
+                            "INSERT INTO orders (orderCode, userId, deliveryType, city, fullName, phone, card, status, item, total, date) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
                     );
                     stmt.setString(1, orderCode);
-                    stmt.setString(2, "Самовивіз");
-                    stmt.setString(3, city);
-                    stmt.setString(4, fullName);
-                    stmt.setString(5, phone);
-                    stmt.setString(6, card); // 4-значна картка
-                    stmt.setString(7, "Нове");
-                    stmt.setString(8, itemsDb.toString());
-                    stmt.setDouble(9, total);
+                    stmt.setLong(2, userId);
+                    stmt.setString(3, "Самовивіз");
+                    stmt.setString(4, city);
+                    stmt.setString(5, fullName);
+                    stmt.setString(6, phone);
+                    stmt.setString(7, card);
+                    stmt.setString(8, "Нове");
+                    stmt.setString(9, itemsDb.toString());
+                    stmt.setDouble(10, total);
                     stmt.executeUpdate();
                     stmt.close();
 
-                    // Вставка в окрему таблицю user_cards
-                    PreparedStatement insertUser = conn.prepareStatement(
-                            "INSERT INTO user_cards (name, city, number, number_carts, bonus) VALUES (?, ?, ?, ?, ?)"
+                    // 🔹 Додаємо або оновлюємо користувача в user_cards
+                    PreparedStatement checkStmt = conn.prepareStatement(
+                            "SELECT id FROM user_cards WHERE id = ?"
                     );
-                    insertUser.setString(1, fullName);
-                    insertUser.setString(2, city);
-                    insertUser.setString(3, phone);
-                    insertUser.setString(4, card); // 4-значна картка
-                    insertUser.setString(5, "");    // бонус поки порожній
-                    insertUser.executeUpdate();
-                    insertUser.close();
+                    checkStmt.setLong(1, userId);
+                    ResultSet rs = checkStmt.executeQuery();
+                    if (!rs.next()) {
+                        // користувача немає, вставляємо
+                        PreparedStatement insertUser = conn.prepareStatement(
+                                "INSERT INTO user_cards (id, name, city, number, number_carts, bonus) VALUES (?, ?, ?, ?, ?, ?)"
+                        );
+                        insertUser.setLong(1, userId);
+                        insertUser.setString(2, fullName);
+                        insertUser.setString(3, city);
+                        insertUser.setString(4, phone);
+                        insertUser.setString(5, "1"); // перше замовлення
+                        insertUser.setString(6, "0"); // бонус
+                        insertUser.executeUpdate();
+                        insertUser.close();
+                        System.out.println("[USER_CARDS] Added new user id=" + userId);
+                    }
+                    checkStmt.close();
 
                     userCart.remove(userId);
                     userStates.remove(userId);
@@ -1546,13 +1558,14 @@ public class StoreBot extends TelegramLongPollingBot {
                             "\nВаше замовлення:\n" + itemsDb.toString().replace(";", "\n") +
                             "\n💰 Всього: " + total + " грн\nБудь ласка, заберіть товар у магазині.");
 
+                    for (Long adminId : ADMINS) showAdminOrder(adminId, adminId.toString());
+
                 } catch (SQLException e) {
                     e.printStackTrace();
                     sendText(chatId, "❌ Сталася помилка при збереженні замовлення.");
                 }
             }
 
-// 🔹 City Delivery
             case "awaiting_city_delivery" -> {
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
@@ -1584,31 +1597,43 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 try (Connection conn = DatabaseManager.getConnection()) {
                     PreparedStatement stmt = conn.prepareStatement(
-                            "INSERT INTO orders (orderCode, deliveryType, address, fullName, phone, card, status, item, total, date) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
+                            "INSERT INTO orders (orderCode, userId, deliveryType, address, fullName, phone, card, status, item, total, date) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
                     );
                     stmt.setString(1, orderCode);
-                    stmt.setString(2, "Доставка по місту");
-                    stmt.setString(3, address);
-                    stmt.setString(4, fullName);
-                    stmt.setString(5, phone);
-                    stmt.setString(6, card);
-                    stmt.setString(7, "Нове");
-                    stmt.setString(8, itemsDb.toString());
-                    stmt.setDouble(9, total);
+                    stmt.setLong(2, userId);
+                    stmt.setString(3, "Доставка по місту");
+                    stmt.setString(4, address);
+                    stmt.setString(5, fullName);
+                    stmt.setString(6, phone);
+                    stmt.setString(7, card);
+                    stmt.setString(8, "Нове");
+                    stmt.setString(9, itemsDb.toString());
+                    stmt.setDouble(10, total);
                     stmt.executeUpdate();
                     stmt.close();
 
-                    PreparedStatement insertUser = conn.prepareStatement(
-                            "INSERT INTO user_cards (name, city, number, number_carts, bonus) VALUES (?, ?, ?, ?, ?)"
+                    // 🔹 Додаємо або оновлюємо користувача в user_cards
+                    PreparedStatement checkStmt = conn.prepareStatement(
+                            "SELECT id FROM user_cards WHERE id = ?"
                     );
-                    insertUser.setString(1, fullName);
-                    insertUser.setString(2, address);
-                    insertUser.setString(3, phone);
-                    insertUser.setString(4, card);
-                    insertUser.setString(5, "");
-                    insertUser.executeUpdate();
-                    insertUser.close();
+                    checkStmt.setLong(1, userId);
+                    ResultSet rs = checkStmt.executeQuery();
+                    if (!rs.next()) {
+                        PreparedStatement insertUser = conn.prepareStatement(
+                                "INSERT INTO user_cards (id, name, city, number, number_carts, bonus) VALUES (?, ?, ?, ?, ?, ?)"
+                        );
+                        insertUser.setLong(1, userId);
+                        insertUser.setString(2, fullName);
+                        insertUser.setString(3, address);
+                        insertUser.setString(4, phone);
+                        insertUser.setString(5, "1");
+                        insertUser.setString(6, "0");
+                        insertUser.executeUpdate();
+                        insertUser.close();
+                        System.out.println("[USER_CARDS] Added new user id=" + userId);
+                    }
+                    checkStmt.close();
 
                     userCart.remove(userId);
                     userStates.remove(userId);
@@ -1617,13 +1642,14 @@ public class StoreBot extends TelegramLongPollingBot {
                             "\nВаше замовлення:\n" + itemsDb.toString().replace(";", "\n") +
                             "\n💰 Всього: " + total + " грн\nВаш товар буде доставлений за вказаною адресою.");
 
+                    for (Long adminId : ADMINS) showAdminOrder(adminId, adminId.toString());
+
                 } catch (SQLException e) {
                     e.printStackTrace();
                     sendText(chatId, "❌ Сталася помилка при збереженні замовлення.");
                 }
             }
 
-// 🔹 Nova Poshta Delivery
             case "awaiting_post_delivery" -> {
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
@@ -1655,38 +1681,53 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 try (Connection conn = DatabaseManager.getConnection()) {
                     PreparedStatement stmt = conn.prepareStatement(
-                            "INSERT INTO orders (orderCode, deliveryType, postOffice, fullName, phone, card, status, item, total, date) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
+                            "INSERT INTO orders (orderCode, userId, deliveryType, postOffice, fullName, phone, card, status, item, total, date) " +
+                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
                     );
                     stmt.setString(1, orderCode);
-                    stmt.setString(2, "Нова пошта");
-                    stmt.setString(3, postOffice);
-                    stmt.setString(4, fullName);
-                    stmt.setString(5, phone);
-                    stmt.setString(6, card);
-                    stmt.setString(7, "Нове");
-                    stmt.setString(8, itemsDb.toString());
-                    stmt.setDouble(9, total);
+                    stmt.setLong(2, userId);
+                    stmt.setString(3, "Нова пошта");
+                    stmt.setString(4, postOffice);
+                    stmt.setString(5, fullName);
+                    stmt.setString(6, phone);
+                    stmt.setString(7, card);
+                    stmt.setString(8, "Нове");
+                    stmt.setString(9, itemsDb.toString());
+                    stmt.setDouble(10, total);
                     stmt.executeUpdate();
                     stmt.close();
 
-                    PreparedStatement insertUser = conn.prepareStatement(
-                            "INSERT INTO user_cards (name, city, number, number_carts, bonus) VALUES (?, ?, ?, ?, ?)"
+                    // 🔹 Додаємо або оновлюємо користувача в user_cards
+                    PreparedStatement checkStmt = conn.prepareStatement(
+                            "SELECT id FROM user_cards WHERE id = ?"
                     );
-                    insertUser.setString(1, fullName);
-                    insertUser.setString(2, postOffice);
-                    insertUser.setString(3, phone);
-                    insertUser.setString(4, card);
-                    insertUser.setString(5, "");
-                    insertUser.executeUpdate();
-                    insertUser.close();
+                    checkStmt.setLong(1, userId);
+                    ResultSet rs = checkStmt.executeQuery();
+                    if (!rs.next()) {
+                        PreparedStatement insertUser = conn.prepareStatement(
+                                "INSERT INTO user_cards (id, name, city, number, number_carts, bonus) VALUES (?, ?, ?, ?, ?, ?)"
+                        );
+                        insertUser.setLong(1, userId);
+                        insertUser.setString(2, fullName);
+                        insertUser.setString(3, postOffice);
+                        insertUser.setString(4, phone);
+                        insertUser.setString(5, "1");
+                        insertUser.setString(6, "0");
+                        insertUser.executeUpdate();
+                        insertUser.close();
+                        System.out.println("[USER_CARDS] Added new user id=" + userId);
+                    }
+                    checkStmt.close();
 
                     userCart.remove(userId);
                     userStates.remove(userId);
+                    tempStorage.remove(userId + "_deliveryType");
 
                     sendText(chatId, "✅ Ваше замовлення успішно оформлено!\nКод замовлення: " + orderCode +
                             "\nВаше замовлення:\n" + itemsDb.toString().replace(";", "\n") +
                             "\n💰 Всього: " + total + " грн\nВаш товар буде доставлений Новою поштою за вказаним відділенням.");
+
+                    for (Long adminId : ADMINS) showAdminOrder(adminId, adminId.toString());
 
                 } catch (SQLException e) {
                     e.printStackTrace();
