@@ -248,28 +248,17 @@ public class StoreBot extends TelegramLongPollingBot {
                         }
                     }
 
-                    // Реєстрація користувача та стартове повідомлення
+                    // --- Реєстрація користувача
                     UserManager userManager = new UserManager();
-                    SendMessage startMsg = userManager.registerUser(
-                            chatIdLong,
-                            update.getMessage().getFrom().getFirstName(),
-                            chatIdStr
-                    );
+                    userManager.registerUser(chatIdLong, update.getMessage().getFrom().getFirstName(), chatIdStr);
 
-                    if (startMsg != null) {
-                        try {
-                            execute(startMsg);
-                        } catch (TelegramApiException e) {
-                            e.printStackTrace();
-                            sendText(chatIdStr, "❌ Помилка надсилання стартового повідомлення.");
-                        }
-                    } else {
-                        try {
-                            execute(createUserMenu(chatIdStr, userId));
-                        } catch (TelegramApiException e) {
-                            e.printStackTrace();
-                            sendText(chatIdStr, "❌ Помилка надсилання меню користувача.");
-                        }
+                    // --- Відправка меню користувача одразу після /start
+                    try {
+                        SendMessage menuMsg = createUserMenu(chatIdStr, userId);
+                        execute(menuMsg);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                        sendText(chatIdStr, "❌ Помилка надсилання меню користувача.");
                     }
 
                     System.out.println("Користувач натиснув /start: " + chatIdLong);
