@@ -1480,6 +1480,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
+            // Самовивіз товару
             case "order_pickup" -> {
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
@@ -1510,6 +1511,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 try (Connection conn = DatabaseManager.getConnection()) {
+                    // 🔹 Зберігаємо замовлення
                     PreparedStatement stmt = conn.prepareStatement(
                             "INSERT INTO orders (orderCode, userId, deliveryType, city, fullName, phone, card, status, item, total, date) " +
                                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
@@ -1527,16 +1529,30 @@ public class StoreBot extends TelegramLongPollingBot {
                     stmt.executeUpdate();
                     stmt.close();
 
-                    // 🔹 Оновлення accounts
-                    PreparedStatement updateStmt = conn.prepareStatement(
-                            "UPDATE accounts SET name = ?, city = ?, number = ?, number_carts = number_carts + 1 WHERE telegramid = ?"
+                    // 🔹 Додаємо користувача в user_cards, тільки якщо його там ще немає
+                    PreparedStatement checkUser = conn.prepareStatement(
+                            "SELECT COUNT(*) FROM user_cards WHERE telegramid = ?"
                     );
-                    updateStmt.setString(1, fullName);
-                    updateStmt.setString(2, city);
-                    updateStmt.setString(3, phone);
-                    updateStmt.setLong(4, userId);
-                    updateStmt.executeUpdate();
-                    updateStmt.close();
+                    checkUser.setLong(1, userId);
+                    ResultSet rs = checkUser.executeQuery();
+                    rs.next();
+                    int count = rs.getInt(1);
+                    rs.close();
+                    checkUser.close();
+
+                    if (count == 0) {
+                        PreparedStatement insertUser = conn.prepareStatement(
+                                "INSERT INTO user_cards (telegramid, name, city, number, numbercarts, bonus) VALUES (?, ?, ?, ?, ?, ?)"
+                        );
+                        insertUser.setLong(1, userId);
+                        insertUser.setString(2, fullName);
+                        insertUser.setString(3, city);
+                        insertUser.setString(4, phone);
+                        insertUser.setInt(5, 1);
+                        insertUser.setInt(6, 0); // бонус
+                        insertUser.executeUpdate();
+                        insertUser.close();
+                    }
 
                     userCart.remove(userId);
                     userStates.remove(userId);
@@ -1600,15 +1616,29 @@ public class StoreBot extends TelegramLongPollingBot {
                     stmt.executeUpdate();
                     stmt.close();
 
-                    PreparedStatement updateStmt = conn.prepareStatement(
-                            "UPDATE accounts SET name = ?, city = ?, number = ?, number_carts = number_carts + 1 WHERE telegramid = ?"
+                    PreparedStatement checkUser = conn.prepareStatement(
+                            "SELECT COUNT(*) FROM user_cards WHERE telegramid = ?"
                     );
-                    updateStmt.setString(1, fullName);
-                    updateStmt.setString(2, address);
-                    updateStmt.setString(3, phone);
-                    updateStmt.setLong(4, userId);
-                    updateStmt.executeUpdate();
-                    updateStmt.close();
+                    checkUser.setLong(1, userId);
+                    ResultSet rs = checkUser.executeQuery();
+                    rs.next();
+                    int count = rs.getInt(1);
+                    rs.close();
+                    checkUser.close();
+
+                    if (count == 0) {
+                        PreparedStatement insertUser = conn.prepareStatement(
+                                "INSERT INTO user_cards (telegramid, name, city, number, numbercarts, bonus) VALUES (?, ?, ?, ?, ?, ?)"
+                        );
+                        insertUser.setLong(1, userId);
+                        insertUser.setString(2, fullName);
+                        insertUser.setString(3, address);
+                        insertUser.setString(4, phone);
+                        insertUser.setInt(5, 1);
+                        insertUser.setInt(6, 0);
+                        insertUser.executeUpdate();
+                        insertUser.close();
+                    }
 
                     userCart.remove(userId);
                     userStates.remove(userId);
@@ -1672,15 +1702,29 @@ public class StoreBot extends TelegramLongPollingBot {
                     stmt.executeUpdate();
                     stmt.close();
 
-                    PreparedStatement updateStmt = conn.prepareStatement(
-                            "UPDATE accounts SET name = ?, city = ?, number = ?, number_carts = number_carts + 1 WHERE telegramid = ?"
+                    PreparedStatement checkUser = conn.prepareStatement(
+                            "SELECT COUNT(*) FROM user_cards WHERE telegramid = ?"
                     );
-                    updateStmt.setString(1, fullName);
-                    updateStmt.setString(2, postOffice);
-                    updateStmt.setString(3, phone);
-                    updateStmt.setLong(4, userId);
-                    updateStmt.executeUpdate();
-                    updateStmt.close();
+                    checkUser.setLong(1, userId);
+                    ResultSet rs = checkUser.executeQuery();
+                    rs.next();
+                    int count = rs.getInt(1);
+                    rs.close();
+                    checkUser.close();
+
+                    if (count == 0) {
+                        PreparedStatement insertUser = conn.prepareStatement(
+                                "INSERT INTO user_cards (telegramid, name, city, number, numbercarts, bonus) VALUES (?, ?, ?, ?, ?, ?)"
+                        );
+                        insertUser.setLong(1, userId);
+                        insertUser.setString(2, fullName);
+                        insertUser.setString(3, postOffice);
+                        insertUser.setString(4, phone);
+                        insertUser.setInt(5, 1);
+                        insertUser.setInt(6, 0);
+                        insertUser.executeUpdate();
+                        insertUser.close();
+                    }
 
                     userCart.remove(userId);
                     userStates.remove(userId);

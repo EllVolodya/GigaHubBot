@@ -68,3 +68,12 @@ CREATE TABLE accounts (
 	is_admin TEXT, 
 	is_developer TEXT
 );
+
+CREATE TABLE user_cards (
+    id SERIAL PRIMARY KEY,
+    name TEXT,
+    city TEXT,
+    number TEXT,
+    number_carts TEXT,
+    bonus TEXT
+);
