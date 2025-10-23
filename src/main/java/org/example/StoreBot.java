@@ -1512,11 +1512,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 try (Connection conn = DatabaseManager.getConnection()) {
                     PreparedStatement stmt = conn.prepareStatement(
-                            "INSERT INTO orders (orderCode, userId, deliveryType, city, fullName, phone, card, status, item, total, date) " +
+                            "INSERT INTO orders (userId, orderCode, deliveryType, city, fullName, phone, card, status, item, total, date) " +
                                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
                     );
-                    stmt.setString(1, orderCode);
-                    stmt.setLong(2, userId);
+                    stmt.setLong(1, userId);
+                    stmt.setString(2, orderCode);
                     stmt.setString(3, "Самовивіз");
                     stmt.setString(4, city);
                     stmt.setString(5, fullName);
@@ -1597,11 +1597,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 try (Connection conn = DatabaseManager.getConnection()) {
                     PreparedStatement stmt = conn.prepareStatement(
-                            "INSERT INTO orders (orderCode, userId, deliveryType, address, fullName, phone, card, status, item, total, date) " +
+                            "INSERT INTO orders (userId, orderCode, deliveryType, city, fullName, phone, card, status, item, total, date) " +
                                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
                     );
-                    stmt.setString(1, orderCode);
-                    stmt.setLong(2, userId);
+                    stmt.setLong(1, userId);              // ось тут передаємо userId
+                    stmt.setString(2, orderCode);
                     stmt.setString(3, "Доставка по місту");
                     stmt.setString(4, address);
                     stmt.setString(5, fullName);
@@ -1681,11 +1681,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 try (Connection conn = DatabaseManager.getConnection()) {
                     PreparedStatement stmt = conn.prepareStatement(
-                            "INSERT INTO orders (orderCode, userId, deliveryType, postOffice, fullName, phone, card, status, item, total, date) " +
+                            "INSERT INTO orders (userId, orderCode, deliveryType, city, fullName, phone, card, status, item, total, date) " +
                                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
                     );
-                    stmt.setString(1, orderCode);
-                    stmt.setLong(2, userId);
+                    stmt.setLong(1, userId);              // ось тут передаємо userId
+                    stmt.setString(2, orderCode);
                     stmt.setString(3, "Нова пошта");
                     stmt.setString(4, postOffice);
                     stmt.setString(5, fullName);
@@ -1696,6 +1696,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     stmt.setDouble(10, total);
                     stmt.executeUpdate();
                     stmt.close();
+
 
                     // 🔹 Додаємо або оновлюємо користувача в user_cards
                     PreparedStatement checkStmt = conn.prepareStatement(
