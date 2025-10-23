@@ -3,6 +3,7 @@ package org.example;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
 public class UserManager {
@@ -23,7 +24,6 @@ public class UserManager {
         String selectSql = "SELECT id FROM users WHERE telegramid = ?";
         String insertSql = "INSERT INTO users (name, city, number, number_carts, bonus, is_admin, is_developer, telegramid) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-
         try (PreparedStatement selectStmt = connection.prepareStatement(selectSql)) {
             selectStmt.setString(1, telegramId.toString());
             try (ResultSet rs = selectStmt.executeQuery()) {
@@ -53,33 +53,36 @@ public class UserManager {
             System.out.println("❌ SQL Error while registering user: " + telegramId);
             e.printStackTrace();
         }
-        return null;
+        return null; // Користувач вже є
     }
 
-    // Інкремент кількості замовлень
-    public void incrementOrders(Long telegramId) {
-        String sql = "UPDATE users SET number_carts = number_carts + 1 WHERE telegramid = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setString(1, telegramId.toString());
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
-    // Список всіх користувачів
+    // Список всіх зареєстрованих користувачів
     public List<String> getRegisteredUsers() {
         List<String> users = new ArrayList<>();
         String sql = "SELECT telegramid FROM users";
         try (PreparedStatement stmt = connection.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                users.add(rs.getString("telegramid"));
+                String idStr = rs.getString("telegramid");
+                if (idStr != null && !idStr.isBlank()) {
+                    users.add(idStr);
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return users;
+    }
+
+    // Інкремент кількості замовлень
+    public void incrementOrders(String telegramId) {
+        String sql = "UPDATE users SET number_carts = number_carts + 1 WHERE telegramid = ?";
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+            stmt.setString(1, telegramId);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     // Текст стартового повідомлення
