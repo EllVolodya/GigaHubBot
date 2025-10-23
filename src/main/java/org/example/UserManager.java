@@ -3,7 +3,6 @@ package org.example;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
 public class UserManager {
@@ -21,23 +20,23 @@ public class UserManager {
 
     // Реєстрація нового користувача. Повертає стартове повідомлення, якщо користувач новий
     public SendMessage registerUser(Long telegramId, String name, String chatId) {
-        String selectSql = "SELECT id FROM users WHERE telegram_id = ?";
-        String insertSql = "INSERT INTO users (telegram_id, name, is_admin, is_developer, number_carts, bonus, city, number) " +
+        String selectSql = "SELECT id FROM users WHERE telegramid = ?";
+        String insertSql = "INSERT INTO users (name, city, number, number_carts, bonus, is_admin, is_developer, telegramid) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement selectStmt = connection.prepareStatement(selectSql)) {
-            selectStmt.setLong(1, telegramId);
+            selectStmt.setString(1, telegramId.toString());
             try (ResultSet rs = selectStmt.executeQuery()) {
                 if (!rs.next()) {
                     System.out.println("🔹 Registering new user: " + telegramId);
                     try (PreparedStatement insertStmt = connection.prepareStatement(insertSql)) {
-                        insertStmt.setLong(1, telegramId);
-                        insertStmt.setString(2, name);
-                        insertStmt.setString(3, "NO"); // is_admin
-                        insertStmt.setString(4, "NO"); // is_developer
-                        insertStmt.setInt(5, 0);       // number_carts
-                        insertStmt.setInt(6, 0);       // bonus
-                        insertStmt.setString(7, "");   // city
-                        insertStmt.setString(8, "");   // number
+                        insertStmt.setString(1, name);            // name
+                        insertStmt.setString(2, "");              // city
+                        insertStmt.setString(3, "");              // number
+                        insertStmt.setInt(4, 0);                  // number_carts
+                        insertStmt.setInt(5, 0);                  // bonus
+                        insertStmt.setString(6, "NO");            // is_admin
+                        insertStmt.setString(7, "NO");            // is_developer
+                        insertStmt.setString(8, telegramId.toString()); // telegramid
                         insertStmt.executeUpdate();
 
                         System.out.println("✅ New user inserted: " + telegramId);
@@ -59,9 +58,9 @@ public class UserManager {
 
     // Інкремент кількості замовлень
     public void incrementOrders(Long telegramId) {
-        String sql = "UPDATE users SET number_carts = number_carts + 1 WHERE telegram_id = ?";
+        String sql = "UPDATE users SET number_carts = number_carts + 1 WHERE telegramid = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, telegramId);
+            stmt.setString(1, telegramId.toString());
             stmt.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -69,13 +68,13 @@ public class UserManager {
     }
 
     // Список всіх користувачів
-    public List<Long> getRegisteredUsers() {
-        List<Long> users = new ArrayList<>();
-        String sql = "SELECT telegram_id FROM users";
+    public List<String> getRegisteredUsers() {
+        List<String> users = new ArrayList<>();
+        String sql = "SELECT telegramid FROM users";
         try (PreparedStatement stmt = connection.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
-                users.add(rs.getLong("telegram_id"));
+                users.add(rs.getString("telegramid"));
             }
         } catch (SQLException e) {
             e.printStackTrace();

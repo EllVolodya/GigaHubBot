@@ -59,12 +59,12 @@ CREATE TABLE hits (
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
-    telegram_id integer NOT NULL,
+    telegram_id TEXT,
     name TEXT,
     city TEXT,
     number TEXT,
     number_carts integer DEFAULT 0,
     bonus integer DEFAULT 0,
     is_admin TEXT,
-    is_developer
+    is_developer TEXT
 );

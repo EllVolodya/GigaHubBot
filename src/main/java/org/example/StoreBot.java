@@ -237,7 +237,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     // --- Перевірка коду інвайту
                     String messageText = update.getMessage().getText();
                     if (messageText != null && messageText.length() > 6) {
-                        String inviteCode = messageText.substring(7).trim(); // усе після "/start "
+                        String inviteCode = messageText.substring(7).trim();
                         if (!inviteCode.isBlank()) {
                             boolean incremented = new InviteManager().incrementInviteNumber(inviteCode);
                             if (incremented) {
@@ -1415,8 +1415,8 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "✅ Товар успішно додано у Хіт продажу!");
 
                 // Розсилка всім користувачам
-                for (Long uid : userManager.getRegisteredUsers()) {
-                    if (!ADMINS.contains(uid)) {
+                for (String uid : userManager.getRegisteredUsers()) {
+                    if (!ADMINS.contains(Long.parseLong(uid))) {
                         try {
                             sendText(uid, "🌟 Новий Хіт продажу з’явився в магазині!\nПерегляньте його у розділі «Хіти продажів»!");
                         } catch (Exception ignored) {}
@@ -1436,8 +1436,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 sendText(chatId, "✅ Товар успішно додано у Хіт продажу!");
 
-                for (Long uid : userManager.getRegisteredUsers()) {
-                    if (!ADMINS.contains(uid)) {
+                for (String uid : userManager.getRegisteredUsers()) {
+                    if (!ADMINS.contains(Long.parseLong(uid))) {
                         try {
                             sendText(uid, "🌟 Новий Хіт продажу з’явився в магазині!\nПерегляньте його у розділі «Хіти продажів»!");
                         } catch (Exception ignored) {}
