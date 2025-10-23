@@ -20,25 +20,39 @@ public class UserManager {
     }
 
     // Реєстрація нового користувача
-    public void registerUser(Long telegramId, String name) {
+    public SendMessage registerUser(Long telegramId, String name, String chatId) {
         String selectSql = "SELECT id FROM users WHERE telegram_id = ?";
-        String insertSql = "INSERT INTO users (telegram_id, name, is_admin, is_developer, number_carts, start_sent) " +
-                "VALUES (?, ?, 'NO', 'NO', 0, 'NO')";
+        // Зверни увагу: просто вставляємо значення, без DEFAULT
+        String insertSql = "INSERT INTO users (telegram_id, name, is_admin, is_developer, number_carts) " +
+                "VALUES (?, ?, ?, ?, ?)";
+
         try (PreparedStatement selectStmt = connection.prepareStatement(selectSql)) {
             selectStmt.setLong(1, telegramId);
             try (ResultSet rs = selectStmt.executeQuery()) {
                 if (!rs.next()) {
+                    // Новий користувач → реєструємо
                     try (PreparedStatement insertStmt = connection.prepareStatement(insertSql)) {
                         insertStmt.setLong(1, telegramId);
                         insertStmt.setString(2, name);
+                        insertStmt.setString(3, "NO"); // is_admin
+                        insertStmt.setString(4, "NO"); // is_developer
+                        insertStmt.setInt(5, 0);       // number_carts
                         insertStmt.executeUpdate();
+
                         System.out.println("✅ New user registered: " + telegramId);
+
+                        // Відправляємо стартове повідомлення одразу
+                        return SendMessage.builder()
+                                .chatId(chatId)
+                                .text(getStartMessageText())
+                                .build();
                     }
                 }
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
+        return null; // Користувач вже є → нічого не надсилаємо
     }
 
     // Інкремент кількості замовлень

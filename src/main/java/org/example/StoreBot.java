@@ -248,12 +248,14 @@ public class StoreBot extends TelegramLongPollingBot {
                         }
                     }
 
-                    // --- Реєстрація користувача
+                    // --- Реєстрація користувача та стартове повідомлення
                     UserManager userManager = new UserManager();
-                    userManager.registerUser(chatIdLong, update.getMessage().getFrom().getFirstName());
+                    SendMessage startMsg = userManager.registerUser(
+                            chatIdLong,
+                            update.getMessage().getFrom().getFirstName(),
+                            chatIdStr
+                    );
 
-                    // --- Відправка стартового повідомлення, якщо новий користувач
-                    SendMessage startMsg = userManager.sendStartMessageIfNewUser(chatIdStr, chatIdLong);
                     if (startMsg != null) {
                         try {
                             execute(startMsg);
