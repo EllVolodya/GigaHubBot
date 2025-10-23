@@ -234,7 +234,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     Long chatIdLong = update.getMessage().getChatId();
                     String chatIdStr = chatIdLong.toString();
 
-                    // --- Перевірка коду інвайту
+                    // Перевірка коду інвайту
                     String messageText = update.getMessage().getText();
                     if (messageText != null && messageText.length() > 6) {
                         String inviteCode = messageText.substring(7).trim();
@@ -248,7 +248,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         }
                     }
 
-                    // --- Реєстрація користувача та стартове повідомлення
+                    // Реєстрація користувача та стартове повідомлення
                     UserManager userManager = new UserManager();
                     SendMessage startMsg = userManager.registerUser(
                             chatIdLong,
@@ -1415,10 +1415,10 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "✅ Товар успішно додано у Хіт продажу!");
 
                 // Розсилка всім користувачам
-                for (String uid : userManager.getRegisteredUsers()) {
-                    if (!ADMINS.contains(Long.parseLong(uid))) {
+                for (String uidStr : userManager.getRegisteredUsers()) {
+                    if (!ADMINS.contains(Long.parseLong(uidStr))) {
                         try {
-                            sendText(uid, "🌟 Новий Хіт продажу з’явився в магазині!\nПерегляньте його у розділі «Хіти продажів»!");
+                            sendText(uidStr, "🌟 Новий Хіт продажу з’явився в магазині!\nПерегляньте його у розділі «Хіти продажів»!");
                         } catch (Exception ignored) {}
                     }
                 }
@@ -1436,10 +1436,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 sendText(chatId, "✅ Товар успішно додано у Хіт продажу!");
 
-                for (String uid : userManager.getRegisteredUsers()) {
-                    if (!ADMINS.contains(Long.parseLong(uid))) {
+                for (String uidStr : userManager.getRegisteredUsers()) {
+                    if (!ADMINS.contains(Long.parseLong(uidStr))) {
                         try {
-                            sendText(uid, "🌟 Новий Хіт продажу з’явився в магазині!\nПерегляньте його у розділі «Хіти продажів»!");
+                            sendText(uidStr, "🌟 Новий Хіт продажу з’явився в магазині!\nПерегляньте його у розділі «Хіти продажів»!");
                         } catch (Exception ignored) {}
                     }
                 }

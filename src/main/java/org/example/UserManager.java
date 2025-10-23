@@ -21,8 +21,8 @@ public class UserManager {
 
     // Реєстрація нового користувача. Повертає стартове повідомлення, якщо користувач новий
     public SendMessage registerUser(Long telegramId, String name, String chatId) {
-        String selectSql = "SELECT id FROM users WHERE telegramid = ?";
-        String insertSql = "INSERT INTO users (name, city, number, number_carts, bonus, is_admin, is_developer, telegramid) " +
+        String selectSql = "SELECT id FROM accounts WHERE telegramid = ?";
+        String insertSql = "INSERT INTO accounts (telegramid, name, city, number, number_carts, bonus, is_admin, is_developer) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement selectStmt = connection.prepareStatement(selectSql)) {
             selectStmt.setString(1, telegramId.toString());
@@ -30,14 +30,14 @@ public class UserManager {
                 if (!rs.next()) {
                     System.out.println("🔹 Registering new user: " + telegramId);
                     try (PreparedStatement insertStmt = connection.prepareStatement(insertSql)) {
-                        insertStmt.setString(1, name);                // name
-                        insertStmt.setString(2, "");                  // city
-                        insertStmt.setString(3, "");                  // number
-                        insertStmt.setInt(4, 0);                      // number_carts
-                        insertStmt.setInt(5, 0);                      // bonus
-                        insertStmt.setString(6, "NO");                // is_admin
-                        insertStmt.setString(7, "NO");                // is_developer
-                        insertStmt.setString(8, telegramId.toString()); // telegramid
+                        insertStmt.setString(1, telegramId.toString()); // telegramid
+                        insertStmt.setString(2, name);                  // name
+                        insertStmt.setString(3, "");                    // city
+                        insertStmt.setString(4, "");                    // number
+                        insertStmt.setInt(5, 0);                        // number_carts
+                        insertStmt.setInt(6, 0);                        // bonus
+                        insertStmt.setString(7, "NO");                  // is_admin
+                        insertStmt.setString(8, "NO");                  // is_developer
                         insertStmt.executeUpdate();
 
                         System.out.println("✅ New user inserted: " + telegramId);
@@ -56,10 +56,10 @@ public class UserManager {
         return null; // Користувач вже є
     }
 
-    // Список всіх зареєстрованих користувачів
+    // Список всіх користувачів
     public List<String> getRegisteredUsers() {
         List<String> users = new ArrayList<>();
-        String sql = "SELECT telegramid FROM users";
+        String sql = "SELECT telegramid FROM accounts";
         try (PreparedStatement stmt = connection.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
             while (rs.next()) {
@@ -76,7 +76,7 @@ public class UserManager {
 
     // Інкремент кількості замовлень
     public void incrementOrders(String telegramId) {
-        String sql = "UPDATE users SET number_carts = number_carts + 1 WHERE telegramid = ?";
+        String sql = "UPDATE accounts SET number_carts = number_carts + 1 WHERE telegramid = ?";
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, telegramId);
             stmt.executeUpdate();
@@ -85,7 +85,7 @@ public class UserManager {
         }
     }
 
-    // Текст стартового повідомлення
+    // Стартове повідомлення
     private String getStartMessageText() {
         return "👋 Привіт, друже!\nМитрофан 🤖 — твій помічник у телеграм-магазині 🛍️\n\n" +
                 "✨ Каталог товарів, 🔎 Пошук, 🧺 Кошик і доставка, ⭐ Відгуки, 🔥 Хіти продажів, 💡 Допомога, 🌐 Соцмережі.\n" +

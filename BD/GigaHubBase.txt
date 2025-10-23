@@ -57,14 +57,14 @@ CREATE TABLE hits (
     date_created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
-    telegram_id TEXT,
-    name TEXT,
-    city TEXT,
-    number TEXT,
-    number_carts integer DEFAULT 0,
-    bonus integer DEFAULT 0,
-    is_admin TEXT,
-    is_developer TEXT
+CREATE TABLE accounts ( 
+	id SERIAL PRIMARY KEY, 
+	telegramid TEXT, 
+	name TEXT, 
+	city TEXT, 
+	number TEXT, 
+	number_carts INTEGER DEFAULT 0, 
+	bonus INTEGER DEFAULT 0, 
+	is_admin TEXT, 
+	is_developer TEXT
 );
