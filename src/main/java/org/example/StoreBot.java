@@ -1537,7 +1537,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     if (!rs.next()) {
                         // користувача немає, вставляємо
                         PreparedStatement insertUser = conn.prepareStatement(
-                                "INSERT INTO user_cards (id, name, city, number, numbercarts, bonus) VALUES (?, ?, ?, ?, ?, ?)"
+                                "INSERT INTO user_cards (id, name, city, number, number_carts, bonus) VALUES (?, ?, ?, ?, ?, ?)"
                         );
                         insertUser.setLong(1, userId);
                         insertUser.setString(2, fullName);
@@ -1621,7 +1621,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     ResultSet rs = checkStmt.executeQuery();
                     if (!rs.next()) {
                         PreparedStatement insertUser = conn.prepareStatement(
-                                "INSERT INTO user_cards (id, name, city, number, numbercarts, bonus) VALUES (?, ?, ?, ?, ?, ?)"
+                                "INSERT INTO user_cards (id, name, city, number, number_carts, bonus) VALUES (?, ?, ?, ?, ?, ?)"
                         );
                         insertUser.setLong(1, userId);
                         insertUser.setString(2, fullName);
@@ -1705,7 +1705,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     ResultSet rs = checkStmt.executeQuery();
                     if (!rs.next()) {
                         PreparedStatement insertUser = conn.prepareStatement(
-                                "INSERT INTO user_cards (id, name, city, number, numbercarts, bonus) VALUES (?, ?, ?, ?, ?, ?)"
+                                "INSERT INTO user_cards (id, name, city, number, number_carts, bonus) VALUES (?, ?, ?, ?, ?, ?)"
                         );
                         insertUser.setLong(1, userId);
                         insertUser.setString(2, fullName);
