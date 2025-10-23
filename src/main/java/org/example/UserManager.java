@@ -3,13 +3,13 @@ package org.example;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
 public class UserManager {
 
-    private Connection connection;
+    private final Connection connection;
 
-    // Конструктор ініціалізує з'єднання
     public UserManager() {
         try {
             this.connection = DatabaseManager.getConnection();
@@ -19,29 +19,30 @@ public class UserManager {
         }
     }
 
-    // Реєстрація нового користувача
+    // Реєстрація нового користувача. Повертає стартове повідомлення, якщо користувач новий
     public SendMessage registerUser(Long telegramId, String name, String chatId) {
         String selectSql = "SELECT id FROM users WHERE telegram_id = ?";
-        // Зверни увагу: просто вставляємо значення, без DEFAULT
-        String insertSql = "INSERT INTO users (telegram_id, name, is_admin, is_developer, number_carts) " +
-                "VALUES (?, ?, ?, ?, ?)";
-
+        String insertSql = "INSERT INTO users (telegram_id, name, is_admin, is_developer, number_carts, bonus, city, number) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement selectStmt = connection.prepareStatement(selectSql)) {
             selectStmt.setLong(1, telegramId);
             try (ResultSet rs = selectStmt.executeQuery()) {
                 if (!rs.next()) {
-                    // Новий користувач → реєструємо
+                    System.out.println("🔹 Registering new user: " + telegramId);
                     try (PreparedStatement insertStmt = connection.prepareStatement(insertSql)) {
                         insertStmt.setLong(1, telegramId);
                         insertStmt.setString(2, name);
                         insertStmt.setString(3, "NO"); // is_admin
                         insertStmt.setString(4, "NO"); // is_developer
                         insertStmt.setInt(5, 0);       // number_carts
+                        insertStmt.setInt(6, 0);       // bonus
+                        insertStmt.setString(7, "");   // city
+                        insertStmt.setString(8, "");   // number
                         insertStmt.executeUpdate();
 
-                        System.out.println("✅ New user registered: " + telegramId);
+                        System.out.println("✅ New user inserted: " + telegramId);
 
-                        // Відправляємо стартове повідомлення одразу
+                        // Стартове повідомлення
                         return SendMessage.builder()
                                 .chatId(chatId)
                                 .text(getStartMessageText())
@@ -50,9 +51,10 @@ public class UserManager {
                 }
             }
         } catch (SQLException e) {
+            System.out.println("❌ SQL Error while registering user: " + telegramId);
             e.printStackTrace();
         }
-        return null; // Користувач вже є → нічого не надсилаємо
+        return null; // Користувач вже є
     }
 
     // Інкремент кількості замовлень
@@ -79,40 +81,6 @@ public class UserManager {
             e.printStackTrace();
         }
         return users;
-    }
-
-    // Надсилає стартове повідомлення, якщо користувач новий
-    public SendMessage sendStartMessageIfNewUser(String chatId, Long telegramId) {
-        String sql = "SELECT start_sent FROM users WHERE telegram_id = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
-            stmt.setLong(1, telegramId);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next() && "NO".equals(rs.getString("start_sent"))) {
-                    String text = getStartMessageText();
-                    // Оновлюємо статус start_sent
-                    String updateSql = "UPDATE users SET start_sent = 'YES' WHERE telegram_id = ?";
-                    try (PreparedStatement updateStmt = connection.prepareStatement(updateSql)) {
-                        updateStmt.setLong(1, telegramId);
-                        updateStmt.executeUpdate();
-                    }
-                    return SendMessage.builder()
-                            .chatId(chatId)
-                            .text(text)
-                            .build();
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    // Інформаційне повідомлення користувачу
-    public SendMessage getInfoMessage(String chatId) {
-        return SendMessage.builder()
-                .chatId(chatId)
-                .text(getStartMessageText())
-                .build();
     }
 
     // Текст стартового повідомлення
