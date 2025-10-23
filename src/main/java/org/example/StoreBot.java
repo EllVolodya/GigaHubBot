@@ -1493,7 +1493,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 String city = parts.length > 0 ? parts[0].trim() : "Невідомо";
                 String fullName = parts.length > 1 ? parts[1].trim() : "Невідомо";
                 String phone = parts.length > 2 ? parts[2].trim() : "Невідомо";
-                String card = parts.length > 3 ? parts[3].trim() : "Немає";
+                String card = parts.length > 3 ? parts[3].trim() : "0000";
 
                 StringBuilder itemsDb = new StringBuilder();
                 double total = 0;
@@ -1509,8 +1509,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     total += price;
                 }
 
-                try {
-                    Connection conn = DatabaseManager.getConnection();
+                try (Connection conn = DatabaseManager.getConnection()) {
                     PreparedStatement stmt = conn.prepareStatement(
                             "INSERT INTO orders (orderCode, userId, deliveryType, city, fullName, phone, card, status, item, total, date) " +
                                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
@@ -1528,7 +1527,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     stmt.executeUpdate();
                     stmt.close();
 
-                    // 🔹 Оновлення даних користувача (accounts)
+                    // 🔹 Оновлення accounts
                     PreparedStatement updateStmt = conn.prepareStatement(
                             "UPDATE accounts SET name = ?, city = ?, number = ?, number_carts = number_carts + 1 WHERE telegramid = ?"
                     );
@@ -1536,9 +1535,8 @@ public class StoreBot extends TelegramLongPollingBot {
                     updateStmt.setString(2, city);
                     updateStmt.setString(3, phone);
                     updateStmt.setLong(4, userId);
-                    int rowsUpdated = updateStmt.executeUpdate();
+                    updateStmt.executeUpdate();
                     updateStmt.close();
-                    System.out.println("[ACCOUNTS] Updated user info (" + rowsUpdated + " rows) for telegramid=" + userId);
 
                     userCart.remove(userId);
                     userStates.remove(userId);
@@ -1568,7 +1566,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 String address = parts.length > 0 ? parts[0].trim() : "Невідомо";
                 String fullName = parts.length > 1 ? parts[1].trim() : "Невідомо";
                 String phone = parts.length > 2 ? parts[2].trim() : "Невідомо";
-                String card = parts.length > 3 ? parts[3].trim() : "Немає";
+                String card = parts.length > 3 ? parts[3].trim() : "0000";
 
                 StringBuilder itemsDb = new StringBuilder();
                 double total = 0;
@@ -1584,8 +1582,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     total += price;
                 }
 
-                try {
-                    Connection conn = DatabaseManager.getConnection();
+                try (Connection conn = DatabaseManager.getConnection()) {
                     PreparedStatement stmt = conn.prepareStatement(
                             "INSERT INTO orders (orderCode, userId, deliveryType, address, fullName, phone, card, status, item, total, date) " +
                                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
@@ -1603,7 +1600,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     stmt.executeUpdate();
                     stmt.close();
 
-                    // 🔹 Оновлення accounts
                     PreparedStatement updateStmt = conn.prepareStatement(
                             "UPDATE accounts SET name = ?, city = ?, number = ?, number_carts = number_carts + 1 WHERE telegramid = ?"
                     );
@@ -1611,9 +1607,8 @@ public class StoreBot extends TelegramLongPollingBot {
                     updateStmt.setString(2, address);
                     updateStmt.setString(3, phone);
                     updateStmt.setLong(4, userId);
-                    int rowsUpdated = updateStmt.executeUpdate();
+                    updateStmt.executeUpdate();
                     updateStmt.close();
-                    System.out.println("[ACCOUNTS] Updated user info (" + rowsUpdated + " rows) for telegramid=" + userId);
 
                     userCart.remove(userId);
                     userStates.remove(userId);
@@ -1643,7 +1638,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 String postOffice = parts.length > 0 ? parts[0].trim() : "Невідомо";
                 String fullName = parts.length > 1 ? parts[1].trim() : "Невідомо";
                 String phone = parts.length > 2 ? parts[2].trim() : "Невідомо";
-                String card = parts.length > 3 ? parts[3].trim() : "Немає";
+                String card = parts.length > 3 ? parts[3].trim() : "0000";
 
                 StringBuilder itemsDb = new StringBuilder();
                 double total = 0;
@@ -1659,8 +1654,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     total += price;
                 }
 
-                try {
-                    Connection conn = DatabaseManager.getConnection();
+                try (Connection conn = DatabaseManager.getConnection()) {
                     PreparedStatement stmt = conn.prepareStatement(
                             "INSERT INTO orders (orderCode, userId, deliveryType, postOffice, fullName, phone, card, status, item, total, date) " +
                                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
@@ -1678,7 +1672,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     stmt.executeUpdate();
                     stmt.close();
 
-                    // 🔹 Оновлення accounts
                     PreparedStatement updateStmt = conn.prepareStatement(
                             "UPDATE accounts SET name = ?, city = ?, number = ?, number_carts = number_carts + 1 WHERE telegramid = ?"
                     );
@@ -1686,9 +1679,8 @@ public class StoreBot extends TelegramLongPollingBot {
                     updateStmt.setString(2, postOffice);
                     updateStmt.setString(3, phone);
                     updateStmt.setLong(4, userId);
-                    int rowsUpdated = updateStmt.executeUpdate();
+                    updateStmt.executeUpdate();
                     updateStmt.close();
-                    System.out.println("[ACCOUNTS] Updated user info (" + rowsUpdated + " rows) for telegramid=" + userId);
 
                     userCart.remove(userId);
                     userStates.remove(userId);
