@@ -75,8 +75,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
     //Розробників стани
     private final Map<Long, Boolean> developerMenuState = new HashMap<>();
+    private final Map<String, String> developerState = new HashMap<>(); // Зберігаємо стан кожного користувача по chatId
 
     private final PhotoHandler photoHandler = new PhotoHandler(this, userStates, adminEditingProduct);
+    private final Map<String, String> tempProductName = new HashMap<>(); // Тимчасово зберігаємо назву товару для ручного оновлення ціни
 
     private static final String BACK_BUTTON = "⬅️ Назад";
     private static final String ADD_TO_CART_BUTTON = "🛠 Додати в кошик";
@@ -218,6 +220,36 @@ public class StoreBot extends TelegramLongPollingBot {
                         ProductSearchManager searchHandler = new ProductSearchManager(this);
                         searchHandler.handleSearchNumber(userId, chatId, text);
                     }
+
+                    case "WAITING_FOR_PRODUCT_NAME" -> {
+                        tempProductName.put(chatId, text);
+                        execute(SendMessage.builder()
+                                .chatId(chatId)
+                                .text("💰 Введіть нову ціну для товару \"" + text + "\":")
+                                .build());
+                        developerState.put(chatId, "WAITING_FOR_NEW_PRICE");
+                    }
+
+                    case "WAITING_FOR_NEW_PRICE" -> {
+                        try {
+                            String productName = tempProductName.get(chatId);
+                            double newPrice = Double.parseDouble(text);
+                            updateProductPriceInDB(productName, newPrice);
+                            execute(SendMessage.builder()
+                                    .chatId(chatId)
+                                    .text("✅ Ціна для товару \"" + productName + "\" оновлена до " + newPrice + " грн.")
+                                    .build());
+                        } catch (NumberFormatException e) {
+                            execute(SendMessage.builder()
+                                    .chatId(chatId)
+                                    .text("⚠️ Введіть правильне числове значення ціни.")
+                                    .build());
+                            return;
+                        }
+                        developerState.remove(chatId);
+                        tempProductName.remove(chatId);
+                    }
+
                     default -> {
                         sendText(chatId, "🔎 Введіть назву товару для пошуку:");
                         userStates.put(userId, "waiting_for_search");
@@ -477,6 +509,11 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
                 }
 
+                case "🔄 Оновити каталог" -> {
+                    if (DEVELOPERS.contains(userId)) execute(createDeveloperCatalogMenu(chatId));
+                    else sendText(chatId, "⛔ У вас немає доступу.");
+                }
+
                 case "🔗 Запрошувальні посилання" -> {
                     if (DEVELOPERS.contains(userId)) {
                         userStates.put(userId, "invites_menu");
@@ -510,6 +547,21 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "📦 Замовлення" -> {
                     userStates.put(userId, "logs_orders");
                     handleState(userId, chatId, text, "logs_orders", update);
+                }
+
+                case "🔄 Оновити каталог (.yml)" -> {
+                    sendText(chatId, "📤 Надішліть .yml файл для оновлення каталогу.");
+                    developerState.put(chatId, "WAITING_FOR_YML_FULL");
+                }
+
+                case "💰 Оновити ціни (.yml)" -> {
+                    sendText(chatId, "📤 Надішліть .yml файл для оновлення лише цін (по назві товару).");
+                    developerState.put(chatId, "WAITING_FOR_YML_PRICES");
+                }
+
+                case "✏️ Оновити ціну по назві товару" -> {
+                    sendText(chatId, "✏️ Введіть назву товару, ціну якого хочете змінити:");
+                    developerState.put(chatId, "WAITING_FOR_PRODUCT_NAME");
                 }
 
                 // Адмін меню
@@ -2593,6 +2645,34 @@ public class StoreBot extends TelegramLongPollingBot {
                 .build();
     }
 
+    // Меню оновлення каталога
+    private SendMessage createDeveloperCatalogMenu(String chatId) {
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setResizeKeyboard(true);
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        // 🔄 Оновити каталог (.yml) і 💰 Оновити ціни (.yml)
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("🔄 Оновити каталог (.yml)");
+        row1.add("💰 Оновити ціни (.yml)");
+        keyboard.add(row1);
+
+        // ✏️ Оновити ціну по назві товару + назад
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("✏️ Оновити ціну по назві товару");
+        row2.add(new KeyboardButton(BACK_BUTTON));
+        keyboard.add(row2);
+
+        markup.setKeyboard(keyboard);
+
+        return SendMessage.builder()
+                .chatId(chatId)
+                .text("👨‍💻 Меню оновлення каталогу — оберіть дію:")
+                .replyMarkup(markup)
+                .build();
+    }
+
     // Меню в пошуку товару
     public void sendProductWithAddToCartRow(Long userId, String chatId, String productText) {
         SendMessage message = new SendMessage();
@@ -3562,5 +3642,58 @@ public class StoreBot extends TelegramLongPollingBot {
 
         sendText(userId.toString(), "✅ Товар додано до кошика!");
         System.out.println("[handleAddToCart] User " + userId + " added product: " + product.get("name"));
+    }
+
+    private void updateOrInsertProduct(Map<String, Object> productData) {
+        String name = (String) productData.get("name");
+        double price = Double.parseDouble(productData.get("price").toString());
+        String category = (String) productData.getOrDefault("category", "Uncategorized");
+        String description = (String) productData.getOrDefault("description", "");
+
+        String updateQuery = "UPDATE products SET price=?, category=?, description=? WHERE name=?";
+        String insertQuery = "INSERT INTO products (name, price, category, description) VALUES (?, ?, ?, ?)";
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            var stmt = conn.prepareStatement(updateQuery);
+            stmt.setDouble(1, price);
+            stmt.setString(2, category);
+            stmt.setString(3, description);
+            stmt.setString(4, name);
+            int rows = stmt.executeUpdate();
+
+            if (rows == 0) {
+                var insertStmt = conn.prepareStatement(insertQuery);
+                insertStmt.setString(1, name);
+                insertStmt.setDouble(2, price);
+                insertStmt.setString(3, category);
+                insertStmt.setString(4, description);
+                insertStmt.executeUpdate();
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error updating/inserting product: " + name);
+            e.printStackTrace();
+        }
+    }
+
+    private void updateProductPriceInDB(String name, double price) {
+        String query = "UPDATE products SET price=? WHERE name=?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             var stmt = conn.prepareStatement(query)) {
+
+            stmt.setDouble(1, price);
+            stmt.setString(2, name);
+            int rows = stmt.executeUpdate();
+
+            if (rows == 0) {
+                System.out.println("⚠️ Товар '" + name + "' не знайдено, ціна не оновлена.");
+            }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error updating price for product: " + name);
+            e.printStackTrace();
+        }
     }
 }
