@@ -571,7 +571,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "✏️ Редагувати товар" -> {
-                    if (ADMINS.contains(userId)) {
+                    if (DEVELOPERS.contains(userId)) {
                         userStates.put(userId, "edit_product"); // ставимо стан редагування
 
                         // Відразу показуємо меню вибору джерела
