@@ -1115,8 +1115,22 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         userCart.computeIfAbsent(userId, k -> new ArrayList<>()).add(product);
+
+        // повідомлення про успіх
         sendText(chatId, "✅ Товар додано до кошика: " + product.get("name"));
-        sendText(chatId, "🔎 Введіть назву нового товару або оберіть інший товар з попереднього списку:");
+
+        // тепер показуємо кнопки
+        SendMessage msg = new SendMessage();
+        msg.setChatId(chatId);
+        msg.setText("🔎 Введіть назву нового товару або оберіть інший товар з попереднього списку:");
+        msg.setReplyMarkup(getSearchKeyboard());
+
+        try {
+            execute(msg);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
+
         userStates.put(userId, "waiting_for_search");
     }
 
@@ -3273,6 +3287,28 @@ public class StoreBot extends TelegramLongPollingBot {
         message.setReplyMarkup(markup);
 
         return message;
+    }
+
+    private ReplyKeyboardMarkup getSearchKeyboard() {
+        ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
+        keyboard.setResizeKeyboard(true); // робить клавіатуру зручною під мобільний
+        keyboard.setOneTimeKeyboard(false);
+
+        List<KeyboardRow> rows = new ArrayList<>();
+
+        // перший ряд — кнопки для товарів
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("🛠 Додати в кошик");
+        row1.add("🛍️ Перейти в кошик");
+        rows.add(row1);
+
+        // другий ряд — кнопка назад
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("⬅️ Назад");
+        rows.add(row2);
+
+        keyboard.setKeyboard(rows);
+        return keyboard;
     }
 
     private void handleAdminSearchSource(Long userId, String chatId, String text) throws TelegramApiException {
