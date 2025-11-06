@@ -2282,9 +2282,20 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔧 Редагування товару
     private void handleEditing(Long userId, String chatId, String text) {
-        // Отримуємо список обраних товарів для масового редагування
+        // Отримуємо список обраних товарів (масове редагування)
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
         String singleProduct = adminEditingProduct.get(userId);
+
+        // 🔹 Обробка кнопки "Назад"
+        if (text.equals(BACK_BUTTON)) {
+            try {
+                handleBack(chatId); // повертаємо користувача у меню пошуку
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Помилка при поверненні назад.");
+            }
+            return;
+        }
 
         switch (text) {
             case "✏️ Назву":
@@ -2338,7 +2349,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 break;
         }
 
-        // Залишаємо користувача в меню редагування для подальших змін
+        // 🔹 Після обробки кнопки залишаємо користувача в меню редагування
         sendMessage(createEditMenu(chatId, userId));
     }
 
