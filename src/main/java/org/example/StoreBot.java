@@ -51,6 +51,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Long> adminReplyTarget = new HashMap<>();
 
     private final Map<Long, String> adminEditingProduct = new HashMap<>();
+    private final Map<Long, List<String>> adminSelectedProductsRange = new HashMap<>();
     private final Map<Long, String> adminEditingField = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> adminMatchList = new HashMap<>();
     private final Map<Long, String> adminNewCategory = new HashMap<>();
@@ -1018,7 +1019,21 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔸 7. За замовчуванням — головне меню
+        // 🔸 7. Якщо користувач був у редагуванні товару (adminEditingProduct або adminSelectedProductsRange)
+        if (adminEditingProduct.containsKey(userId) || adminSelectedProductsRange.containsKey(userId)) {
+            System.out.println("[handleBack] Returning admin " + userId + " to search source menu from editing.");
+
+            // Очищаємо тимчасові стани редагування
+            adminEditingProduct.remove(userId);
+            adminSelectedProductsRange.remove(userId);
+            adminEditingField.remove(userId);
+            userStates.put(userId, "choose_search_source");
+
+            sendMessage(showAdminSearchSourceMenu(userId, Long.parseLong(chatId)));
+            return;
+        }
+
+        // 🔸 8. За замовчуванням — головне меню
         System.out.println("[handleBack] Default: Returning user " + userId + " to main menu.");
         sendMessage(createUserMenu(chatId, userId));
     }
@@ -1392,7 +1407,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 // Повертаємо користувача назад у меню редагування
-                sendText(chatId, createEditMenu(chatId, productName).getText());
+                sendText(chatId, createEditMenu(chatId, userId).getText());
                 userStates.put(userId, "edit_product");
             }
 
@@ -2203,31 +2218,59 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // Вибір товару по списку
     private void handleChooseProduct(Long userId, String chatId, String text) {
-        List<Map<String, Object>> matches = adminMatchList.get(userId); // список товарів
+        List<Map<String, Object>> matches = adminMatchList.get(userId);
         if (matches == null || matches.isEmpty()) {
             sendText(chatId, "❌ Помилка: список товарів порожній.");
             userStates.remove(userId);
             return;
         }
 
+        text = text.trim();
+        List<String> selectedProducts = new ArrayList<>();
+
         try {
-            int index = Integer.parseInt(text.trim()) - 1;
-            if (index < 0 || index >= matches.size()) {
-                sendText(chatId, "❌ Некоректний номер. Спробуйте ще раз.");
+            if (text.contains("-")) {
+                // Діапазон, наприклад "1-10"
+                String[] parts = text.split("-");
+                int start = Integer.parseInt(parts[0].trim()) - 1;
+                int end = Integer.parseInt(parts[1].trim()) - 1;
+
+                if (start < 0) start = 0;
+                if (end >= matches.size()) end = matches.size() - 1;
+
+                for (int i = start; i <= end; i++) {
+                    selectedProducts.add((String) matches.get(i).get("name"));
+                }
+            } else {
+                // Одиночні номери, через пробіл або кому
+                String[] numbers = text.split("[,\\s]+"); // "1 3 5" або "1,3,5"
+                for (String numberStr : numbers) {
+                    int index = Integer.parseInt(numberStr.trim()) - 1;
+                    if (index >= 0 && index < matches.size()) {
+                        selectedProducts.add((String) matches.get(index).get("name"));
+                    }
+                }
+            }
+
+            if (selectedProducts.isEmpty()) {
+                sendText(chatId, "❌ Немає валідних номерів для редагування.");
                 return;
             }
 
-            Map<String, Object> selectedProduct = matches.get(index);
-            String selectedProductName = (String) selectedProduct.get("name");
-            adminEditingProduct.put(userId, selectedProductName); // зберігаємо тільки назву
+            // Перший товар для сумісності зі старим кодом
+            adminEditingProduct.put(userId, selectedProducts.get(0));
+
+            // Зберігаємо весь список для масового редагування
+            adminSelectedProductsRange.put(userId, selectedProducts);
 
             userStates.put(userId, "editing");
             adminMatchList.remove(userId);
 
-            sendMessage(createEditMenu(chatId, selectedProductName));
+            // Викликаємо меню редагування
+            sendMessage(createEditMenu(chatId, userId));
 
         } catch (NumberFormatException e) {
-            sendText(chatId, "❌ Будь ласка, введіть номер із списку.");
+            sendText(chatId, "❌ Будь ласка, введіть номер або діапазон у форматі '1-10', або через пробіл/кому.");
         }
     }
 
@@ -2291,15 +2334,27 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 📝 Очікування значення для редагування
     private void handleAwaitingField(Long userId, String chatId, String newValue) {
-        String productName = adminEditingProduct.get(userId);
         String field = adminEditingField.get(userId);
+        if (field == null) return;
 
-        if (field == null || productName == null) return;
+        List<String> productsToEdit = adminSelectedProductsRange.get(userId);
 
-        CatalogEditor.updateField(productName, field, newValue);
+        if (productsToEdit == null || productsToEdit.isEmpty()) {
+            String productName = adminEditingProduct.get(userId);
+            if (productName != null) {
+                CatalogEditor.updateField(productName, field, newValue);
+                sendText(chatId, "✅ Поле '" + field + "' оновлено для товару: " + productName);
+            }
+        } else {
+            for (String productName : productsToEdit) {
+                CatalogEditor.updateField(productName, field, newValue);
+            }
+            sendText(chatId, "✅ Поле '" + field + "' оновлено для " + productsToEdit.size() + " товарів.");
+        }
 
-        sendText(chatId, "✅ Поле '" + field + "' оновлено для товару: " + productName);
+        // Очищаємо стани
         adminEditingProduct.remove(userId);
+        adminSelectedProductsRange.remove(userId);
         adminEditingField.remove(userId);
         userStates.remove(userId);
     }
@@ -2714,24 +2769,41 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    private SendMessage createEditMenu(String chatId, String productName) {
-        SendMessage msg = new SendMessage(chatId, "Редагування товару: " + productName);
+    private SendMessage createEditMenu(String chatId, Long userId) {
+        List<String> productsToEdit = adminSelectedProductsRange.get(userId);
+        String menuTitle;
+
+        if (productsToEdit != null && !productsToEdit.isEmpty()) {
+            menuTitle = "Редагуємо " + productsToEdit.size() + " товарів. Поточний: " + productsToEdit.get(0);
+        } else {
+            String productName = adminEditingProduct.get(userId);
+            menuTitle = "Редагування товару: " + (productName != null ? productName : "не вибрано");
+        }
+
+        SendMessage msg = new SendMessage(chatId, menuTitle);
+
         ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
         kb.setResizeKeyboard(true);
+
         KeyboardRow r1 = new KeyboardRow();
         r1.add(new KeyboardButton("✏️ Назву"));
         r1.add(new KeyboardButton("💰 Ціну"));
+
         KeyboardRow r2 = new KeyboardRow();
         r2.add(new KeyboardButton("📖 Опис"));
         r2.add(new KeyboardButton("🗂️ Додати в підкатегорію"));
+
         KeyboardRow r3 = new KeyboardRow();
         r3.add(new KeyboardButton("🖼️ Додати фотографію"));
         r3.add(new KeyboardButton("📏 Одиниця виміру"));
+
         KeyboardRow r4 = new KeyboardRow();
         r4.add(new KeyboardButton("🏭 Виробник"));
         r4.add(new KeyboardButton(BACK_BUTTON));
+
         kb.setKeyboard(List.of(r1, r2, r3, r4));
         msg.setReplyMarkup(kb);
+
         return msg;
     }
 
