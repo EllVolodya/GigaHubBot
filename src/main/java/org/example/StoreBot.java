@@ -968,7 +968,6 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Назад
     private void handleBack(String chatId) throws TelegramApiException {
         Long userId = Long.parseLong(chatId);
-
         System.out.println("[handleBack] User " + userId + " pressed Back.");
 
         // 🔸 1. Повне очищення тимчасових станів
@@ -980,7 +979,6 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔸 2. Якщо користувач був у підкатегорії
         if (currentSubcategory.containsKey(userId)) {
             currentSubcategory.remove(userId);
-            System.out.println("[handleBack] Returning user " + userId + " to categories from subcategory.");
             if (currentCategory.containsKey(userId)) {
                 sendSubcategories(userId, currentCategory.get(userId));
             } else {
@@ -992,14 +990,12 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔸 3. Якщо користувач був у категорії
         if (currentCategory.containsKey(userId)) {
             currentCategory.remove(userId);
-            System.out.println("[handleBack] Returning user " + userId + " to main menu from category.");
             sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
         // 🔸 4. Якщо користувач у кошику
         if (userCart.containsKey(userId)) {
-            System.out.println("[handleBack] Returning user " + userId + " from cart to main menu.");
             sendMessage(createUserMenu(chatId, userId));
             return;
         }
@@ -1007,23 +1003,18 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔸 5. Якщо користувач в адмін-меню
         if (adminOrderIndex.containsKey(userId)) {
             adminOrderIndex.remove(userId);
-            System.out.println("[handleBack] Returning admin " + userId + " to admin menu.");
             sendMessage(createAdminMenu(chatId));
             return;
         }
 
         // 🔸 6. Якщо користувач у меню розробника
         if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
-            System.out.println("[handleBack] Returning developer " + userId + " to developer menu.");
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
 
-        // 🔸 7. Якщо користувач був у редагуванні товару (adminEditingProduct або adminSelectedProductsRange)
+        // 🔸 7. Якщо користувач був у редагуванні товару
         if (adminEditingProduct.containsKey(userId) || adminSelectedProductsRange.containsKey(userId)) {
-            System.out.println("[handleBack] Returning admin " + userId + " to search source menu from editing.");
-
-            // Очищаємо тимчасові стани редагування
             adminEditingProduct.remove(userId);
             adminSelectedProductsRange.remove(userId);
             adminEditingField.remove(userId);
@@ -1033,8 +1024,13 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔸 8. За замовчуванням — головне меню
-        System.out.println("[handleBack] Default: Returning user " + userId + " to main menu.");
+        // 🔸 8. Повернення користувача в меню розробника
+        if (DEVELOPERS.contains(userId)) {
+            sendMessage(createDeveloperMenu(chatId));
+            return;
+        }
+
+        // 🔸 9. За замовчуванням — головне меню
         sendMessage(createUserMenu(chatId, userId));
     }
 
