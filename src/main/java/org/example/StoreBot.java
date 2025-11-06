@@ -2228,7 +2228,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleChooseProduct(Long userId, String chatId, String text) {
         List<Map<String, Object>> matches = adminMatchList.get(userId);
         if (matches == null || matches.isEmpty()) {
-            sendText(chatId, "❌ Помилка: список товарів порожній.");
+            sendText(chatId, "❌ Список товарів порожній.");
             userStates.remove(userId);
             return;
         }
@@ -2237,7 +2237,7 @@ public class StoreBot extends TelegramLongPollingBot {
         List<String> selectedProducts = new ArrayList<>();
 
         try {
-            // Діапазон
+            // Розпізнаємо масовий вибір: діапазон 1-10 або список 1,3,5
             if (text.contains("-")) {
                 String[] parts = text.split("-");
                 int start = Integer.parseInt(parts[0].trim()) - 1;
@@ -2249,9 +2249,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 for (int i = start; i <= end; i++) {
                     selectedProducts.add((String) matches.get(i).get("name"));
                 }
-            }
-            // Один або кілька через кому
-            else if (text.contains(",")) {
+            } else if (text.contains(",")) {
                 String[] parts = text.split(",");
                 for (String part : parts) {
                     int index = Integer.parseInt(part.trim()) - 1;
@@ -2259,9 +2257,8 @@ public class StoreBot extends TelegramLongPollingBot {
                         selectedProducts.add((String) matches.get(index).get("name"));
                     }
                 }
-            }
-            // Один товар
-            else {
+            } else {
+                // Одинарний вибір
                 int index = Integer.parseInt(text) - 1;
                 if (index >= 0 && index < matches.size()) {
                     selectedProducts.add((String) matches.get(index).get("name"));
@@ -2273,18 +2270,21 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // Зберігаємо список назв для редагування
+            // Зберігаємо всі обрані товари
             adminSelectedProductsRange.put(userId, selectedProducts);
-            // Зберігаємо рядок введення для відображення у меню ("1,3,5" або "1-10" або "1")
-            adminEditingProduct.put(userId, text);
-
+            // Поточний товар для редагування
+            adminEditingProduct.put(userId, selectedProducts.get(0));
+            // Встановлюємо стан редагування
             userStates.put(userId, "editing");
+
+            // Чистимо попередній пошук
             adminMatchList.remove(userId);
 
-            sendMessage(createEditMenu(chatId, userId));
+            // Показуємо меню редагування один раз
+            showEditMenuOnce(userId, chatId);
 
         } catch (NumberFormatException e) {
-            sendText(chatId, "❌ Будь ласка, введіть номери у форматі '1', '1,3,5' або '1-10'.");
+            sendText(chatId, "❌ Введіть правильні номери або діапазон у форматі '1-10' або '1,3,5'.");
         }
     }
 
