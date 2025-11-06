@@ -3402,12 +3402,18 @@ public class StoreBot extends TelegramLongPollingBot {
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
 
+        // Рядки з кнопками пошуку
         KeyboardRow row1 = new KeyboardRow();
         row1.add("🔍 Пошук у MySQL");
+
         KeyboardRow row2 = new KeyboardRow();
         row2.add("🔍 Пошук у YAML");
 
-        markup.setKeyboard(List.of(row1, row2));
+        // Рядок з кнопкою "Назад"
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add(BACK_BUTTON);
+
+        markup.setKeyboard(List.of(row1, row2, row3));
         message.setReplyMarkup(markup);
 
         return message;
