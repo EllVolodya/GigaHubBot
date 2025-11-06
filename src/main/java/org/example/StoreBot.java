@@ -1017,27 +1017,19 @@ public class StoreBot extends TelegramLongPollingBot {
         if (adminEditingProduct.containsKey(userId) || adminSelectedProductsRange.containsKey(userId)) {
             System.out.println("[handleBack] Returning admin " + userId + " to developer menu from editing.");
 
-            // Очищаємо всі тимчасові стани редагування
+            // Очищаємо тимчасові стани редагування
             adminEditingProduct.remove(userId);
             adminSelectedProductsRange.remove(userId);
             adminEditingField.remove(userId);
             userStates.remove(userId);
 
-            // Відправляємо в меню розробника
+            // Повернення в меню розробника
+            sendText(chatId, "↩️ Ви повернулися до меню розробника.");
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
 
-        // 🔸 8. Якщо користувач у меню вибору джерела пошуку
-        String state = userStates.get(userId);
-        if ("choose_search_source".equals(state)) {
-            System.out.println("[handleBack] Returning user " + userId + " from search source menu to developer menu.");
-            userStates.remove(userId);
-            sendMessage(createDeveloperMenu(chatId));
-            return;
-        }
-
-        // 🔸 9. За замовчуванням — головне меню
+        // 🔸 8. За замовчуванням — головне меню
         sendMessage(createUserMenu(chatId, userId));
     }
 
