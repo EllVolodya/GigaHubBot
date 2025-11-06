@@ -2340,7 +2340,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 break;
 
             case "⬅️ Назад":
-                // Повертаємось у меню пошуку джерела (або інше логічне місце)
+                // Очищаємо редагування та повертаємося в меню пошуку
                 adminEditingField.remove(userId);
                 userStates.put(userId, "choose_search_source");
                 sendMessageSafely(showAdminSearchSourceMenu(userId, Long.parseLong(chatId)));
@@ -2351,7 +2351,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 break;
         }
 
-        // 🔹 Після обробки кнопки залишаємо користувача в меню редагування
+        // Завжди оновлюємо меню редагування
         sendMessageSafely(createEditMenu(chatId, userId));
     }
 
@@ -2377,7 +2377,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 if (updated) successCount++;
             }
 
-            // Формуємо рядок діапазону або список вибраних
+            // Формуємо відображення номерації
             String selection;
             if (productsToEdit.size() > 1) {
                 selection = "1-" + productsToEdit.size();
@@ -2387,7 +2387,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для всіх " + successCount +
                     " товарів у вибраному діапазоні (" + selection + ").");
-
         } else if (singleProduct != null) {
             boolean success = CatalogEditor.updateField(singleProduct, field, newValue);
             if (success) {
@@ -2397,7 +2396,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        // 🔹 Залишаємо користувача у меню редагування для подальших змін
+        // Залишаємо користувача у меню редагування
         adminEditingField.remove(userId);
         userStates.put(userId, "editing");
         sendMessageSafely(createEditMenu(chatId, userId));
@@ -2812,32 +2811,28 @@ public class StoreBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
-
-    private SendMessage createEditMenu(String chatId, Long userId) {
+    // Метод для першого показу меню редагування
+    private void showEditMenuOnce(Long userId, String chatId) {
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
         String menuTitle;
 
         if (productsToEdit != null && !productsToEdit.isEmpty()) {
-            // Визначаємо поточний товар
-            int currentIndex = productIndex.getOrDefault(userId, 0);
-            if (currentIndex >= productsToEdit.size()) currentIndex = 0; // безпечний варіант
-
-            // Формуємо рядок з вибраними номерами
-            String selection;
-            if (productsToEdit.size() > 1) {
-                selection = "1-" + productsToEdit.size(); // або можна зберігати реальний ввід користувача
-            } else {
-                selection = "1";
-            }
-
-            menuTitle = "Редагуємо " + productsToEdit.size() + " товарів. Вибрані: " + selection +
-                    "\nПоточний: " + productsToEdit.get(currentIndex);
+            menuTitle = "Редагуємо " + productsToEdit.size() + " товарів. Вибрані: 1-" + productsToEdit.size() +
+                    "\nПоточний: " + productsToEdit.get(0);
         } else {
             String productName = adminEditingProduct.get(userId);
             menuTitle = "Редагування товару: " + (productName != null ? productName : "не вибрано");
         }
 
-        SendMessage msg = new SendMessage(chatId, menuTitle);
+        sendText(chatId, menuTitle); // текст один раз
+        sendMessageSafely(createEditMenu(chatId, userId)); // тільки кнопки
+    }
+
+    // Новий метод для клавіатури
+    private SendMessage createEditMenu(String chatId, Long userId) {
+        SendMessage msg = new SendMessage();
+        msg.setChatId(chatId);
+        msg.setText(" ");
 
         ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
         kb.setResizeKeyboard(true);
