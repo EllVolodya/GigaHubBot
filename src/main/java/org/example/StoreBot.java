@@ -1015,6 +1015,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // 🔸 7. Якщо користувач був у редагуванні товару
         if (adminEditingProduct.containsKey(userId) || adminSelectedProductsRange.containsKey(userId)) {
+            System.out.println("[handleBack] Returning admin " + userId + " to search source menu from editing.");
+
             adminEditingProduct.remove(userId);
             adminSelectedProductsRange.remove(userId);
             adminEditingField.remove(userId);
@@ -1024,8 +1026,11 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔸 8. Повернення користувача в меню розробника
-        if (DEVELOPERS.contains(userId)) {
+        // 🔸 8. Якщо користувач у меню вибору джерела пошуку
+        String state = userStates.get(userId);
+        if ("choose_search_source".equals(state)) {
+            System.out.println("[handleBack] Returning user " + userId + " from search source menu to developer menu.");
+            userStates.remove(userId); // очищаємо стан
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
