@@ -2290,20 +2290,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔧 Редагування товару
     private void handleEditing(Long userId, String chatId, String text) {
-        // Отримуємо список обраних товарів (масове редагування)
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
         String singleProduct = adminEditingProduct.get(userId);
-
-        // 🔹 Обробка кнопки "Назад"
-        if (text.equals(BACK_BUTTON)) {
-            try {
-                handleBack(chatId); // повертаємо користувача у меню пошуку
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-                sendText(chatId, "❌ Помилка при поверненні назад.");
-            }
-            return;
-        }
 
         switch (text) {
             case "✏️ Назву":
@@ -2330,7 +2318,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 break;
 
             case "🖼️ Додати фотографію":
-                System.out.println("[DEBUG] Button 'Add Photo' clicked by userId=" + userId);
                 if (productsToEdit != null && productsToEdit.size() > 1) {
                     sendText(chatId, "⚠️ Масове додавання фотографій не підтримується. Виберіть один товар.");
                 } else if (singleProduct != null) {
@@ -2352,24 +2339,35 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "✏️ Введіть назву виробника для товару (або ❌ щоб видалити):");
                 break;
 
+            case "⬅️ Назад":
+                // Повертаємось у меню пошуку джерела (або інше логічне місце)
+                adminEditingField.remove(userId);
+                userStates.put(userId, "choose_search_source");
+                sendMessageSafely(showAdminSearchSourceMenu(userId, Long.parseLong(chatId)));
+                break;
+
             default:
                 sendText(chatId, "Невідома опція редагування.");
                 break;
         }
 
         // 🔹 Після обробки кнопки залишаємо користувача в меню редагування
-        sendMessage(createEditMenu(chatId, userId));
+        sendMessageSafely(createEditMenu(chatId, userId));
     }
 
     // 📝 Очікування значення для редагування
     private void handleAwaitingField(Long userId, String chatId, String newValue) {
         String field = adminEditingField.get(userId);
-
-        // Отримуємо список товарів для масового редагування
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
         String singleProduct = adminEditingProduct.get(userId);
 
         if (field == null) return;
+
+        // Перевірка одиниці виміру
+        if ("unit".equals(field) && !newValue.equalsIgnoreCase("шт") && !newValue.equalsIgnoreCase("метр")) {
+            sendText(chatId, "❌ Допустимі значення: 'шт' або 'метр'. Спробуйте ще раз:");
+            return;
+        }
 
         if (productsToEdit != null && !productsToEdit.isEmpty()) {
             // Масове оновлення
@@ -2378,16 +2376,31 @@ public class StoreBot extends TelegramLongPollingBot {
                 boolean updated = CatalogEditor.updateField(productName, field, newValue);
                 if (updated) successCount++;
             }
+
+            // Формуємо рядок діапазону або список вибраних
+            String selection;
+            if (productsToEdit.size() > 1) {
+                selection = "1-" + productsToEdit.size();
+            } else {
+                selection = "1";
+            }
+
             sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для всіх " + successCount +
-                    " товарів у вибраному діапазоні.");
+                    " товарів у вибраному діапазоні (" + selection + ").");
+
         } else if (singleProduct != null) {
-            // Оновлення одного товару
-            CatalogEditor.updateField(singleProduct, field, newValue);
-            sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару '" + singleProduct + "'");
+            boolean success = CatalogEditor.updateField(singleProduct, field, newValue);
+            if (success) {
+                sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару '" + singleProduct + "'");
+            } else {
+                sendText(chatId, "⚠️ Не вдалося оновити поле '" + field + "' для товару '" + singleProduct + "'");
+            }
         }
 
-        // 🔹 Залишаємо користувача в меню редагування для подальших змін
-        sendMessage(createEditMenu(chatId, userId));
+        // 🔹 Залишаємо користувача у меню редагування для подальших змін
+        adminEditingField.remove(userId);
+        userStates.put(userId, "editing");
+        sendMessageSafely(createEditMenu(chatId, userId));
     }
 
     // ⭐ Додавання хіта продажу
