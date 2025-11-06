@@ -2336,19 +2336,20 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "✏️ Введіть назву виробника для товару (або ❌ щоб видалити):");
                 break;
 
-            case "⬅️ Назад":
-                // Очищаємо редагування та повертаємося в меню пошуку
+            case BACK_BUTTON:  // використання константи замість хардкоду
                 adminEditingField.remove(userId);
+                adminEditingProduct.remove(userId);
+                adminSelectedProductsRange.remove(userId);
                 userStates.put(userId, "choose_search_source");
                 sendMessageSafely(showAdminSearchSourceMenu(userId, Long.parseLong(chatId)));
-                break;
+                return; // важливо, щоб не показувати createEditMenu після "Назад"
 
             default:
                 sendText(chatId, "Невідома опція редагування.");
                 break;
         }
 
-        // Завжди оновлюємо меню редагування
+        // 🔹 Показуємо меню редагування тільки якщо це не кнопка "Назад"
         sendMessageSafely(createEditMenu(chatId, userId));
     }
 
