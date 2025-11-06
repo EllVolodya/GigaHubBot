@@ -2359,28 +2359,27 @@ public class StoreBot extends TelegramLongPollingBot {
                     startPhotoUpload(userId, chatId, productName);
                 }
             }
-            sendMessage(createEditMenu(chatId, userId));
-            adminEditingField.remove(userId);
-            userStates.put(userId, "editing");
-            return;
-        }
-
-        // Масове або одиночне оновлення
-        if (productsToEdit != null && !productsToEdit.isEmpty()) {
-            for (String productName : productsToEdit) {
-                CatalogEditor.updateField(productName, field, newValue);
-            }
-            sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для всіх "
-                    + productsToEdit.size() + " товарів у вибраному діапазоні.");
         } else {
-            String productName = adminEditingProduct.get(userId);
-            if (productName != null) {
-                CatalogEditor.updateField(productName, field, newValue);
-                sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару: " + productName);
+            // Масове оновлення
+            if (productsToEdit != null && !productsToEdit.isEmpty()) {
+                for (String productName : productsToEdit) {
+                    CatalogEditor.updateField(productName, field, newValue);
+                }
+                // Одне повідомлення для всіх товарів
+                sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для всіх "
+                        + productsToEdit.size() + " товарів у вибраному діапазоні.");
+            }
+            // Одиночне оновлення
+            else {
+                String productName = adminEditingProduct.get(userId);
+                if (productName != null) {
+                    CatalogEditor.updateField(productName, field, newValue);
+                    sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару: " + productName);
+                }
             }
         }
 
-        // Повертаємо користувача в меню редагування
+        // Повертаємо користувача в меню редагування **тільки один раз**
         sendMessage(createEditMenu(chatId, userId));
 
         // Очищаємо поле редагування, залишаємо список товарів
