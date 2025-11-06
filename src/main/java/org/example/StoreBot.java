@@ -2337,18 +2337,37 @@ public class StoreBot extends TelegramLongPollingBot {
         String field = adminEditingField.get(userId);
         if (field == null) return;
 
-        // Беремо всі вибрані товари (масовий режим)
+        // Список товарів для масового редагування (1-10, 1-3-5 і т.д.)
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
 
+        // 🔹 Фото масово редагувати не можна
+        if ("photo".equals(field)) {
+            if (productsToEdit != null && !productsToEdit.isEmpty()) {
+                sendText(chatId, "⚠️ Масове додавання фото не підтримується. Виберіть один товар для фотографії.");
+            } else {
+                String productName = adminEditingProduct.get(userId);
+                if (productName != null) {
+                    startPhotoUpload(userId, chatId, productName);
+                }
+            }
+
+            // Залишаємо користувача в меню редагування
+            sendMessage(createEditMenu(chatId, userId));
+            adminEditingField.remove(userId);
+            userStates.put(userId, "editing");
+            return;
+        }
+
+        // 🔹 Оновлення полів (один або масово)
         if (productsToEdit == null || productsToEdit.isEmpty()) {
-            // Старий режим для одного товару
+            // Один товар
             String productName = adminEditingProduct.get(userId);
             if (productName != null) {
                 CatalogEditor.updateField(productName, field, newValue);
                 sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару: " + productName);
             }
         } else {
-            // Масове оновлення всіх товарів у вибраному діапазоні
+            // Масове оновлення
             for (String productName : productsToEdit) {
                 CatalogEditor.updateField(productName, field, newValue);
             }
@@ -2356,11 +2375,12 @@ public class StoreBot extends TelegramLongPollingBot {
                     + productsToEdit.size() + " товарів у вибраному діапазоні.");
         }
 
-        // Очищаємо тимчасові стани редагування
-        adminEditingProduct.remove(userId);
-        adminSelectedProductsRange.remove(userId);
+        // 🔹 Залишаємо користувача в меню редагування для подальших змін
+        sendMessage(createEditMenu(chatId, userId));
+
+        // 🔹 Очищаємо поле редагування, залишаємо список товарів
         adminEditingField.remove(userId);
-        userStates.remove(userId);
+        userStates.put(userId, "editing");
     }
 
     // ⭐ Додавання хіта продажу
