@@ -970,37 +970,13 @@ public class StoreBot extends TelegramLongPollingBot {
         Long userId = Long.parseLong(chatId);
         System.out.println("[handleBack] User " + userId + " pressed Back.");
 
-        String state = userStates.get(userId);
+        // 🔸 1. Повне очищення тимчасових станів
+        getUserStates().remove(userId);
+        getLastShownProduct().remove(userId);
+        adminMatchList.remove(userId);
+        productIndex.remove(userId);
 
-        // 🔹 Якщо користувач у меню вибору пошуку → повертаємо в меню розробника
-        if ("choose_search_source".equals(state)) {
-            System.out.println("[handleBack] Returning developer " + userId + " from search source to developer menu.");
-            userStates.remove(userId);
-            sendMessage(createDeveloperMenu(chatId));
-            return;
-        }
-
-        // 🔹 Якщо користувач був у редагуванні товару
-        if (adminEditingProduct.containsKey(userId) || adminSelectedProductsRange.containsKey(userId)) {
-            System.out.println("[handleBack] Returning admin " + userId + " to search source menu from editing.");
-
-            adminEditingProduct.remove(userId);
-            adminSelectedProductsRange.remove(userId);
-            adminEditingField.remove(userId);
-
-            userStates.put(userId, "choose_search_source");
-            sendMessage(showAdminSearchSourceMenu(userId, Long.parseLong(chatId)));
-            return;
-        }
-
-        // 🔹 Якщо користувач у меню розробника
-        if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
-            System.out.println("[handleBack] Returning developer " + userId + " to developer menu.");
-            sendMessage(createDeveloperMenu(chatId));
-            return;
-        }
-
-        // 🔹 Якщо користувач був у підкатегорії
+        // 🔸 2. Якщо користувач був у підкатегорії
         if (currentSubcategory.containsKey(userId)) {
             currentSubcategory.remove(userId);
             if (currentCategory.containsKey(userId)) {
@@ -1011,29 +987,57 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 Якщо користувач був у категорії
+        // 🔸 3. Якщо користувач був у категорії
         if (currentCategory.containsKey(userId)) {
             currentCategory.remove(userId);
             sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
-        // 🔹 Якщо користувач у кошику
+        // 🔸 4. Якщо користувач у кошику
         if (userCart.containsKey(userId)) {
             sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
-        // 🔹 Якщо користувач в адмін-меню
+        // 🔸 5. Якщо користувач в адмін-меню
         if (adminOrderIndex.containsKey(userId)) {
             adminOrderIndex.remove(userId);
             sendMessage(createAdminMenu(chatId));
             return;
         }
 
-        // 🔹 За замовчуванням — головне меню
-        System.out.println("[handleBack] Default: Returning user " + userId + " to main menu.");
-        userStates.remove(userId);
+        // 🔸 6. Якщо користувач у меню розробника
+        if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
+            sendMessage(createDeveloperMenu(chatId));
+            return;
+        }
+
+        // 🔸 7. Якщо користувач був у редагуванні товару
+        if (adminEditingProduct.containsKey(userId) || adminSelectedProductsRange.containsKey(userId)) {
+            System.out.println("[handleBack] Returning admin " + userId + " to developer menu from editing.");
+
+            // Очищаємо всі тимчасові стани редагування
+            adminEditingProduct.remove(userId);
+            adminSelectedProductsRange.remove(userId);
+            adminEditingField.remove(userId);
+            userStates.remove(userId);
+
+            // Відправляємо в меню розробника
+            sendMessage(createDeveloperMenu(chatId));
+            return;
+        }
+
+        // 🔸 8. Якщо користувач у меню вибору джерела пошуку
+        String state = userStates.get(userId);
+        if ("choose_search_source".equals(state)) {
+            System.out.println("[handleBack] Returning user " + userId + " from search source menu to developer menu.");
+            userStates.remove(userId);
+            sendMessage(createDeveloperMenu(chatId));
+            return;
+        }
+
+        // 🔸 9. За замовчуванням — головне меню
         sendMessage(createUserMenu(chatId, userId));
     }
 
