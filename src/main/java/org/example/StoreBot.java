@@ -2337,22 +2337,25 @@ public class StoreBot extends TelegramLongPollingBot {
         String field = adminEditingField.get(userId);
         if (field == null) return;
 
+        // Беремо всі вибрані товари (масовий режим)
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
 
         if (productsToEdit == null || productsToEdit.isEmpty()) {
+            // Якщо масового списку немає — старий режим для одного товару
             String productName = adminEditingProduct.get(userId);
             if (productName != null) {
                 CatalogEditor.updateField(productName, field, newValue);
-                sendText(chatId, "✅ Поле '" + field + "' оновлено для товару: " + productName);
+                sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару: " + productName);
             }
         } else {
+            // Масове оновлення всіх товарів у списку
             for (String productName : productsToEdit) {
                 CatalogEditor.updateField(productName, field, newValue);
             }
-            sendText(chatId, "✅ Поле '" + field + "' оновлено для " + productsToEdit.size() + " товарів.");
+            sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для " + productsToEdit.size() + " товарів.");
         }
 
-        // Очищаємо стани
+        // Очищаємо тимчасові стани редагування
         adminEditingProduct.remove(userId);
         adminSelectedProductsRange.remove(userId);
         adminEditingField.remove(userId);
