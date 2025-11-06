@@ -3412,11 +3412,7 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow row2 = new KeyboardRow();
         row2.add("🔍 Пошук у YAML");
 
-        // Рядок з кнопкою "Назад"
-        KeyboardRow row3 = new KeyboardRow();
-        row3.add(BACK_BUTTON);
-
-        markup.setKeyboard(List.of(row1, row2, row3));
+        markup.setKeyboard(List.of(row1, row2));
         message.setReplyMarkup(markup);
 
         return message;
