@@ -2237,7 +2237,7 @@ public class StoreBot extends TelegramLongPollingBot {
         List<String> selectedProducts = new ArrayList<>();
 
         try {
-            // Розпізнаємо масовий вибір: діапазон 1-10 або список 1,3,5
+            // Діапазон 1-10
             if (text.contains("-")) {
                 String[] parts = text.split("-");
                 int start = Integer.parseInt(parts[0].trim()) - 1;
@@ -2249,7 +2249,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 for (int i = start; i <= end; i++) {
                     selectedProducts.add((String) matches.get(i).get("name"));
                 }
-            } else if (text.contains(",")) {
+            } else if (text.contains(",")) { // список 1,3,5
                 String[] parts = text.split(",");
                 for (String part : parts) {
                     int index = Integer.parseInt(part.trim()) - 1;
@@ -2257,8 +2257,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         selectedProducts.add((String) matches.get(index).get("name"));
                     }
                 }
-            } else {
-                // Одинарний вибір
+            } else { // один товар
                 int index = Integer.parseInt(text) - 1;
                 if (index >= 0 && index < matches.size()) {
                     selectedProducts.add((String) matches.get(index).get("name"));
@@ -2270,17 +2269,15 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // Зберігаємо всі обрані товари
+            // Зберігаємо вибрані товари
             adminSelectedProductsRange.put(userId, selectedProducts);
-            // Поточний товар для редагування
             adminEditingProduct.put(userId, selectedProducts.get(0));
-            // Встановлюємо стан редагування
             userStates.put(userId, "editing");
 
-            // Чистимо попередній пошук
+            // Чистимо список пошуку
             adminMatchList.remove(userId);
 
-            // Показуємо меню редагування один раз
+            // Показуємо меню редагування **тільки один раз**
             showEditMenuOnce(userId, chatId);
 
         } catch (NumberFormatException e) {
@@ -2363,28 +2360,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (field == null) return;
 
-        // Перевірка одиниці виміру
-        if ("unit".equals(field) && !newValue.equalsIgnoreCase("шт") && !newValue.equalsIgnoreCase("метр")) {
-            sendText(chatId, "❌ Допустимі значення: 'шт' або 'метр'. Спробуйте ще раз:");
-            return;
-        }
-
         if (productsToEdit != null && !productsToEdit.isEmpty()) {
-            // Масове оновлення
             int successCount = 0;
             for (String productName : productsToEdit) {
                 boolean updated = CatalogEditor.updateField(productName, field, newValue);
                 if (updated) successCount++;
             }
-
-            // Формуємо відображення номерації
-            String selection;
-            if (productsToEdit.size() > 1) {
-                selection = "1-" + productsToEdit.size();
-            } else {
-                selection = "1";
-            }
-
+            String selection = productsToEdit.size() > 1 ? "1-" + productsToEdit.size() : "1";
             sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для всіх " + successCount +
                     " товарів у вибраному діапазоні (" + selection + ").");
         } else if (singleProduct != null) {
@@ -2396,10 +2378,10 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        // Залишаємо користувача у меню редагування
+        // 🔹 Залишаємо користувача в меню редагування
+        sendMessageSafely(createEditMenu(chatId, userId));
         adminEditingField.remove(userId);
         userStates.put(userId, "editing");
-        sendMessageSafely(createEditMenu(chatId, userId));
     }
 
     // ⭐ Додавання хіта продажу
@@ -2817,8 +2799,13 @@ public class StoreBot extends TelegramLongPollingBot {
         String menuTitle;
 
         if (productsToEdit != null && !productsToEdit.isEmpty()) {
-            menuTitle = "Редагуємо " + productsToEdit.size() + " товарів. Вибрані: 1-" + productsToEdit.size() +
-                    "\nПоточний: " + productsToEdit.get(0);
+            menuTitle = "Редагуємо " + productsToEdit.size() + " товарів. Вибрані: ";
+            if (productsToEdit.size() > 1) {
+                menuTitle += "1-" + productsToEdit.size();
+            } else {
+                menuTitle += "1";
+            }
+            menuTitle += "\nПоточний: " + productsToEdit.get(0);
         } else {
             String productName = adminEditingProduct.get(userId);
             menuTitle = "Редагування товару: " + (productName != null ? productName : "не вибрано");
@@ -2828,11 +2815,9 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessageSafely(createEditMenu(chatId, userId)); // тільки кнопки
     }
 
-    // Новий метод для клавіатури
+    // 🔹 Створюємо клавіатуру меню редагування
     private SendMessage createEditMenu(String chatId, Long userId) {
-        SendMessage msg = new SendMessage();
-        msg.setChatId(chatId);
-        msg.setText(" ");
+        SendMessage msg = new SendMessage(chatId, "Виберіть дію:");
 
         ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
         kb.setResizeKeyboard(true);
