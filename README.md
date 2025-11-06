@@ -37,13 +37,12 @@ gradle run
 
 The bot will automatically connect to Telegram and be ready to use.
 
-📖 Example Commands
+📖 Example Commands:
 /start - Welcome message and bot info
 /help - List of available commands
 /stats - User statistics
 
-🤝 Contact
-
-Email: example@mail.com
-
-GitHub: username
+🤝 Contact:
+Email: vova.elyk@gmail.com
+GitHub: EllVolodya
+Telegram: @elvolodya
