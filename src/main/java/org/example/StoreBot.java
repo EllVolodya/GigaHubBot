@@ -1929,46 +1929,54 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case "editing_field_value" -> {
-                String field = adminEditingField.get(userId);        // яке поле редагується
-                String productName = adminEditingProduct.get(userId);
+                String field = adminEditingField.get(userId);
+                String singleProduct = adminEditingProduct.get(userId);
+                List<String> productsToEdit = adminSelectedProductsRange.get(userId);
 
-                System.out.println("DEBUG: User " + userId + " editing field = '" + field + "' for product = '" + productName + "'");
-
-                if (productName == null || field == null) {
+                if (field == null || (singleProduct == null && (productsToEdit == null || productsToEdit.isEmpty()))) {
                     sendText(chatId, "❌ Сталася помилка. Спробуйте ще раз.");
                     userStates.remove(userId);
                     return;
                 }
 
                 String newValue = text.trim();
-                System.out.println("DEBUG: New value entered = '" + newValue + "'");
+                System.out.println("DEBUG: User " + userId + " entered new value '" + newValue + "' for field '" + field + "'");
 
-                // --- Перевірка для одиниці виміру ---
-                if ("unit".equals(field)) {
-                    if (!newValue.equalsIgnoreCase("шт") && !newValue.equalsIgnoreCase("метр")) {
-                        sendText(chatId, "❌ Допустимі значення: 'шт' або 'метр'. Спробуйте ще раз:");
-                        return; // залишаємо стан await
-                    }
+                // Перевірка для одиниці виміру
+                if ("unit".equals(field) && !newValue.equalsIgnoreCase("шт") && !newValue.equalsIgnoreCase("метр")) {
+                    sendText(chatId, "❌ Допустимі значення: 'шт' або 'метр'. Спробуйте ще раз:");
+                    return;
                 }
 
-                try {
-                    boolean success = CatalogEditor.updateField(productName, field, newValue);
-                    System.out.println("DEBUG: updateField returned " + success);
+                if (productsToEdit != null && !productsToEdit.isEmpty()) {
+                    // Масове оновлення
+                    int successCount = 0;
+                    for (String productName : productsToEdit) {
+                        boolean updated = CatalogEditor.updateField(productName, field, newValue);
+                        if (updated) successCount++;
+                    }
 
+                    // Формуємо рядок з вибраними товарами (діапазон або номери)
+                    String selection = productsToEdit.size() > 1 ? "1-" + productsToEdit.size() : "1";
+                    sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для всіх " + successCount +
+                            " товарів у вибраному діапазоні (" + selection + ").");
+
+                } else if (singleProduct != null) {
+                    // Оновлення одного товару
+                    boolean success = CatalogEditor.updateField(singleProduct, field, newValue);
                     if (success) {
-                        sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару '" + productName + "'");
+                        sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару '" + singleProduct + "'");
                     } else {
-                        sendText(chatId, "⚠️ Не вдалося оновити поле '" + field + "' для товару '" + productName + "'");
+                        sendText(chatId, "⚠️ Не вдалося оновити поле '" + field + "' для товару '" + singleProduct + "'");
                     }
-                } catch (Exception e) {
-                    sendText(chatId, "❌ Сталася помилка при оновленні поля '" + field + "'");
-                    e.printStackTrace();
                 }
 
-                // --- Очищення станів ---
-                userStates.remove(userId);
+                // 🔹 Залишаємо користувача в меню редагування для подальших змін
+                sendMessageSafely(createEditMenu(chatId, userId));
+
+                // --- Очищення станів для поля (але залишаємо список товарів для подальшого редагування)
                 adminEditingField.remove(userId);
-                adminEditingProduct.remove(userId);
+                userStates.put(userId, "editing"); // повертаємо користувача в режим редагування
             }
 
             case "changelog_menu" -> {
@@ -3837,6 +3845,14 @@ public class StoreBot extends TelegramLongPollingBot {
 
         } catch (SQLException e) {
             System.err.println("❌ Error updating price for product: " + name);
+            e.printStackTrace();
+        }
+    }
+
+    private void sendMessageSafely(SendMessage msg) {
+        try {
+            sendMessage(msg);
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
