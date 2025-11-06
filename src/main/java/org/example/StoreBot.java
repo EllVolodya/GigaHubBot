@@ -2796,14 +2796,22 @@ public class StoreBot extends TelegramLongPollingBot {
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
         String menuTitle;
 
-        // Якщо масове редагування
         if (productsToEdit != null && !productsToEdit.isEmpty()) {
-            String selection = adminEditingProduct.get(userId); // рядок введення: 1-10, 1,3,5 або 1
-            menuTitle = "Редагуємо " + productsToEdit.size() + " товарів. Вибрані: " + selection
-                    + "\nПоточний: " + productsToEdit.get(0);
-        }
-        // Одиночний товар
-        else {
+            // Визначаємо поточний товар
+            int currentIndex = productIndex.getOrDefault(userId, 0);
+            if (currentIndex >= productsToEdit.size()) currentIndex = 0; // безпечний варіант
+
+            // Формуємо рядок з вибраними номерами
+            String selection;
+            if (productsToEdit.size() > 1) {
+                selection = "1-" + productsToEdit.size(); // або можна зберігати реальний ввід користувача
+            } else {
+                selection = "1";
+            }
+
+            menuTitle = "Редагуємо " + productsToEdit.size() + " товарів. Вибрані: " + selection +
+                    "\nПоточний: " + productsToEdit.get(currentIndex);
+        } else {
             String productName = adminEditingProduct.get(userId);
             menuTitle = "Редагування товару: " + (productName != null ? productName : "не вибрано");
         }
@@ -2827,7 +2835,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow r4 = new KeyboardRow();
         r4.add(new KeyboardButton("🏭 Виробник"));
-        r4.add(new KeyboardButton(BACK_BUTTON));
+        r4.add(new KeyboardButton("⬅️ Назад"));
 
         kb.setKeyboard(List.of(r1, r2, r3, r4));
         msg.setReplyMarkup(kb);
