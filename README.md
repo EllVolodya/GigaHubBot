@@ -43,6 +43,7 @@ The bot will automatically connect to Telegram and be ready to use.
 /stats - User statistics
 
 🤝 Contact:
+
 Email: vova.elyk@gmail.com
 GitHub: EllVolodya
 Telegram: @elvolodya
