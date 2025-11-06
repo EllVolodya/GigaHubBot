@@ -2360,6 +2360,15 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (field == null) return;
 
+        // --- Перевірка для одиниці виміру ---
+        if ("unit".equals(field)) {
+            if (!newValue.equalsIgnoreCase("шт") && !newValue.equalsIgnoreCase("метр")) {
+                sendText(chatId, "❌ Допустимі значення: 'шт' або 'метр'. Спробуйте ще раз:");
+                return; // залишаємо стан await
+            }
+        }
+
+        // --- Оновлення поля ---
         if (productsToEdit != null && !productsToEdit.isEmpty()) {
             int successCount = 0;
             for (String productName : productsToEdit) {
@@ -2378,9 +2387,14 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        // 🔹 Залишаємо користувача в меню редагування
-        sendMessageSafely(createEditMenu(chatId, userId));
+        // --- Очищення стану для поля ---
         adminEditingField.remove(userId);
+
+        // --- Виводимо меню дій (без повтору тексту про поточний товар) ---
+        sendText(chatId, "Виберіть наступну дію або можете повернутись назад:");
+        sendMessageSafely(createEditMenu(chatId, userId));
+
+        // --- Залишаємо користувача в режимі редагування ---
         userStates.put(userId, "editing");
     }
 
