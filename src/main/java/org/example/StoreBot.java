@@ -2356,46 +2356,30 @@ public class StoreBot extends TelegramLongPollingBot {
     // 📝 Очікування значення для редагування
     private void handleAwaitingField(Long userId, String chatId, String newValue) {
         String field = adminEditingField.get(userId);
+
+        // Отримуємо список товарів для масового редагування
+        List<String> productsToEdit = adminSelectedProductsRange.get(userId);
+        String singleProduct = adminEditingProduct.get(userId);
+
         if (field == null) return;
 
-        List<String> productsToEdit = adminSelectedProductsRange.get(userId);
-
-        // Фото масово редагувати не можна
-        if ("photo".equals(field)) {
-            if (productsToEdit != null && !productsToEdit.isEmpty()) {
-                sendText(chatId, "⚠️ Масове додавання фото не підтримується. Виберіть один товар для фотографії.");
-            } else {
-                String productName = adminEditingProduct.get(userId);
-                if (productName != null) {
-                    startPhotoUpload(userId, chatId, productName);
-                }
-            }
-        } else {
+        if (productsToEdit != null && !productsToEdit.isEmpty()) {
             // Масове оновлення
-            if (productsToEdit != null && !productsToEdit.isEmpty()) {
-                for (String productName : productsToEdit) {
-                    CatalogEditor.updateField(productName, field, newValue);
-                }
-                // Одне повідомлення для всіх товарів
-                sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для всіх "
-                        + productsToEdit.size() + " товарів у вибраному діапазоні.");
+            int successCount = 0;
+            for (String productName : productsToEdit) {
+                boolean updated = CatalogEditor.updateField(productName, field, newValue);
+                if (updated) successCount++;
             }
-            // Одиночне оновлення
-            else {
-                String productName = adminEditingProduct.get(userId);
-                if (productName != null) {
-                    CatalogEditor.updateField(productName, field, newValue);
-                    sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару: " + productName);
-                }
-            }
+            sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для всіх " + successCount +
+                    " товарів у вибраному діапазоні.");
+        } else if (singleProduct != null) {
+            // Оновлення одного товару
+            CatalogEditor.updateField(singleProduct, field, newValue);
+            sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару '" + singleProduct + "'");
         }
 
-        // Повертаємо користувача в меню редагування **тільки один раз**
+        // 🔹 Залишаємо користувача в меню редагування для подальших змін
         sendMessage(createEditMenu(chatId, userId));
-
-        // Очищаємо поле редагування, залишаємо список товарів
-        adminEditingField.remove(userId);
-        userStates.put(userId, "editing");
     }
 
     // ⭐ Додавання хіта продажу
