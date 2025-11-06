@@ -2341,18 +2341,19 @@ public class StoreBot extends TelegramLongPollingBot {
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
 
         if (productsToEdit == null || productsToEdit.isEmpty()) {
-            // Якщо масового списку немає — старий режим для одного товару
+            // Старий режим для одного товару
             String productName = adminEditingProduct.get(userId);
             if (productName != null) {
                 CatalogEditor.updateField(productName, field, newValue);
                 sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару: " + productName);
             }
         } else {
-            // Масове оновлення всіх товарів у списку
+            // Масове оновлення всіх товарів у вибраному діапазоні
             for (String productName : productsToEdit) {
                 CatalogEditor.updateField(productName, field, newValue);
             }
-            sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для " + productsToEdit.size() + " товарів.");
+            sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для всіх "
+                    + productsToEdit.size() + " товарів у вибраному діапазоні.");
         }
 
         // Очищаємо тимчасові стани редагування
