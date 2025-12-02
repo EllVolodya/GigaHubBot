@@ -42,6 +42,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, String> userState = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userCart = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userOrders = new HashMap<>();
+    private final Map<Long, Boolean> waitingForQuantity = new HashMap<>();
 
     //Права
     private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню
@@ -1144,8 +1145,13 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        userCart.computeIfAbsent(chatId, k -> new ArrayList<>()).add(product);
-        sendText(chatId, "✅ Товар \"" + product.get("name") + "\" додано до кошика!");
+        // Зберігаємо, що ми чекаємо кількість
+        waitingForQuantity.put(chatId, true);
+
+        sendText(chatId,
+                "📥 Вкажіть кількість товару:\n" +
+                        "👉 \"" + product.get("name") + "\"\n\n" +
+                        "Введіть число (наприклад: 3)");
     }
 
     public void addToCartTool(Long userId) {
