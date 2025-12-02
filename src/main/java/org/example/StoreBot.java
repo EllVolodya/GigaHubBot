@@ -223,6 +223,28 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if ("admin_search_order_code".equals(state)) {
+
+            String code = text.trim();
+
+            if (!code.matches("\\d{1,10}")) {
+                sendText(chatId, "❌ Код має складатися тільки з цифр. Спробуйте ще раз:");
+                return;
+            }
+
+            Map<String, Object> foundOrder = findAdminOrderByCode(code);
+
+            if (foundOrder == null) {
+                sendText(chatId, "😔 Замовлення з кодом " + code + " не знайдено.");
+            } else {
+                // Показуємо знайдене замовлення
+                createOrderAdminMenu(chatId, foundOrder, (Long) foundOrder.get("userId"));
+            }
+
+            userStates.remove(userId);
+            return;
+        }
+
         // 🖼️ Button "Add Photo"
         if (normalizedText.contains("Додати фотографію") || normalizedText.contains("Add Photo")) {
             System.out.println("[DEBUG] Button 'Add Photo' detected for userId=" + userId);
@@ -479,6 +501,11 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "🔍 Пошук" -> {
                     waitingForCatalogSearch.put(userId, true);
                     sendText(chatId, "🔍 Введіть назву товару для пошуку:");
+                }
+
+                case "🔍 Пошук коду" -> {
+                    userStates.put(userId, "admin_search_order_code");
+                    sendText(chatId, "🔍 Введіть код замовлення (наприклад: 9141):");
                 }
 
                 case "🛒 Замовити товар" -> {
@@ -3579,6 +3606,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row2 = new KeyboardRow();
         row2.add("⏮️ Назад");
+        row2.add("🔍 Пошук коду");
         row2.add("⏭️ Дальше");
         keyboard.add(row2);
 
@@ -4131,5 +4159,44 @@ public class StoreBot extends TelegramLongPollingBot {
         lastShownProduct.put(userId, product);
 
         sendProductMessage(Long.valueOf(chatId), product);
+    }
+
+    private Map<String, Object> findAdminOrderByCode(String code) {
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT * FROM orders WHERE orderCode = ? LIMIT 1"
+            );
+            stmt.setString(1, code);
+
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                Map<String, Object> order = new HashMap<>();
+
+                order.put("id", rs.getLong("id"));
+                order.put("userId", rs.getLong("userId"));
+                order.put("orderCode", rs.getString("orderCode"));
+                order.put("deliveryType", rs.getString("deliveryType"));
+                order.put("city", rs.getString("city"));
+                order.put("address", rs.getString("address"));
+                order.put("postOffice", rs.getString("postOffice"));
+                order.put("fullName", rs.getString("fullName"));
+                order.put("phone", rs.getString("phone"));
+                order.put("card", rs.getString("card"));
+                order.put("status", rs.getString("status"));
+                order.put("item", rs.getString("item"));
+                order.put("total", rs.getDouble("total"));
+                order.put("date", rs.getString("date"));
+
+                return order;
+            }
+
+            return null;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
