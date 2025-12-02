@@ -173,14 +173,20 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        if (waitingForCatalogSearch.getOrDefault(userId, false)) {
+        if (waitingForCatalogSearch.getOrDefault(realChatId, false)) {
 
-            waitingForCatalogSearch.put(userId, false);
+            waitingForCatalogSearch.put(realChatId, false);
 
             String query = text.toLowerCase();
 
-            String category = currentCategory.get(chatId);
-            String subcategory = currentSubcategory.get(chatId);
+            // ❗ БЕРЕМО КАТЕГОРІЮ ТІЛЬКИ ПО realChatId (Long)
+            String category = currentCategory.get(realChatId);
+            String subcategory = currentSubcategory.get(realChatId);
+
+            if (category == null || subcategory == null) {
+                sendText(chatId, "❌ Ви не вибрали категорію.");
+                return;
+            }
 
             CatalogSearcher searcher = new CatalogSearcher();
             List<Map<String, Object>> all = searcher.getProducts(category, subcategory);
@@ -203,15 +209,16 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // Зберігаємо результати
-            searchResults.put(userId, found);
-            searchIndex.put(userId, 0);
+            // Зберігаємо знайдені товари (ПРИВ’ЯЗАНО ДО ЧАТУ)
+            searchResults.put(realChatId, found);
+            searchIndex.put(realChatId, 0);
 
+            // Показуємо перший знайдений товар
             try {
                 showSearchProduct(chatId);
             } catch (TelegramApiException e) {
                 e.printStackTrace();
-                sendText(chatId, "❌ Сталася помилка при показі товару по пошуку.");
+                sendText(chatId, "❌ Помилка при показі знайденого товару.");
             }
             return;
         }
