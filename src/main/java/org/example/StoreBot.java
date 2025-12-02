@@ -1670,17 +1670,37 @@ public class StoreBot extends TelegramLongPollingBot {
                 String card = parts.length > 3 ? parts[3].trim() : "0000";
 
                 StringBuilder itemsDb = new StringBuilder();
+                StringBuilder itemsForUser = new StringBuilder();
+
                 double total = 0;
+
                 for (Map<String, Object> item : cart) {
+
                     String name = item.getOrDefault("name", "Без назви").toString();
+
                     double price = 0;
                     Object priceObj = item.get("price");
                     if (priceObj instanceof Number n) price = n.doubleValue();
                     else if (priceObj != null) {
                         try { price = Double.parseDouble(priceObj.toString()); } catch (NumberFormatException ignored) {}
                     }
-                    itemsDb.append(name).append(":").append(price).append(";");
-                    total += price;
+
+                    int quantity = 1;
+                    Object qObj = item.get("quantity");
+                    if (qObj instanceof Number qn) quantity = qn.intValue();
+                    else if (qObj != null) {
+                        try { quantity = Integer.parseInt(qObj.toString()); } catch (Exception ignored) {}
+                    }
+
+                    double lineTotal = price * quantity;
+                    total += lineTotal;
+
+                    itemsDb.append(name).append(":").append(price).append(":").append(quantity).append(";");
+
+                    itemsForUser.append("🛒 ").append(name).append("\n")
+                            .append("   🔢 Кількість: ").append(quantity).append("\n")
+                            .append("   💵 Ціна за 1: ").append(price).append(" грн\n")
+                            .append("   💰 Разом: ").append(lineTotal).append(" грн\n\n");
                 }
 
                 try (Connection conn = DatabaseManager.getConnection()) {
@@ -1716,9 +1736,13 @@ public class StoreBot extends TelegramLongPollingBot {
                     userCart.remove(userId);
                     userStates.remove(userId);
 
-                    sendText(chatId, "✅ Ваше замовлення успішно оформлено!\nКод замовлення: " + orderCode +
-                            "\nВаше замовлення:\n" + itemsDb.toString().replace(";", "\n") +
-                            "\n💰 Всього: " + total + " грн\nБудь ласка, заберіть товар у магазині.");
+                    sendText(chatId,
+                            "✅ Ваше замовлення успішно оформлено!\n" +
+                                    "Код замовлення: " + orderCode + "\n\n" +
+                                    itemsForUser.toString() +
+                                    "💳 Всього: " + total + " грн\n" +
+                                    "Дякуємо за замовлення!"
+                    );
 
                 } catch (SQLException e) {
                     e.printStackTrace();
@@ -1743,17 +1767,37 @@ public class StoreBot extends TelegramLongPollingBot {
                 String card = parts.length > 3 ? parts[3].trim() : "0000";
 
                 StringBuilder itemsDb = new StringBuilder();
+                StringBuilder itemsForUser = new StringBuilder();
+
                 double total = 0;
+
                 for (Map<String, Object> item : cart) {
+
                     String name = item.getOrDefault("name", "Без назви").toString();
+
                     double price = 0;
                     Object priceObj = item.get("price");
                     if (priceObj instanceof Number n) price = n.doubleValue();
                     else if (priceObj != null) {
                         try { price = Double.parseDouble(priceObj.toString()); } catch (NumberFormatException ignored) {}
                     }
-                    itemsDb.append(name).append(":").append(price).append(";");
-                    total += price;
+
+                    int quantity = 1;
+                    Object qObj = item.get("quantity");
+                    if (qObj instanceof Number qn) quantity = qn.intValue();
+                    else if (qObj != null) {
+                        try { quantity = Integer.parseInt(qObj.toString()); } catch (Exception ignored) {}
+                    }
+
+                    double lineTotal = price * quantity;
+                    total += lineTotal;
+
+                    itemsDb.append(name).append(":").append(price).append(":").append(quantity).append(";");
+
+                    itemsForUser.append("🛒 ").append(name).append("\n")
+                            .append("   🔢 Кількість: ").append(quantity).append("\n")
+                            .append("   💵 Ціна за 1: ").append(price).append(" грн\n")
+                            .append("   💰 Разом: ").append(lineTotal).append(" грн\n\n");
                 }
 
                 try (Connection conn = DatabaseManager.getConnection()) {
@@ -1788,9 +1832,13 @@ public class StoreBot extends TelegramLongPollingBot {
                     userCart.remove(userId);
                     userStates.remove(userId);
 
-                    sendText(chatId, "✅ Ваше замовлення успішно оформлено!\nКод замовлення: " + orderCode +
-                            "\nВаше замовлення:\n" + itemsDb.toString().replace(";", "\n") +
-                            "\n💰 Всього: " + total + " грн\nВаш товар буде доставлений за вказаною адресою.");
+                    sendText(chatId,
+                            "✅ Ваше замовлення успішно оформлено!\n" +
+                                    "Код замовлення: " + orderCode + "\n\n" +
+                                    itemsForUser.toString() +
+                                    "💳 Всього: " + total + " грн\n" +
+                                    "Дякуємо за замовлення!"
+                    );
 
                 } catch (SQLException e) {
                     e.printStackTrace();
@@ -1815,17 +1863,37 @@ public class StoreBot extends TelegramLongPollingBot {
                 String card = parts.length > 3 ? parts[3].trim() : "0000";
 
                 StringBuilder itemsDb = new StringBuilder();
+                StringBuilder itemsForUser = new StringBuilder();
+
                 double total = 0;
+
                 for (Map<String, Object> item : cart) {
+
                     String name = item.getOrDefault("name", "Без назви").toString();
+
                     double price = 0;
                     Object priceObj = item.get("price");
                     if (priceObj instanceof Number n) price = n.doubleValue();
                     else if (priceObj != null) {
                         try { price = Double.parseDouble(priceObj.toString()); } catch (NumberFormatException ignored) {}
                     }
-                    itemsDb.append(name).append(":").append(price).append(";");
-                    total += price;
+
+                    int quantity = 1;
+                    Object qObj = item.get("quantity");
+                    if (qObj instanceof Number qn) quantity = qn.intValue();
+                    else if (qObj != null) {
+                        try { quantity = Integer.parseInt(qObj.toString()); } catch (Exception ignored) {}
+                    }
+
+                    double lineTotal = price * quantity;
+                    total += lineTotal;
+
+                    itemsDb.append(name).append(":").append(price).append(":").append(quantity).append(";");
+
+                    itemsForUser.append("🛒 ").append(name).append("\n")
+                            .append("   🔢 Кількість: ").append(quantity).append("\n")
+                            .append("   💵 Ціна за 1: ").append(price).append(" грн\n")
+                            .append("   💰 Разом: ").append(lineTotal).append(" грн\n\n");
                 }
 
                 try (Connection conn = DatabaseManager.getConnection()) {
@@ -1860,9 +1928,13 @@ public class StoreBot extends TelegramLongPollingBot {
                     userCart.remove(userId);
                     userStates.remove(userId);
 
-                    sendText(chatId, "✅ Ваше замовлення успішно оформлено!\nКод замовлення: " + orderCode +
-                            "\nВаше замовлення:\n" + itemsDb.toString().replace(";", "\n") +
-                            "\n💰 Всього: " + total + " грн\nВаш товар буде доставлений Новою поштою за вказаним відділенням.");
+                    sendText(chatId,
+                            "✅ Ваше замовлення успішно оформлено!\n" +
+                                    "Код замовлення: " + orderCode + "\n\n" +
+                                    itemsForUser.toString() +
+                                    "💳 Всього: " + total + " грн\n" +
+                                    "Дякуємо за замовлення!"
+                    );
 
                 } catch (SQLException e) {
                     e.printStackTrace();
