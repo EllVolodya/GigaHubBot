@@ -928,12 +928,25 @@ public class StoreBot extends TelegramLongPollingBot {
         int i = 1;
 
         for (Map<String, Object> item : cart) {
+
             String name = item.getOrDefault("name", "Без назви").toString();
             double price = Double.parseDouble(item.getOrDefault("price", "0").toString());
-            total += price;
-            sb.append(i++).append(". ").append(name).append(" — ").append(price).append(" грн\n");
+
+            // 🔥 Кількість товару
+            int quantity = Integer.parseInt(item.getOrDefault("quantity", 1).toString());
+
+            // 🔥 Ціна за позицію
+            double lineTotal = price * quantity;
+            total += lineTotal;
+
+            sb.append(i++).append(". ").append(name)
+                    .append("\n   🔢 Кількість: ").append(quantity)
+                    .append("\n   💵 Ціна за 1: ").append(price).append(" грн")
+                    .append("\n   💰 Разом: ").append(lineTotal).append(" грн")
+                    .append("\n\n");
         }
-        sb.append("\n💰 Всього: ").append(total).append(" грн");
+
+        sb.append("💳 **Всього до оплати:** ").append(total).append(" грн");
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
