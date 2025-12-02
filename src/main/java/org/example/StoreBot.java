@@ -414,6 +414,8 @@ public class StoreBot extends TelegramLongPollingBot {
                     UserManager userManager = new UserManager();
                     userManager.registerUser(chatIdLong, update.getMessage().getFrom().getFirstName(), chatIdStr);
 
+                    testConsultantDM();
+
                     // --- Відправка меню користувача одразу після /start
                     try {
                         SendMessage menuMsg = createUserMenu(chatIdStr, userId);
@@ -4253,6 +4255,23 @@ public class StoreBot extends TelegramLongPollingBot {
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
+        }
+    }
+
+    private void testConsultantDM() {
+        try {
+            SendMessage msg = new SendMessage();
+            msg.setChatId(CONSULTANT_CHAT_ID);
+            msg.setText("🔍 Тест доставки повідомлення консультанту.\n"
+                    + "Якщо ти бачиш це повідомлення — бот МОЖЕ писати тобі в лічку.");
+
+            execute(msg);
+            System.out.println("✔ [DEBUG] Повідомлення успішно відправлено консультанту!");
+
+        } catch (Exception e) {
+            System.out.println("❌ [ERROR] Бот НЕ МОЖЕ написати консультанту!");
+            System.out.println("Причина: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 }
