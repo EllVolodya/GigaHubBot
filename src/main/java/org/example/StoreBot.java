@@ -43,6 +43,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, List<Map<String, Object>>> userCart = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userOrders = new HashMap<>();
     private final Map<Long, Boolean> waitingForQuantity = new HashMap<>();
+    private final Map<Long, Boolean> waitingForCatalogSearch = new HashMap<>();
+    private final Map<Long, Integer> searchIndex = new HashMap<>();
 
     //Права
     private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню
@@ -169,6 +171,49 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(realChatId, "❌ Це не число. Введіть кількість ще раз:");
                 return;
             }
+        }
+
+        if (waitingForCatalogSearch.getOrDefault(userId, false)) {
+
+            waitingForCatalogSearch.put(userId, false);
+
+            String query = text.toLowerCase();
+
+            String category = currentCategory.get(chatId);
+            String subcategory = currentSubcategory.get(chatId);
+
+            CatalogSearcher searcher = new CatalogSearcher();
+            List<Map<String, Object>> all = searcher.getProducts(category, subcategory);
+
+            if (all == null || all.isEmpty()) {
+                sendText(chatId, "❌ У цій підкатегорії немає товарів.");
+                return;
+            }
+
+            List<Map<String, Object>> found = new ArrayList<>();
+            for (Map<String, Object> p : all) {
+                String name = String.valueOf(p.get("name")).toLowerCase();
+                if (name.contains(query)) {
+                    found.add(p);
+                }
+            }
+
+            if (found.isEmpty()) {
+                sendText(chatId, "😔 Нічого не знайдено.");
+                return;
+            }
+
+            // Зберігаємо результати
+            searchResults.put(userId, found);
+            searchIndex.put(userId, 0);
+
+            try {
+                showSearchProduct(chatId);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Сталася помилка при показі товару по пошуку.");
+            }
+            return;
         }
 
         // 🖼️ Button "Add Photo"
@@ -422,6 +467,11 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "🔍 Пошук товару" -> {
                     userStates.put(userId, "waiting_for_search");
                     sendText(chatId, "🔎 Введіть назву товару, який хочете знайти:");
+                }
+
+                case "🔍 Пошук" -> {
+                    waitingForCatalogSearch.put(userId, true);
+                    sendText(chatId, "🔍 Введіть назву товару для пошуку:");
                 }
 
                 case "🛒 Замовити товар" -> {
@@ -1168,26 +1218,25 @@ public class StoreBot extends TelegramLongPollingBot {
         if (!description.isEmpty() && !"null".equalsIgnoreCase(description))
             sb.append("\n📖 ").append(description);
 
-        // 🔹 Перший ряд з навігацією товарів
-        KeyboardRow navigationRow = new KeyboardRow();
-        navigationRow.add("⬅ Назад");
-        navigationRow.add("➡ Далі");
-        navigationRow.add("🛒 Додати в кошик");
-        navigationRow.add("🛍️ Перейти в кошик");
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("⬅ Назад");
+        row1.add("🔍 Пошук");
+        row1.add("➡ Далі");
 
-        // 🔹 Другий ряд — повернення в підкатегорії
-        KeyboardRow backRow = new KeyboardRow();
-        backRow.add(new KeyboardButton(BACK_BUTTON));
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("🛒 Додати в кошик");
+        row2.add("🛍️ Перейти в кошик");
 
-        List<KeyboardRow> keyboard = new ArrayList<>();
-        keyboard.add(navigationRow);
-        keyboard.add(backRow);
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add(new KeyboardButton(BACK_BUTTON));
+
+        List<KeyboardRow> keyboard = List.of(row1, row2, row3);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(keyboard);
         markup.setResizeKeyboard(true);
 
-        // 🔹 Фото або текст
+        // ========== 🖼️ Фото або текст ==========
         if (photo != null && !photo.isEmpty() && !"null".equalsIgnoreCase(photo)) {
             sendPhotoFromResources(chatId.toString(), photo, sb.toString(), markup);
         } else {
@@ -3322,14 +3371,9 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // 🔹 Показ товару
     private void sendProduct(Long chatId) throws TelegramApiException {
         String category = currentCategory.get(chatId);
         String subcategory = currentSubcategory.get(chatId);
-
-        System.out.println("\n==============================");
-        System.out.println("DEBUG: sendProduct() called for chatId = " + chatId);
-        System.out.println("DEBUG: Category = " + category + ", Subcategory = " + subcategory);
 
         int index = productIndex.getOrDefault(chatId, 0);
 
@@ -3338,11 +3382,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (products == null || products.isEmpty()) {
             sendText(chatId, "❌ У цій підкатегорії немає товарів.");
-            System.out.println("DEBUG: No products found for category = " + category + ", subcategory = " + subcategory);
             return;
         }
 
-        // 🔢 Сортуємо товари по id
+        // Сортуємо
         products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
 
         if (index >= products.size() || index < 0) index = 0;
@@ -3350,14 +3393,13 @@ public class StoreBot extends TelegramLongPollingBot {
         Map<String, Object> product = products.get(index);
         lastShownProduct.put(chatId, product);
 
-        // 🧩 Безпечне читання даних із мапи
         String name = safeToString(product.get("name"), "Без назви");
         String price = safeToString(product.get("price"), "N/A");
         String unit = safeToString(product.get("unit"), "шт");
         String description = safeToString(product.get("description"), "");
         String photo = safeToString(product.get("photo"), "");
 
-        // 🏭 Виробник — з урахуванням можливого типу BLOB або Blob
+        // 🏭 Виробник
         String manufacturer = "";
         Object manufacturerObj = product.get("manufacturer");
         try {
@@ -3368,61 +3410,45 @@ public class StoreBot extends TelegramLongPollingBot {
             } else if (manufacturerObj != null) {
                 manufacturer = String.valueOf(manufacturerObj);
             }
-        } catch (Exception e) {
-            System.err.println("❌ Error reading manufacturer: " + e.getMessage());
-        }
+        } catch (Exception ignored) {}
 
-        System.out.println("DEBUG: Showing product -> " + name);
-        System.out.println("DEBUG: Manufacturer = " + manufacturer);
-        System.out.println("DEBUG: Photo = " + photo);
-        System.out.println("DEBUG: Description = " + description);
-        System.out.println("DEBUG: Price = " + price + ", Unit = " + unit);
-
-        // 🧾 Формування повідомлення
+        // 🧾 Текст
         StringBuilder sb = new StringBuilder("📦 ").append(name)
                 .append("\n💰 Ціна: ").append(price).append(" грн за ").append(unit);
 
-        if (!manufacturer.isEmpty() && !"null".equalsIgnoreCase(manufacturer.trim())) {
+        if (!manufacturer.isEmpty() && !"null".equalsIgnoreCase(manufacturer.trim()))
             sb.append("\n🏭 Виробник: ").append(manufacturer);
-        }
 
-        if (!description.isEmpty() && !"null".equalsIgnoreCase(description.trim())) {
+        if (!description.isEmpty() && !"null".equalsIgnoreCase(description.trim()))
             sb.append("\n📖 ").append(description);
-        }
 
-        // 🧭 Кнопки
+        // 🔘 ПРАВИЛЬНІ КНОПКИ
         KeyboardRow row1 = new KeyboardRow();
-        row1.add("➡ Далі");
         row1.add("⬅ Назад");
-        row1.add("🛒 Додати в кошик");
-        row1.add("🛍️ Перейти в кошик");
+        row1.add("🔍 Пошук");
+        row1.add("➡ Далі");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add(BACK_BUTTON);
+        row2.add("🛒 Додати в кошик");
+        row2.add("🛍️ Перейти в кошик");
 
-        List<KeyboardRow> keyboard = new ArrayList<>();
-        keyboard.add(row1);
-        keyboard.add(row2);
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add(BACK_BUTTON);
 
-        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
-        markup.setKeyboard(keyboard);
+        List<KeyboardRow> keyboard = List.of(row1, row2, row3);
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(keyboard);
         markup.setResizeKeyboard(true);
 
-        // 🖼️ Відправка контенту
-        if (photo != null && !photo.isEmpty() && !"null".equalsIgnoreCase(photo.trim())) {
+        // 🖼️ Фото або текст
+        if (!photo.isEmpty() && !"null".equalsIgnoreCase(photo.trim())) {
             sendPhotoFromResources(chatId.toString(), photo, sb.toString(), markup);
-            System.out.println("DEBUG: Sent product with photo");
         } else {
             sendTextWithMarkup(chatId, sb.toString(), markup);
-            System.out.println("DEBUG: Sent product without photo");
         }
 
-        // 🔁 Оновлюємо індекс для наступного товару
-        index = (index + 1) % products.size();
-        productIndex.put(chatId, index);
-
-        System.out.println("DEBUG: Product index updated to " + index);
-        System.out.println("==============================\n");
+        // 🔁 Оновлення індекса
+        productIndex.put(chatId, (index + 1) % products.size());
     }
 
     // 🔸 Допоміжний метод — безпечне перетворення в String
@@ -4076,5 +4102,27 @@ public class StoreBot extends TelegramLongPollingBot {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void showSearchProduct(String chatId) throws TelegramApiException {
+        Long userId = Long.valueOf(chatId);
+
+        List<Map<String, Object>> list = searchResults.get(userId);
+        int index = searchIndex.getOrDefault(userId, 0);
+
+        if (list == null || list.isEmpty()) {
+            sendText(chatId, "❌ Результатів пошуку немає.");
+            return;
+        }
+
+        if (index < 0) index = 0;
+        if (index >= list.size()) index = list.size() - 1;
+
+        searchIndex.put(userId, index);
+
+        Map<String, Object> product = list.get(index);
+        lastShownProduct.put(userId, product);
+
+        sendProductMessage(Long.valueOf(chatId), product);
     }
 }
