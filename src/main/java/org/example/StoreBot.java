@@ -945,7 +945,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     .append("\n\n");
         }
 
-        sb.append("💳 *Всього до оплати:* ").append(total).append(" грн");
+        sb.append("💳 Всього до оплати: ").append(total).append(" грн");
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
