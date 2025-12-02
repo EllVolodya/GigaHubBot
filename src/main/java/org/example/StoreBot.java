@@ -123,6 +123,37 @@ public class StoreBot extends TelegramLongPollingBot {
             handleChooseYamlProduct(userId, chatId, normalizedText);
             return;
         }
+        
+        if (waitingForQuantity.getOrDefault(chatId, false)) {
+
+            try {
+                int quantity = Integer.parseInt(text);
+
+                if (quantity <= 0) {
+                    sendText(chatId, "❌ Кількість має бути більше 0. Введіть ще раз:");
+                    return;
+                }
+
+                Map<String, Object> product = lastShownProduct.get(chatId);
+
+                Map<String, Object> cartItem = new HashMap<>(product);
+                cartItem.put("quantity", quantity);
+
+                userCart.computeIfAbsent(chatId, k -> new ArrayList<>()).add(cartItem);
+
+                sendText(chatId,
+                        "✅ Додано в кошик:\n" +
+                                "📦 " + product.get("name") + "\n" +
+                                "🔢 Кількість: " + quantity);
+
+                waitingForQuantity.put(chatId, false);
+                return;
+
+            } catch (NumberFormatException e) {
+                sendText(chatId, "❌ Це не число. Введіть кількість ще раз:");
+                return;
+            }
+        }
 
         // 🖼️ Button "Add Photo"
         if (normalizedText.contains("Додати фотографію") || normalizedText.contains("Add Photo")) {
