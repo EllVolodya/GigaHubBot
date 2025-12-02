@@ -3387,6 +3387,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
+    // 🔸 Показ замовлення користовувача Адміну
     private void createOrderAdminMenu(String chatId, Map<String, Object> order, Long userId) {
         StringBuilder sb = new StringBuilder();
 
@@ -3395,6 +3396,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 .append("📦 Тип замовлення: ").append(order.getOrDefault("deliveryType", "Невідомо")).append("\n\n");
 
         String deliveryType = (String) order.get("deliveryType");
+
         if ("Самовивіз".equals(deliveryType)) {
             sb.append("🏙 Місто: ").append(order.getOrDefault("city", "-")).append("\n");
         } else if ("Доставка по місту".equals(deliveryType)) {
@@ -3407,32 +3409,65 @@ public class StoreBot extends TelegramLongPollingBot {
                 .append("📞 Телефон: ").append(order.getOrDefault("phone", "-")).append("\n")
                 .append("💳 Картка: ").append(order.getOrDefault("card", "-")).append("\n\n");
 
-        // Вивід товарів
+        // ------------------------------
+        // 🛒 ВИВІД ТОВАРІВ (з кількістю)
+        // ------------------------------
         String itemsStr = (String) order.get("item");
+
         if (itemsStr != null && !itemsStr.isEmpty()) {
+
             String[] itemArr = itemsStr.split(";");
             int i = 1;
+
             for (String s : itemArr) {
+
                 if (s.isBlank()) continue;
-                String[] pair = s.split(":");
-                String name = pair[0];
+
+                // parts = [name, price] або [name, price, quantity]
+                String[] parts = s.split(":");
+
+                String name = parts[0];
+
                 double price = 0;
+                int quantity = 1;
+
                 try {
-                    if (pair.length > 1) price = Double.parseDouble(pair[1]);
+                    if (parts.length > 1)
+                        price = Double.parseDouble(parts[1]);
+
+                    if (parts.length > 2)
+                        quantity = Integer.parseInt(parts[2]);
+
                 } catch (Exception ignored) {}
-                sb.append(i++).append(". 🛒 ").append(name).append(" — ").append(price).append(" грн\n");
+
+                double lineTotal = price * quantity;
+
+                sb.append(i++).append(". 🛒 ").append(name).append("\n")
+                        .append("   🔢 Кількість: ").append(quantity).append("\n")
+                        .append("   💵 Ціна за 1: ").append(price).append(" грн\n")
+                        .append("   💰 Разом: ").append(lineTotal).append(" грн\n\n");
             }
         }
 
+        // ------------------------------
+        // 💰 Загальна сума замовлення
+        // ------------------------------
         double total = 0.0;
         Object totalObj = order.get("total");
-        if (totalObj instanceof Number) total = ((Number) totalObj).doubleValue();
-        else if (totalObj != null) {
-            try { total = Double.parseDouble(totalObj.toString()); } catch (Exception ignored) {}
-        }
-        sb.append("\n💰 Всього: ").append(total).append(" грн");
 
-        // 🔹 Кнопки
+        if (totalObj instanceof Number)
+            total = ((Number) totalObj).doubleValue();
+        else if (totalObj != null) {
+            try {
+                total = Double.parseDouble(totalObj.toString());
+            } catch (Exception ignored) {}
+        }
+
+        sb.append("💳 **Всього до оплати:** ").append(total).append(" грн");
+
+        // ------------------------------
+        // 🔘 КНОПКИ
+        // ------------------------------
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         keyboardMarkup.setResizeKeyboard(true);
         keyboardMarkup.setOneTimeKeyboard(false);
