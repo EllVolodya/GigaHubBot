@@ -109,8 +109,17 @@ public class StoreBot extends TelegramLongPollingBot {
         if (update == null || update.getMessage() == null) return;
 
         Long userId = update.getMessage().getFrom().getId();
+
+        // ❗ chatId як String (для фото, логів і т.д.)
         String chatId = update.getMessage().getChatId().toString();
-        String text = update.getMessage().getText() != null ? update.getMessage().getText().trim() : "";
+
+        // ❗ realChatId — як Long (ДЛЯ ВСІХ МАП!)
+        Long realChatId = update.getMessage().getChatId();
+
+        String text = update.getMessage().getText() != null
+                ? update.getMessage().getText().trim()
+                : "";
+
         String state = userStates.get(userId);
 
         System.out.println("[DEBUG] Received message from userId=" + userId + ": '" + text + "' (state=" + state + ")");
@@ -123,34 +132,40 @@ public class StoreBot extends TelegramLongPollingBot {
             handleChooseYamlProduct(userId, chatId, normalizedText);
             return;
         }
-        
-        if (waitingForQuantity.getOrDefault(chatId, false)) {
+
+        if (waitingForQuantity.getOrDefault(realChatId, false)) {
 
             try {
                 int quantity = Integer.parseInt(text);
 
                 if (quantity <= 0) {
-                    sendText(chatId, "❌ Кількість має бути більше 0. Введіть ще раз:");
+                    sendText(realChatId, "❌ Кількість має бути більше 0. Введіть ще раз:");
                     return;
                 }
 
-                Map<String, Object> product = lastShownProduct.get(chatId);
+                Map<String, Object> product = lastShownProduct.get(realChatId);
+
+                if (product == null) {
+                    sendText(realChatId, "❌ Помилка: товар не знайдено.");
+                    waitingForQuantity.put(realChatId, false);
+                    return;
+                }
 
                 Map<String, Object> cartItem = new HashMap<>(product);
                 cartItem.put("quantity", quantity);
 
-                userCart.computeIfAbsent(chatId, k -> new ArrayList<>()).add(cartItem);
+                userCart.computeIfAbsent(realChatId, k -> new ArrayList<>()).add(cartItem);
 
-                sendText(chatId,
+                sendText(realChatId,
                         "✅ Додано в кошик:\n" +
                                 "📦 " + product.get("name") + "\n" +
                                 "🔢 Кількість: " + quantity);
 
-                waitingForQuantity.put(chatId, false);
+                waitingForQuantity.put(realChatId, false);
                 return;
 
             } catch (NumberFormatException e) {
-                sendText(chatId, "❌ Це не число. Введіть кількість ще раз:");
+                sendText(realChatId, "❌ Це не число. Введіть кількість ще раз:");
                 return;
             }
         }
