@@ -1108,19 +1108,26 @@ public class StoreBot extends TelegramLongPollingBot {
         if (!description.isEmpty() && !"null".equalsIgnoreCase(description))
             sb.append("\n📖 ").append(description);
 
-        KeyboardRow row = new KeyboardRow();
-        row.add("⬅ Назад");
-        row.add("➡ Далі");
-        row.add("🛒 Додати в кошик");
-        row.add("🛍️ Перейти в кошик");
+        // 🔹 Перший ряд з навігацією товарів
+        KeyboardRow navigationRow = new KeyboardRow();
+        navigationRow.add("⬅ Назад");
+        navigationRow.add("➡ Далі");
+        navigationRow.add("🛒 Додати в кошик");
+        navigationRow.add("🛍️ Перейти в кошик");
+
+        // 🔹 Другий ряд — повернення в підкатегорії
+        KeyboardRow backRow = new KeyboardRow();
+        backRow.add(new KeyboardButton(BACK_BUTTON));
 
         List<KeyboardRow> keyboard = new ArrayList<>();
-        keyboard.add(row);
+        keyboard.add(navigationRow);
+        keyboard.add(backRow);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(keyboard);
         markup.setResizeKeyboard(true);
 
+        // 🔹 Фото або текст
         if (photo != null && !photo.isEmpty() && !"null".equalsIgnoreCase(photo)) {
             sendPhotoFromResources(chatId.toString(), photo, sb.toString(), markup);
         } else {
