@@ -58,6 +58,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, String> adminNewCategory = new HashMap<>();
     private final Map<Long, List<String>> supportAnswers = new HashMap<>();
     private final Map<Long, Integer> adminOrderIndex = new HashMap<>();
+    private final Map<Long, List<Map<String, Object>>> adminOrders = new HashMap<>();
     private final Map<Long, String> adminSearchSource = new HashMap<>();  // джерело пошуку для кожного користувача
     private final Map<Long, String> adminSearchKeyword = new HashMap<>(); // ключове слово для пошуку
     private final Map<String, Object> tempStorage = new HashMap<>();
@@ -3481,9 +3482,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 .append("📞 Телефон: ").append(order.getOrDefault("phone", "-")).append("\n")
                 .append("💳 Картка: ").append(order.getOrDefault("card", "-")).append("\n\n");
 
-        // ------------------------------
-        // 🛒 ВИВІД ТОВАРІВ (з кількістю)
-        // ------------------------------
         String itemsStr = (String) order.get("item");
 
         if (itemsStr != null && !itemsStr.isEmpty()) {
@@ -3521,9 +3519,6 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        // ------------------------------
-        // 💰 Загальна сума замовлення
-        // ------------------------------
         double total = 0.0;
         Object totalObj = order.get("total");
 
@@ -3537,9 +3532,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         sb.append("💳 **Всього до оплати:** ").append(total).append(" грн");
 
-        // ------------------------------
-        // 🔘 КНОПКИ
-        // ------------------------------
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         keyboardMarkup.setResizeKeyboard(true);
         keyboardMarkup.setOneTimeKeyboard(false);
@@ -3714,60 +3706,73 @@ public class StoreBot extends TelegramLongPollingBot {
                 .build();
     }
 
-    private void showAdminOrder(Long adminId, String chatId) {
-        try (Connection conn = DatabaseManager.getConnection()) {
+    private void showAdminOrder(Long userId, String chatId) {
 
-            // Беремо всі активні замовлення
-            String sql = "SELECT * FROM orders WHERE status != 'Видалено' ORDER BY id ASC";
-            List<Map<String, Object>> orders = new ArrayList<>();
-            try (PreparedStatement stmt = conn.prepareStatement(sql);
+        List<Map<String, Object>> list = adminOrders.get(userId);
+
+        // Якщо у кеші немає списку → читаємо з бази
+        if (list == null) {
+
+            list = new ArrayList<>();
+
+            String sql = "SELECT * FROM orders ORDER BY id DESC";
+
+            try (Connection conn = DatabaseManager.getConnection();
+                 PreparedStatement stmt = conn.prepareStatement(sql);
                  ResultSet rs = stmt.executeQuery()) {
 
                 while (rs.next()) {
                     Map<String, Object> order = new HashMap<>();
-                    order.put("id", rs.getInt("id"));
-                    order.put("orderCode", rs.getString("orderCode"));
+
+                    order.put("id", rs.getLong("id"));
                     order.put("userId", rs.getLong("userId"));
+                    order.put("orderCode", rs.getString("orderCode"));
                     order.put("deliveryType", rs.getString("deliveryType"));
+
+                    // одне поле city використовується для address/місто/НП
                     order.put("city", rs.getString("city"));
-                    order.put("address", rs.getString("address"));
-                    order.put("postOffice", rs.getString("postOffice"));
+                    order.put("address", rs.getString("city"));
+                    order.put("postOffice", rs.getString("city"));
+
                     order.put("fullName", rs.getString("fullName"));
                     order.put("phone", rs.getString("phone"));
                     order.put("card", rs.getString("card"));
                     order.put("status", rs.getString("status"));
-                    order.put("date", rs.getDate("date"));
                     order.put("item", rs.getString("item"));
+                    order.put("total", rs.getDouble("total"));
+                    order.put("date", rs.getTimestamp("date"));
 
-                    Object totalObj = rs.getObject("total");
-                    double total = 0;
-                    if (totalObj instanceof Number) total = ((Number) totalObj).doubleValue();
-                    else if (totalObj != null) {
-                        try { total = Double.parseDouble(totalObj.toString()); } catch (Exception ignored) {}
-                    }
-                    order.put("total", total);
-
-                    orders.add(order);
+                    list.add(order);
                 }
-            }
 
-            if (orders.isEmpty()) {
-                sendText(chatId, "Замовлень немає.");
+            } catch (SQLException e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Помилка читання замовлень з бази.");
                 return;
             }
 
-            // Визначаємо який індекс показувати
-            int idx = adminOrderIndex.getOrDefault(adminId, 0);
-            if (idx >= orders.size()) idx = orders.size() - 1; // щоб не виходило за межі
-            Map<String, Object> orderToShow = orders.get(idx);
-
-            // Показуємо адміну
-            createOrderAdminMenu(chatId, orderToShow, orderToShow.get("userId") instanceof Long ? (Long) orderToShow.get("userId") : 0L);
-
-        } catch (SQLException e) {
-            e.printStackTrace();
-            sendText(chatId, "❌ Помилка при завантаженні замовлень з бази.");
+            // Зберігаємо у кеш!
+            adminOrders.put(userId, list);
         }
+
+        // Якщо список порожній (теоретично)
+        if (list.isEmpty()) {
+            sendText(chatId, "❌ Замовлень немає.");
+            return;
+        }
+
+        // Отримуємо індекс
+        int index = adminOrderIndex.getOrDefault(userId, 0);
+
+        if (index < 0) index = 0;
+        if (index >= list.size()) index = list.size() - 1;
+
+        adminOrderIndex.put(userId, index);
+
+        Map<String, Object> order = list.get(index);
+        Long clientId = (Long) order.get("userId");
+
+        createOrderAdminMenu(chatId, order, clientId);
     }
 
     private void sendSearchedProduct(Long chatId) throws TelegramApiException {
