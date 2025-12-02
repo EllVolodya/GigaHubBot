@@ -8,6 +8,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
+import org.telegram.telegrambots.meta.api.objects.PhotoSize;
 import org.telegram.telegrambots.meta.api.methods.send.SendPhoto;
 import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
@@ -49,8 +50,11 @@ public class StoreBot extends TelegramLongPollingBot {
     //Права
     private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню
     private final List<Long> DEVELOPERS = List.of(620298889L, 1030917576L, 533570832L); // тут айді розробників меню
+    private final Long CONSULTANT_CHAT_ID = 620298889L;
 
     // 🔹 Адмінські стани
+    private final Map<Long, Boolean> adminConnected = new HashMap<>();
+
     private final Map<Long, Long> adminReplyTarget = new HashMap<>();
 
     private final Map<Long, String> adminEditingProduct = new HashMap<>();
@@ -67,6 +71,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private final CatalogSearcher catalogSearcher = new CatalogSearcher();
     protected Map<Long, List<Map<String, Object>>> searchResults = new HashMap<>();
+
+    private final Map<Long, Long> consultantActiveChat = new HashMap<>();
+    private final Map<Integer, String> consultantReplyMap = new HashMap<>();
 
     private final Map<Long, List<String>> feedbacks = new HashMap<>();
 
@@ -483,7 +490,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "💬 Допомога" -> sendMessage(createHelpMenu(chatId));
                 case "✉️ Написати консультанту" -> {
                     userStates.put(userId, "ask_consultant");
-                    sendText(chatId, "✏️ Напишіть своє питання консультанту:");
+                    sendText(chatId, "✏️ Напишіть своє питання (текст або фото):");
                 }
                 case "💌 Відповіді" -> {
                     List<String> answers = supportAnswers.get(userId);
@@ -1517,10 +1524,59 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case "ask_consultant" -> {
-                if (text != null) {
-                    supportAnswers.computeIfAbsent(userId, k -> new ArrayList<>()).add(text);
+
+                // 📸 Якщо користувач відправляє фото
+                if (update.getMessage().hasPhoto()) {
+
+                    List<PhotoSize> photos = update.getMessage().getPhoto();
+                    PhotoSize largest = photos.get(photos.size() - 1);
+                    String fileId = largest.getFileId();
+
+                    SendPhoto msg = new SendPhoto();
+                    msg.setChatId(CONSULTANT_CHAT_ID.toString()); // ← ВИКОРИСТОВУЄМО ТВОЄ ПОЛЕ
+                    msg.setPhoto(new InputFile(fileId));
+                    msg.setCaption(
+                            "📩 Нове фото від користувача:\n" +
+                                    "🆔 User ID: " + userId + "\n" +
+                                    "💬 Chat ID: " + chatId
+                    );
+
+                    try {
+                        execute(msg);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    sendText(chatId, "📸 Ваше фото надіслано консультанту!");
                     userStates.remove(userId);
+
+                    return;
+                }
+
+                // ✏️ Якщо користувач відправляє текст
+                if (text != null && !text.isBlank()) {
+
+                    supportAnswers.computeIfAbsent(userId, k -> new ArrayList<>()).add(text);
+
+                    SendMessage adminMsg = new SendMessage();
+                    adminMsg.setChatId(CONSULTANT_CHAT_ID.toString());
+                    adminMsg.setText(
+                            "📩 Нове текстове повідомлення від користувача:\n" +
+                                    "🆔 User ID: " + userId + "\n" +
+                                    "💬 Chat ID: " + chatId + "\n\n" +
+                                    "✏️ Текст:\n" + text
+                    );
+
+                    try {
+                        execute(adminMsg);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
                     sendText(chatId, "✅ Ваше повідомлення надіслано консультанту!");
+                    userStates.remove(userId);
+
+                    return;
                 }
             }
 
