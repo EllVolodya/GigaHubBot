@@ -3708,9 +3708,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private void showAdminOrder(Long userId, String chatId) {
 
+        // 1️⃣ Завантажуємо список замовлень ТІЛЬКИ ОДИН РАЗ
         List<Map<String, Object>> list = adminOrders.get(userId);
 
-        // Якщо у кеші немає списку → читаємо з бази
         if (list == null) {
 
             list = new ArrayList<>();
@@ -3729,10 +3729,10 @@ public class StoreBot extends TelegramLongPollingBot {
                     order.put("orderCode", rs.getString("orderCode"));
                     order.put("deliveryType", rs.getString("deliveryType"));
 
-                    // одне поле city використовується для address/місто/НП
-                    order.put("city", rs.getString("city"));
-                    order.put("address", rs.getString("city"));
-                    order.put("postOffice", rs.getString("city"));
+                    String city = rs.getString("city");
+                    order.put("city", city);
+                    order.put("address", city);
+                    order.put("postOffice", city);
 
                     order.put("fullName", rs.getString("fullName"));
                     order.put("phone", rs.getString("phone"));
@@ -3740,38 +3740,40 @@ public class StoreBot extends TelegramLongPollingBot {
                     order.put("status", rs.getString("status"));
                     order.put("item", rs.getString("item"));
                     order.put("total", rs.getDouble("total"));
-                    order.put("date", rs.getTimestamp("date"));
 
                     list.add(order);
                 }
 
             } catch (SQLException e) {
                 e.printStackTrace();
-                sendText(chatId, "❌ Помилка читання замовлень з бази.");
+                sendText(chatId, "❌ Помилка читання замовлень.");
                 return;
             }
 
-            // Зберігаємо у кеш!
             adminOrders.put(userId, list);
+            adminOrderIndex.put(userId, 0);
         }
 
-        // Якщо список порожній (теоретично)
+        // 2️⃣ Якщо замовлень немає
         if (list.isEmpty()) {
             sendText(chatId, "❌ Замовлень немає.");
             return;
         }
 
-        // Отримуємо індекс
-        int index = adminOrderIndex.getOrDefault(userId, 0);
+        // 3️⃣ Беремо поточний індекс
+        int idx = adminOrderIndex.getOrDefault(userId, 0);
 
-        if (index < 0) index = 0;
-        if (index >= list.size()) index = list.size() - 1;
+        // 4️⃣ Корекція індекса (щоб не вилітав)
+        if (idx < 0) idx = 0;
+        if (idx >= list.size()) idx = list.size() - 1;
 
-        adminOrderIndex.put(userId, index);
+        adminOrderIndex.put(userId, idx);
 
-        Map<String, Object> order = list.get(index);
+        // 5️⃣ Беремо реальне замовлення
+        Map<String, Object> order = list.get(idx);
         Long clientId = (Long) order.get("userId");
 
+        // 6️⃣ Відображення
         createOrderAdminMenu(chatId, order, clientId);
     }
 
