@@ -1036,6 +1036,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔹 Показ наступного товару по id
     private void showNextProduct(Long chatId) throws TelegramApiException {
+
         String category = currentCategory.get(chatId);
         String subcategory = currentSubcategory.get(chatId);
 
@@ -1049,63 +1050,21 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // Сортуємо по id, щоб показ був завжди у порядку
         products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
 
-        if (index >= products.size() || index < 0) index = 0;
+        // ⬆️ Перехід вперед ПЕРЕД відображенням
+        index = (index + 1) % products.size();
+        productIndex.put(chatId, index);
 
         Map<String, Object> product = products.get(index);
         lastShownProduct.put(chatId, product);
 
-        // 🔒 Безпечне отримання всіх значень
-        String name = String.valueOf(product.getOrDefault("name", "Без назви"));
-        String price = String.valueOf(product.getOrDefault("price", "N/A"));
-        String unit = String.valueOf(product.getOrDefault("unit", "шт"));
-        String description = String.valueOf(product.getOrDefault("description", ""));
-        String photo = String.valueOf(product.getOrDefault("photo", ""));
-        String manufacturer = String.valueOf(product.getOrDefault("manufacturer", ""));
-
-        // 🔧 Якщо manufacturer був збережений як BLOB → конвертуємо
-        if (product.get("manufacturer") instanceof byte[] bytes) {
-            manufacturer = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
-        }
-
-        StringBuilder sb = new StringBuilder("📦 ").append(name)
-                .append("\n💰 Ціна: ").append(price).append(" грн за ").append(unit);
-        if (!manufacturer.isEmpty() && !"null".equalsIgnoreCase(manufacturer))
-            sb.append("\n🏭 Виробник: ").append(manufacturer);
-        if (!description.isEmpty() && !"null".equalsIgnoreCase(description))
-            sb.append("\n📖 ").append(description);
-
-        // Кнопки
-        KeyboardRow row = new KeyboardRow();
-        row.add("➡ Далі");
-        row.add("⬅ Назад");
-        row.add("🛒 Додати в кошик");
-        row.add("🛍️ Перейти в кошик");
-
-        List<KeyboardRow> keyboard = new ArrayList<>();
-        keyboard.add(row);
-        keyboard.add(new KeyboardRow(List.of(new KeyboardButton(BACK_BUTTON))));
-
-        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
-        markup.setKeyboard(keyboard);
-        markup.setResizeKeyboard(true);
-
-        // Відправка фото або тексту
-        if (photo != null && !photo.isEmpty() && !"null".equalsIgnoreCase(photo)) {
-            sendPhotoFromResources(chatId.toString(), photo, sb.toString(), markup);
-        } else {
-            sendTextWithMarkup(chatId, sb.toString(), markup);
-        }
-
-        // Збільшуємо індекс для наступного показу
-        index = (index + 1) % products.size();
-        productIndex.put(chatId, index);
+        sendProductMessage(chatId, product);
     }
 
     // 🔹 Показ предедущего товару по id
     private void showPreviousProduct(Long chatId) throws TelegramApiException {
+
         String category = currentCategory.get(chatId);
         String subcategory = currentSubcategory.get(chatId);
 
@@ -1119,17 +1078,20 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // Сортуємо по id
         products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
 
-        // 🔙 ПЕРЕХІД НАЗАД
+        // ⬇️ Перехід назад ПЕРЕД відображенням
         index = (index - 1 + products.size()) % products.size();
         productIndex.put(chatId, index);
 
         Map<String, Object> product = products.get(index);
         lastShownProduct.put(chatId, product);
 
-        // 🔒 Безпечне отримання всіх значень
+        sendProductMessage(chatId, product);
+    }
+
+    private void sendProductMessage(Long chatId, Map<String, Object> product) throws TelegramApiException {
+
         String name = String.valueOf(product.getOrDefault("name", "Без назви"));
         String price = String.valueOf(product.getOrDefault("price", "N/A"));
         String unit = String.valueOf(product.getOrDefault("unit", "шт"));
@@ -1137,18 +1099,15 @@ public class StoreBot extends TelegramLongPollingBot {
         String photo = String.valueOf(product.getOrDefault("photo", ""));
         String manufacturer = String.valueOf(product.getOrDefault("manufacturer", ""));
 
-        if (product.get("manufacturer") instanceof byte[] bytes) {
-            manufacturer = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
-        }
-
         StringBuilder sb = new StringBuilder("📦 ").append(name)
                 .append("\n💰 Ціна: ").append(price).append(" грн за ").append(unit);
+
         if (!manufacturer.isEmpty() && !"null".equalsIgnoreCase(manufacturer))
             sb.append("\n🏭 Виробник: ").append(manufacturer);
+
         if (!description.isEmpty() && !"null".equalsIgnoreCase(description))
             sb.append("\n📖 ").append(description);
 
-        // Кнопки
         KeyboardRow row = new KeyboardRow();
         row.add("⬅ Назад");
         row.add("➡ Далі");
@@ -1157,13 +1116,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
         List<KeyboardRow> keyboard = new ArrayList<>();
         keyboard.add(row);
-        keyboard.add(new KeyboardRow(List.of(new KeyboardButton(BACK_BUTTON))));
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(keyboard);
         markup.setResizeKeyboard(true);
 
-        // Відправка фото або тексту
         if (photo != null && !photo.isEmpty() && !"null".equalsIgnoreCase(photo)) {
             sendPhotoFromResources(chatId.toString(), photo, sb.toString(), markup);
         } else {
