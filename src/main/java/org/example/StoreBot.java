@@ -119,10 +119,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
         Long userId = update.getMessage().getFrom().getId();
 
-        // ❗ chatId як String (для фото, логів і т.д.)
         String chatId = update.getMessage().getChatId().toString();
 
-        // ❗ realChatId — як Long (ДЛЯ ВСІХ МАП!)
         Long realChatId = update.getMessage().getChatId();
 
         String text = update.getMessage().getText() != null
@@ -792,28 +790,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     } else {
                         sendText(chatId, "⚠️ Please select a product first.");
                     }
-                }
-
-                case "🔹 MySQL" -> {
-                    String keyword = adminSearchKeyword.get(userId);
-                    CatalogSearcher catalogSearcher = new CatalogSearcher();
-                    List<Map<String, Object>> results = catalogSearcher.searchByKeywordsAdmin(keyword);
-
-                    if (results.isEmpty()) {
-                        sendText(chatId, "❌ Товар не знайдено: " + keyword);
-                    } else {
-                        StringBuilder sb = new StringBuilder("🔎 Знайдено товари у MySQL:\n\n");
-                        for (int i = 0; i < results.size(); i++) {
-                            sb.append(i + 1).append(". ").append(results.get(i).get("name")).append("\n");
-                        }
-                        sendText(chatId, sb.toString());
-                    }
-                }
-
-                case "🔹 YAML" -> {
-                    adminSearchSource.put(userId, "yaml");
-                    userStates.put(userId, "awaiting_yaml_keyword");
-                    sendText(chatId, "Введіть ключові слова для пошуку у YAML:");
                 }
 
                 case "Редагувати категорії" -> {
