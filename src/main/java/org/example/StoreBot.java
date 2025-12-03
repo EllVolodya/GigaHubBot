@@ -72,8 +72,6 @@ public class StoreBot extends TelegramLongPollingBot {
     private final CatalogSearcher catalogSearcher = new CatalogSearcher();
     protected Map<Long, List<Map<String, Object>>> searchResults = new HashMap<>();
 
-    private final Map<Long, Long> consultantActiveChat = new HashMap<>();
-    private final Map<Integer, String> consultantReplyMap = new HashMap<>();
     private final Map<Long, Long> consultantReplyTarget = new HashMap<>();
 
     private final Map<Long, List<String>> feedbacks = new HashMap<>();
@@ -253,6 +251,52 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if ("consultant_reply".equals(userStates.get(CONSULTANT_CHAT_ID)) && text != null) {
+
+            Long target = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
+
+            sendText(target, "📩 Відповідь консультанта:\n\n" + text);
+            sendText(CONSULTANT_CHAT_ID, "✔ Повідомлення надіслано!");
+
+            userStates.remove(CONSULTANT_CHAT_ID);
+            return;
+        }
+
+        if ("consultant_reply".equals(userStates.get(CONSULTANT_CHAT_ID))
+                && update.getMessage().hasPhoto()) {
+
+            try {
+                Long target = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
+
+                if (target == null) {
+                    sendText(CONSULTANT_CHAT_ID, "❌ Немає активного покупця для відповіді.");
+                    userStates.remove(CONSULTANT_CHAT_ID);
+                    return;
+                }
+
+                List<PhotoSize> photos = update.getMessage().getPhoto();
+                PhotoSize largest = photos.get(photos.size() - 1);
+                String fileId = largest.getFileId();
+
+                SendPhoto ph = new SendPhoto();
+                ph.setChatId(target.toString());
+                ph.setPhoto(new InputFile(fileId));
+                ph.setCaption("📸 Відповідь від консультанта:");
+
+                execute(ph);
+
+                sendText(CONSULTANT_CHAT_ID, "✔ Фото надіслано покупцю!");
+
+                userStates.remove(CONSULTANT_CHAT_ID);
+
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(CONSULTANT_CHAT_ID, "❌ Помилка при надсиланні фото покупцю.");
+            }
+
+            return;
+        }
+
         // 🖼️ Button "Add Photo"
         if (normalizedText.contains("Додати фотографію") || normalizedText.contains("Add Photo")) {
             System.out.println("[DEBUG] Button 'Add Photo' detected for userId=" + userId);
@@ -414,8 +458,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     // --- Реєстрація користувача
                     UserManager userManager = new UserManager();
                     userManager.registerUser(chatIdLong, update.getMessage().getFrom().getFirstName(), chatIdStr);
-
-                    testConsultantDM();
 
                     // --- Відправка меню користувача одразу після /start
                     try {
@@ -794,6 +836,20 @@ public class StoreBot extends TelegramLongPollingBot {
                         LOGGER.severe("[Admin Error] Failed to load orders for user " + userId + ": " + e.getMessage());
                         sendText(chatId, "❌ Помилка при завантаженні замовлень з бази.");
                     }
+                }
+
+                case "💬 Відповісти покупцю" -> {
+                    Long target = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
+
+                    if (target == null) {
+                        sendText(CONSULTANT_CHAT_ID, "❌ Немає покупця для відповіді.");
+                        return;
+                    }
+
+                    userStates.put(CONSULTANT_CHAT_ID, "consultant_reply");
+
+                    sendText(CONSULTANT_CHAT_ID,
+                            "✏️ Напишіть відповідь або надішліть фото — я передам покупцю.");
                 }
 
                 case "✅ Підтвердити" -> {
@@ -1339,6 +1395,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private void handleState(Long userId, String chatId, String text, String state, Update update) {
 
+        Long realChatId = Long.parseLong(chatId);
         switch (state) {
             case "search_catalog" -> handleSearch(userId, chatId, text);
             case "edit_product" -> {
@@ -1528,105 +1585,69 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "ask_consultant" -> {
 
-                Long fromId = userId;// ID покупця
-                Long chatIdLong = update.getMessage().getChatId();
-                String chatIdStr = chatIdLong.toString();
-
+                // 📸 Якщо користувач відправляє фото
                 if (update.getMessage().hasPhoto()) {
 
                     List<PhotoSize> photos = update.getMessage().getPhoto();
                     PhotoSize largest = photos.get(photos.size() - 1);
                     String fileId = largest.getFileId();
 
-                    // надсилаємо фото консультанту у приватні
-                    SendPhoto ph = new SendPhoto();
-                    ph.setChatId(CONSULTANT_CHAT_ID.toString());
-                    ph.setPhoto(new InputFile(fileId));
-                    ph.setCaption(
-                            "📩 Нове фото від покупця:\n" +
-                                    "🆔 User ID: " + fromId + "\n" +
-                                    "💬 Chat ID: " + chatIdStr
-                    );
-
                     try {
-                        execute(ph);
+                        SendPhoto msg = new SendPhoto();
+                        msg.setChatId(CONSULTANT_CHAT_ID.toString());
+                        msg.setPhoto(new InputFile(fileId));
+                        msg.setCaption(
+                                "📩 Фото від покупця:\n" +
+                                        "🆔 User ID: " + userId + "\n" +
+                                        "💬 Chat ID: " + realChatId
+                        );
+
+                        execute(msg);
+
+                        sendReplyButtonToConsultant(userId);
+
+                        sendText(realChatId, "📸 Ваше фото передано консультанту!");
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
 
-                    // зберігаємо кому консультант відповідає
-                    consultantReplyTarget.put(CONSULTANT_CHAT_ID, fromId);
-
-                    // кнопка ВІДПОВІСТИ ПОКУПЦЮ
-                    SendMessage replyBtn = new SendMessage(
-                            CONSULTANT_CHAT_ID.toString(),
-                            "🤝 Покупець надіслав фото. Бажаєте відповісти?"
-                    );
-
-                    ReplyKeyboardMarkup km = new ReplyKeyboardMarkup();
-                    km.setResizeKeyboard(true);
-                    km.setKeyboard(List.of(
-                            new KeyboardRow(List.of(new KeyboardButton("💬 Відповісти покупцю")))
-                    ));
-
-                    replyBtn.setReplyMarkup(km);
-
-                    try {
-                        execute(replyBtn);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-
-                    sendText(chatIdLong, "📸 Ваше фото надіслано консультанту!");
                     userStates.remove(userId);
                     return;
                 }
 
+                // ✏️ Якщо користувач відправив текст
                 if (text != null && !text.isBlank()) {
 
-                    // зберігаємо текст для історії
-                    supportAnswers.computeIfAbsent(fromId, k -> new ArrayList<>()).add(text);
+                    // спроба авто-відповіді
+                    String botReply = botAutoAnswer(text);
 
-                    SendMessage adminMsg = new SendMessage();
-                    adminMsg.setChatId(CONSULTANT_CHAT_ID.toString());
-                    adminMsg.setText(
-                            "📩 Нове текстове повідомлення від покупця:\n" +
-                                    "🆔 User ID: " + fromId + "\n" +
-                                    "💬 Chat ID: " + chatIdStr + "\n\n" +
-                                    "✏️ Повідомлення:\n" + text
-                    );
+                    if (botReply != null) {
+                        sendText(realChatId, botReply + "\n\n✉️ Якщо хочеш поговорити з консультантом — натисни кнопку.");
+                        userStates.remove(userId);
+                        return;
+                    }
 
+                    // Якщо бот не знає → пересилаємо консультанту
                     try {
+                        SendMessage adminMsg = new SendMessage(
+                                CONSULTANT_CHAT_ID.toString(),
+                                "📩 Нове текстове повідомлення від покупця:\n" +
+                                        "🆔 User ID: " + userId + "\n" +
+                                        "💬 Chat ID: " + realChatId + "\n\n" +
+                                        "📨 Текст:\n" + text
+                        );
+
                         execute(adminMsg);
+
+                        sendReplyButtonToConsultant(userId);
+
+                        sendText(realChatId, "Ваше повідомлення передано консультанту!");
+
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
 
-                    // зберігаємо кому консультант повинен відповісти
-                    consultantReplyTarget.put(CONSULTANT_CHAT_ID, fromId);
-
-                    // кнопка доступна консультанту
-                    SendMessage replyBtn = new SendMessage(
-                            CONSULTANT_CHAT_ID.toString(),
-                            "💬 Покупець надіслав текст. Хочеш відповісти?"
-                    );
-
-                    ReplyKeyboardMarkup km = new ReplyKeyboardMarkup();
-                    km.setResizeKeyboard(true);
-                    km.setKeyboard(List.of(
-                            new KeyboardRow(List.of(new KeyboardButton("💬 Відповісти покупцю")))
-                    ));
-                    replyBtn.setReplyMarkup(km);
-
-                    try {
-                        execute(replyBtn);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-
-                    sendText(chatIdLong, "✅ Ваше повідомлення надіслано консультанту!");
                     userStates.remove(userId);
-
                     return;
                 }
             }
@@ -4307,20 +4328,93 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    private void testConsultantDM() {
+    private void forwardTextToConsultant(Long userId, Long chatIdLong, String text) {
         try {
-            SendMessage msg = new SendMessage();
-            msg.setChatId(CONSULTANT_CHAT_ID);
-            msg.setText("🔍 Тест доставки повідомлення консультанту.\n"
-                    + "Якщо ти бачиш це повідомлення — бот МОЖЕ писати тобі в лічку.");
+            SendMessage msg = new SendMessage(
+                    CONSULTANT_CHAT_ID.toString(),
+                    "📩 Нове повідомлення від покупця:\n" +
+                            "🆔 User ID: " + userId + "\n" +
+                            "💬 Chat ID: " + chatIdLong + "\n\n" +
+                            text
+            );
 
             execute(msg);
-            System.out.println("✔ [DEBUG] Повідомлення успішно відправлено консультанту!");
+
+            // показуємо кнопку відповіді
+            sendReplyButtonToConsultant(userId);
+
+            sendText(chatIdLong, "Ваше повідомлення передано консультанту!");
+            userStates.remove(userId);
 
         } catch (Exception e) {
-            System.out.println("❌ [ERROR] Бот НЕ МОЖЕ написати консультанту!");
-            System.out.println("Причина: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    private void forwardPhotoToConsultant(Long userId, Long chatIdLong, Update update) {
+        try {
+            List<PhotoSize> photos = update.getMessage().getPhoto();
+            PhotoSize largest = photos.get(photos.size() - 1);
+            String fileId = largest.getFileId();
+
+            SendPhoto msg = new SendPhoto();
+            msg.setChatId(CONSULTANT_CHAT_ID.toString());
+            msg.setPhoto(new InputFile(fileId));
+            msg.setCaption(
+                    "📩 Фото від покупця:\n" +
+                            "🆔 User ID: " + userId + "\n" +
+                            "💬 Chat ID: " + chatIdLong
+            );
+
+            execute(msg);
+
+            sendReplyButtonToConsultant(userId);
+
+            sendText(chatIdLong, "Ваше фото передано консультанту!");
+            userStates.remove(userId);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendReplyButtonToConsultant(Long customerId) {
+        try {
+            // зберігаємо кому консультант буде відповідати
+            consultantReplyTarget.put(CONSULTANT_CHAT_ID, customerId);
+
+            SendMessage replyBtn = new SendMessage(
+                    CONSULTANT_CHAT_ID.toString(),
+                    "🤝 Покупець чекає на відповідь. Хочете відповісти?"
+            );
+
+            ReplyKeyboardMarkup km = new ReplyKeyboardMarkup();
+            km.setResizeKeyboard(true);
+            km.setKeyboard(List.of(
+                    new KeyboardRow(List.of(new KeyboardButton("💬 Відповісти покупцю")))
+            ));
+
+            replyBtn.setReplyMarkup(km);
+
+            execute(replyBtn);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String botAutoAnswer(String text) {
+        text = text.toLowerCase();
+
+        if (text.contains("цемент") || text.contains("цем") || text.contains("cement"))
+            return "Так, цемент є в наявності ✔️";
+
+        if (text.contains("ціна") || text.contains("скільки"))
+            return "Вкажіть, будь ласка, точну назву товару — скажу точну ціну.";
+
+        if (text.contains("доставка"))
+            return "Так, є доставка по місту, самовивіз і Нова Пошта 🚚";
+
+        return null;
     }
 }
