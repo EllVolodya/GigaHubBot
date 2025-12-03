@@ -1344,13 +1344,20 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String name = String.valueOf(product.getOrDefault("name", "Без назви"));
         String price = String.valueOf(product.getOrDefault("price", "N/A"));
-        String unit = String.valueOf(product.getOrDefault("unit", "шт"));
+        String unit = String.valueOf(product.getOrDefault("unit", "шт")).toLowerCase();
         String description = String.valueOf(product.getOrDefault("description", ""));
         String photo = String.valueOf(product.getOrDefault("photo", ""));
         String manufacturer = String.valueOf(product.getOrDefault("manufacturer", ""));
 
-        StringBuilder sb = new StringBuilder("📦 ").append(name)
-                .append("\n💰 Ціна: ").append(price).append(" грн за ").append(unit);
+        StringBuilder sb = new StringBuilder("📦 ").append(name);
+
+        // 🔥 НОВА ЛОГІКА ПІД ЗАМОВЛЕННЯ
+        if (unit.equals("під замовлення")) {
+            sb.append("\n💬 *Товар доступний під замовлення*")
+                    .append("\n📞 Уточніть ціну у консультанта");
+        } else {
+            sb.append("\n💰 Ціна: ").append(price).append(" грн за ").append(unit);
+        }
 
         if (!manufacturer.isEmpty() && !"null".equalsIgnoreCase(manufacturer))
             sb.append("\n🏭 Виробник: ").append(manufacturer);
@@ -1364,7 +1371,13 @@ public class StoreBot extends TelegramLongPollingBot {
         row1.add("➡ Далі");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("🛒 Додати в кошик");
+
+        if (unit.equals("під замовлення")) {
+            row2.add("✉ Написати консультанту");
+        } else {
+            row2.add("🛒 Додати в кошик");
+        }
+
         row2.add("🛍️ Перейти в кошик");
 
         KeyboardRow row3 = new KeyboardRow();
@@ -1376,7 +1389,6 @@ public class StoreBot extends TelegramLongPollingBot {
         markup.setKeyboard(keyboard);
         markup.setResizeKeyboard(true);
 
-        // ========== 🖼️ Фото або текст ==========
         if (photo != null && !photo.isEmpty() && !"null".equalsIgnoreCase(photo)) {
             sendPhotoFromResources(chatId.toString(), photo, sb.toString(), markup);
         } else {
