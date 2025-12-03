@@ -1164,6 +1164,19 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleBack(Long userId, String chatId) throws TelegramApiException {
         System.out.println("[handleBack] User " + userId + " pressed Back.");
 
+        // ❗ 0. Блокування кнопки Назад під час оформлення замовлення
+        String state = userStates.get(userId);
+        if ("awaiting_delivery_choice".equals(state) ||
+                "order_pickup".equals(state) ||
+                "awaiting_city_delivery".equals(state) ||
+                "awaiting_post_delivery".equals(state)) {
+
+            sendText(chatId,
+                    "❗ Повернення назад недоступне під час оформлення замовлення.\n" +
+                            "📝 Будь ласка, завершіть заповнення даних або оформіть замовлення.");
+            return;
+        }
+
         // 1. Очищаємо стани
         userStates.remove(userId);
         lastShownProduct.remove(userId);
