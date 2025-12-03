@@ -35,6 +35,9 @@ public class Main {
             StoreBot bot = new StoreBot(token);
             botsApi.registerBot(bot);
 
+            PaymentCallbackServer callbackServer = new PaymentCallbackServer(bot);
+            callbackServer.start();
+
             System.out.println("Bot started successfully!");
         } catch (TelegramApiException e) {
             e.printStackTrace();
