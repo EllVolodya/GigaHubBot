@@ -191,9 +191,11 @@ public class StoreBot extends TelegramLongPollingBot {
                 userCart.computeIfAbsent(realChatId, k -> new ArrayList<>()).add(cartItem);
 
                 sendText(realChatId,
-                        "✅ Додано в кошик:\n" +
-                                "📦 " + product.get("name") + "\n" +
-                                "🔢 Кількість: " + quantity);
+                        "🧺 **Товар додано у кошик!**\n\n" +
+                                "📦 *" + product.get("name") + "*\n" +
+                                "🔢 Кількість: *" + quantity + "*\n\n" +
+                                "Митрофан радісно поклав товар у твій кошик 😊\n" +
+                                "Можеш продовжувати покупки — я поруч!");
 
                 waitingForQuantity.put(realChatId, false);
                 return;
@@ -474,7 +476,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     Long chatIdLong = update.getMessage().getChatId();
                     String chatIdStr = chatIdLong.toString();
 
-                    // Перевірка коду інвайту
                     String messageText = update.getMessage().getText();
                     if (messageText != null && messageText.length() > 6) {
                         String inviteCode = messageText.substring(7).trim();
@@ -488,11 +489,9 @@ public class StoreBot extends TelegramLongPollingBot {
                         }
                     }
 
-                    // --- Реєстрація користувача
                     UserManager userManager = new UserManager();
                     userManager.registerUser(chatIdLong, update.getMessage().getFrom().getFirstName(), chatIdStr);
 
-                    // --- Відправка меню користувача одразу після /start
                     try {
                         SendMessage menuMsg = createUserMenu(chatIdStr, userId);
                         execute(menuMsg);
@@ -568,7 +567,8 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "💬 Допомога" -> sendMessage(createHelpMenu(chatId));
                 case "✉️ Написати консультанту" -> {
                     userStates.put(userId, "ask_consultant");
-                    sendText(chatId, "✏️ Напишіть своє питання (текст або фото):");
+                    sendText(chatId, "✏\uFE0F Напишіть своє питання — я передам консультанту.  \n" +
+                            "Фото теж можна кидати \uD83D\uDCF8\uD83D\uDE09");
                 }
                 case "💌 Відповіді" -> {
                     List<String> answers = supportAnswers.get(userId);
@@ -613,7 +613,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     markup.setKeyboard(List.of(deliveryRow, backRow));
 
-                    sendMessage(chatId, "Оберіть спосіб доставки:", markup);
+                    sendMessage(chatId, "\uD83D\uDE9A Оберіть спосіб доставки:\n" +
+                            "\n" +
+                            "\uD83C\uDFEC Самовивіз\n" +
+                            "\uD83D\uDCE6 Доставка по місту\n" +
+                            "\uD83D\uDCEE Нова Пошта\n" +
+                            "\n" +
+                            "Митрофан усе підготує та передасть замовлення на відправку максимально швидко \uD83D\uDE09", markup);
                     userStates.put(userId, "awaiting_delivery_choice");
                 }
 
@@ -878,7 +884,10 @@ public class StoreBot extends TelegramLongPollingBot {
                             long orderId = rs.getLong("id");
                             long orderUserId = rs.getLong("userId");
 
-                            sendText("" + orderUserId, "✅ Ваше замовлення підтверджено! Очікуйте доставку.");
+                            sendText("" + orderUserId, "\uD83E\uDDF1 Ваше замовлення прийнято!\n" +
+                                    "\n" +
+                                    "Митрофан вже складає його на піддон \uD83D\uDE09  \n" +
+                                    "Дякуємо, що обираєте GigaHub ❤\uFE0F");
 
                             String updateSql = "UPDATE orders SET status = 'Підтверджено' WHERE id = ?";
                             try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
@@ -1071,7 +1080,13 @@ public class StoreBot extends TelegramLongPollingBot {
                 .keyboard(buildKeyboard(categories, true))
                 .build();
 
-        sendMessage(chatId, "📂 Виберіть категорію:", markup);
+        sendMessage(chatId, "\uD83D\uDCC2 Обирай категорію, друже!  \n" +
+                "Я вже підтягнув рукавички та готовий порпатись у наших складських полицях \uD83D\uDE04\uD83E\uDDF1\n" +
+                "\n" +
+                "У нас усе акуратно розкладено: цемент тут, фарба там, інструменти під рукою, а хіти продажів — просто ближче до виходу.  \n" +
+                "Ти лише скажи, що шукаєш — і я миттю знайду найкращі варіанти!\n" +
+                "\n" +
+                "Занурюйся в каталог — почнемо будувати разом \uD83D\uDCAA✨", markup);
 
         System.out.println("DEBUG: Categories sent in ID order: " + categories);
     }
@@ -1085,7 +1100,9 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        StringBuilder sb = new StringBuilder("📋 Ваш кошик:\n\n");
+        StringBuilder sb = new StringBuilder("🧺 *Ваш кошик, друже!* \n")
+                .append("Митрофан перевірив полички і зібрав усе, що ви додали 👇\n\n");
+
         double total = 0;
         int i = 1;
 
@@ -1097,17 +1114,19 @@ public class StoreBot extends TelegramLongPollingBot {
             // 🔥 Кількість товару
             int quantity = Integer.parseInt(item.getOrDefault("quantity", 1).toString());
 
-            // 🔥 Ціна за позицію
+            // 🔥 Сума за позицію
             double lineTotal = price * quantity;
             total += lineTotal;
 
-            sb.append(i++).append(". ").append(name)
+            sb.append("🔸 *").append(i++).append(". ").append(name).append("*")
                     .append("\n   🔢 Кількість: ").append(quantity)
                     .append("\n   💵 Ціна за 1: ").append(price).append(" грн")
-                    .append("\n\n");
+                    .append("\n   💰 Сума: ").append(lineTotal).append(" грн\n\n");
         }
 
-        sb.append("💳 Всього до оплати: ").append(total).append(" грн");
+        sb.append("━━━━━━━━━━━━━━\n")
+                .append("💳 *Всього до оплати:* ").append(total).append(" грн\n")
+                .append("🧱 Митрофан каже: «Готовий оформити замовлення, як тільки будеш готовий!» 🤖");
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
@@ -2056,7 +2075,12 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                sendText(chatId, "Будь ласка, виберіть спосіб оплати кнопкою нижче.");
+                sendText(chatId, "\uD83D\uDCB3 Яким способом хочете оплатити?\n" +
+                        "\n" +
+                        "\uD83D\uDCB5 Готівка — розрахуєтесь при отриманні  \n" +
+                        "\uD83D\uDCB3 Оплата карткою — миттєва та зручно\n" +
+                        "\n" +
+                        "Митрофан тримає термінал… а ну, що вибираєш? \uD83D\uDE04");
             }
 
             case "invites_menu" -> {
@@ -2981,10 +3005,17 @@ public class StoreBot extends TelegramLongPollingBot {
         markup.setKeyboard(keyboard);
         return SendMessage.builder()
                 .chatId(chatId)
-                .text("👋 Знову привіт, друже!\n" +
-                        "Я, Митрофан 🤖, готовий допомогти тобі:\n" +
-                        "🧱 Обирай каталог, 🔍 шукай товари, 🧺 переглядай кошик або ⭐ дивись хіти продажів.\n\n" +
-                        "🫶 Робимо покупки швидкими, зручними та приємними!")
+                .text("\uD83D\uDC4B Радий бачити тебе знову, друже!\n" +
+                        "\n" +
+                        "Я — Митрофан \uD83E\uDD16, твій особистий провідник у світі будматеріалів GigaHub.  \n" +
+                        "Готовий допомогти у всьому, що стосується ремонту та будівництва:\n" +
+                        "\n" +
+                        "\uD83D\uDCC2 Переглядай каталог  \n" +
+                        "\uD83D\uDD0D Шукай потрібні товари  \n" +
+                        "\uD83D\uDED2 Заглядай у свій кошик  \n" +
+                        "\uD83D\uDD25 Або дивись популярні хіти, які беруть найчастіше!\n" +
+                        "\n" +
+                        "Я поруч — зробимо твій вибір простим, а покупки приємними \uD83D\uDCAA✨")
                 .replyMarkup(markup)
                 .build();
     }
@@ -3177,9 +3208,15 @@ public class StoreBot extends TelegramLongPollingBot {
         markup.setKeyboard(keyboard);
         return SendMessage.builder()
                 .chatId(chatId)
-                .text("📖 Виберіть один із пунктів для отримання допомоги:\n\n" +
-                        "✉️ *Написати консультанту* – Задайте своє питання і отримайте професійну консультацію.\n" +
-                        "💌 *Відповіді* – Перегляньте всі відповіді консультантів.")
+                .text("\uD83D\uDCD6 Митрофан до твоїх послуг, друже!\n" +
+                        "\n" +
+                        "Якщо щось хочеш уточнити — я поруч \uD83D\uDC47\n" +
+                        "\n" +
+                        "✉\uFE0F Написати консультанту\n" +
+                        "Я передам твоє питання нашим будівельним майстрам. Вони підкажуть, порадять і допоможуть обрати найкраще \uD83E\uDDF1\uD83D\uDCAC\n" +
+                        "\n" +
+                        "\uD83D\uDC8C Переглянути відповіді\n" +
+                        "Тут зберігаю всі відповіді консультанта — щоб нічого не загубилося.")
                 .parseMode("Markdown")
                 .replyMarkup(markup)
                 .build();
@@ -3428,7 +3465,10 @@ public class StoreBot extends TelegramLongPollingBot {
                             .keyboard(buildKeyboard(subcategories, true))
                             .build();
 
-                    sendMessage(chatId, "📁 Виберіть підкатегорію:", markup);
+                    sendMessage(chatId, "\uD83E\uDDF1 Обери підкатегорію, друже!\n" +
+                            "\n" +
+                            "Митрофан уже стоїть біля стелажа — каска на місці, ліхтар увімкнений \uD83D\uDD26  \n" +
+                            "Залишилось тільки сказати, що саме шукаємо — і я миттю знайду потрібний товар \uD83D\uDE09", markup);
                 }
             }
 
