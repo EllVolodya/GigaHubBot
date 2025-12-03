@@ -2,7 +2,6 @@ package org.example;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
@@ -17,9 +16,7 @@ import java.util.concurrent.Executors;
 
 public class PaymentCallbackServer {
 
-    // 🔥 Admin ID (твій)
     private static final long ADMIN_ID = 620298889L;
-
     private final StoreBot bot;
 
     public PaymentCallbackServer(StoreBot bot) {
@@ -30,11 +27,15 @@ public class PaymentCallbackServer {
         try {
             int port = Integer.parseInt(System.getenv().getOrDefault("PORT", "8080"));
             HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
-            server.createContext("/wfp-callback", this::handleCallback);
+
+            // 🔥 Правильний endpoint для WayForPay
+            server.createContext("/pay/callback", this::handleCallback);
+
             server.setExecutor(Executors.newFixedThreadPool(4));
             server.start();
 
-            System.out.println("🚀 WayForPay callback server started on port " + port);
+            System.out.println("🚀 WayForPay callback server started on port: " + port);
+            System.out.println("📡 Listening on /pay/callback");
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -47,32 +48,30 @@ public class PaymentCallbackServer {
             return;
         }
 
-        String jsonBody = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
-        System.out.println("📩 Callback from WayForPay: " + jsonBody);
+        String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+        System.out.println("📩 Callback data: " + body);
 
-        JsonObject obj = JsonParser.parseString(jsonBody).getAsJsonObject();
+        JsonObject json = JsonParser.parseString(body).getAsJsonObject();
 
-        String orderReference = obj.get("orderReference").getAsString();
-        String transactionStatus = obj.get("transactionStatus").getAsString();
-        double receivedAmount = obj.get("amount").getAsDouble();
+        String orderCode = json.get("orderReference").getAsString();
+        double receivedAmount = json.get("amount").getAsDouble();
 
-        boolean success = "Approved".equalsIgnoreCase(transactionStatus)
-                || "PAYMENT_APPROVED".equalsIgnoreCase(transactionStatus);
+        String status = json.get("transactionStatus").getAsString();
+        boolean success = status.equalsIgnoreCase("Approved")
+                || status.equalsIgnoreCase("PAYMENT_APPROVED");
 
-        // 🔹 Перевірка суми + оновлення статусу
-        updateOrderAndNotify(orderReference, receivedAmount, success);
+        updateOrderAndNotify(orderCode, receivedAmount, success);
 
-        byte[] resp = "OK".getBytes(StandardCharsets.UTF_8);
-        exchange.sendResponseHeaders(200, resp.length);
+        byte[] ok = "OK".getBytes(StandardCharsets.UTF_8);
+        exchange.sendResponseHeaders(200, ok.length);
         try (OutputStream os = exchange.getResponseBody()) {
-            os.write(resp);
+            os.write(ok);
         }
     }
 
     private void updateOrderAndNotify(String orderCode, double receivedAmount, boolean success) {
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            // Спочатку знайдемо замовлення
             PreparedStatement sel = conn.prepareStatement(
                     "SELECT userId, total FROM orders WHERE orderCode=?"
             );
@@ -80,24 +79,18 @@ public class PaymentCallbackServer {
             ResultSet rs = sel.executeQuery();
 
             if (!rs.next()) {
-                System.out.println("⚠ Замовлення з кодом " + orderCode + " не знайдено.");
+                System.out.println("⚠ Order not found: " + orderCode);
                 return;
             }
 
             long userId = rs.getLong("userId");
-            double dbTotal = rs.getDouble("total");
+            double total = rs.getDouble("total");
 
-            // 🔒 Перевірка суми
-            boolean amountOk = Math.abs(dbTotal - receivedAmount) < 0.01;
+            boolean amountCorrect = Math.abs(total - receivedAmount) < 0.01;
 
-            String finalStatus;
-            if (success && amountOk) {
-                finalStatus = "Оплачено";
-            } else if (success) {
-                finalStatus = "Підозріла сума";
-            } else {
-                finalStatus = "Відхилено";
-            }
+            String finalStatus = success
+                    ? (amountCorrect ? "Оплачено" : "Підозріла сума")
+                    : "Відхилено";
 
             PreparedStatement upd = conn.prepareStatement(
                     "UPDATE orders SET paymentstatus=? WHERE orderCode=?"
@@ -106,25 +99,22 @@ public class PaymentCallbackServer {
             upd.setString(2, orderCode);
             upd.executeUpdate();
 
-            // 🔔 Повідомляємо користувача
-            String userMsg;
-            if ("Оплачено".equals(finalStatus)) {
-                userMsg = "✅ Оплату за замовлення *" + orderCode + "* успішно підтверджено!";
-            } else if ("Підозріла сума".equals(finalStatus)) {
-                userMsg = "⚠ Оплату отримано, але сума не співпадає. Консультант зв'яжеться з вами.";
-            } else {
-                userMsg = "❌ Оплата за замовлення *" + orderCode + "* не пройшла.";
-            }
-
+            // 🔔 User notify
+            String userMsg = switch (finalStatus) {
+                case "Оплачено" -> "✅ Ваше замовлення *" + orderCode + "* успішно оплачено!";
+                case "Підозріла сума" -> "⚠ Оплата отримана, але сума не співпадає!";
+                default -> "❌ Оплату не вдалося провести!";
+            };
             bot.sendText(String.valueOf(userId), userMsg);
 
-            // 🔔 Повідомляємо адміна
-            String adminMsg = "💳 *Оплата замовлення*\n" +
-                    "🔢 Код: *" + orderCode + "*\n" +
-                    "👤 User ID: " + userId + "\n" +
-                    "💰 Сума з бази: " + dbTotal + " грн\n" +
-                    "💰 Сума з WayForPay: " + receivedAmount + " грн\n" +
-                    "📌 Статус: *" + finalStatus + "*";
+            // 🔔 Admin notify
+            String adminMsg =
+                    "💳 *Оплата замовлення*\n" +
+                            "🔢 Код: *" + orderCode + "*\n" +
+                            "👤 User: " + userId + "\n" +
+                            "💰 Очікувалося: " + total + " грн\n" +
+                            "💰 Отримано: " + receivedAmount + " грн\n" +
+                            "📌 Статус: *" + finalStatus + "*";
 
             bot.sendText(String.valueOf(ADMIN_ID), adminMsg);
 
