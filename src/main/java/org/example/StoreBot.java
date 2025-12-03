@@ -1384,24 +1384,46 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // 🔹 Додати товар у кошик
     private void addToCart(Long chatId) throws TelegramApiException {
         Map<String, Object> product = lastShownProduct.get(chatId);
 
         if (product == null) {
-            sendText(chatId, "❌ Неможливо додати товар. Спробуйте ще раз.");
+            sendText(chatId, "❌ Не вдалося визначити товар. Спробуй ще раз 🙏");
             return;
         }
 
-        // Зберігаємо, що ми чекаємо кількість
+        String productName = product.getOrDefault("name", "Без назви").toString();
+        String unit = product.getOrDefault("unit", "").toString().toLowerCase();
+
+        if (unit.equals("під замовлення")) {
+
+            sendText(chatId,
+                    "📦 *Товар під замовлення!*\n\n" +
+                            "🔎 \"" + productName + "\" наразі недоступний для швидкого замовлення.\n" +
+                            "Я вже передав інформацію нашому консультанту — він відповість тобі найближчим часом! 🧱🤝");
+
+            String adminMsg =
+                    "📢 *Новий запит під замовлення!*\n\n" +
+                            "👤 Покупець хоче дізнатися про товар:\n" +
+                            "📦 " + productName + "\n\n" +
+                            "🆔 User ID: " + chatId + "\n" +
+                            "💬 Чат ID: " + chatId + "\n\n" +
+                            "Натисніть кнопку нижче, щоб відповісти 👇";
+
+            sendReplyButtonToConsultant(chatId);
+
+            sendText(String.valueOf(CONSULTANT_CHAT_ID), adminMsg);
+
+            return;
+        }
+
         waitingForQuantity.put(chatId, true);
 
         sendText(chatId,
-                "📥 Вкажіть кількість товару:\n" +
-                        "👉 \"" + product.get("name") + "\"\n\n" +
-                        "Введіть число (наприклад: 3)");
+                "📥 Добре, друже! Скільки тобі потрібно?\n" +
+                        "👉 *" + productName + "*\n\n" +
+                        "Введи кількість числом (наприклад: 3)");
     }
-
     public void addToCartTool(Long userId) {
         Map<String, Object> product = lastShownProduct.get(userId);
         String chatId = String.valueOf(userId);
@@ -2632,7 +2654,15 @@ public class StoreBot extends TelegramLongPollingBot {
             case "📏 Одиниця виміру":
                 adminEditingField.put(userId, "unit");
                 userStates.put(userId, "awaiting_field_value");
-                sendText(chatId, "Введіть одиницю виміру для товару (шт або метр):");
+
+                sendText(chatId,
+                        "Введіть одиницю виміру для товару:\n\n" +
+                                "Доступні варіанти:\n" +
+                                "• шт\n" +
+                                "• метр\n" +
+                                "• м2\n" +
+                                "• під замовлення\n\n" +
+                                "✏️ Введіть одне зі значень:");
                 break;
 
             case "🏭 Виробник":
@@ -2670,41 +2700,67 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (field == null) return;
 
-        // --- Перевірка для одиниці виміру ---
         if ("unit".equals(field)) {
-            if (!newValue.equalsIgnoreCase("шт") && !newValue.equalsIgnoreCase("метр")) {
-                sendText(chatId, "❌ Допустимі значення: 'шт' або 'метр'. Спробуйте ще раз:");
-                return; // залишаємо стан await
+
+            newValue = newValue.trim().toLowerCase();
+
+            if (!newValue.equals("шт")
+                    && !newValue.equals("метр")
+                    && !newValue.equals("м2")
+                    && !newValue.equals("під замовлення")) {
+
+                sendText(chatId,
+                        "❌ Недопустиме значення.\n" +
+                                "Можна вводити лише: шт, метр, м2, під замовлення.\nСпробуйте ще раз:");
+                return;
             }
         }
 
-        // --- Оновлення поля ---
         if (productsToEdit != null && !productsToEdit.isEmpty()) {
+
             int successCount = 0;
+
             for (String productName : productsToEdit) {
                 boolean updated = CatalogEditor.updateField(productName, field, newValue);
+
+                if (newValue.equals("під замовлення")) {
+                    CatalogEditor.updateField(productName, "price", "");
+                }
+
                 if (updated) successCount++;
             }
-            String selection = productsToEdit.size() > 1 ? "1-" + productsToEdit.size() : "1";
-            sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для всіх " + successCount +
-                    " товарів у вибраному діапазоні (" + selection + ").");
-        } else if (singleProduct != null) {
+
+            sendText(chatId,
+                    "✅ Одиницю виміру оновлено для " + successCount + " товарів.\n" +
+                            (newValue.equals("під замовлення")
+                                    ? "💡 Ціна очищена, бо товар під замовлення."
+                                    : ""));
+        }
+
+        else if (singleProduct != null) {
+
             boolean success = CatalogEditor.updateField(singleProduct, field, newValue);
+
+            if (newValue.equals("під замовлення")) {
+                CatalogEditor.updateField(singleProduct, "price", "");
+            }
+
             if (success) {
-                sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару '" + singleProduct + "'");
+                sendText(chatId,
+                        "✅ Одиницю виміру оновлено для товару '" + singleProduct + "'.\n" +
+                                (newValue.equals("під замовлення")
+                                        ? "💡 Ціна очищена, бо товар під замовлення."
+                                        : ""));
             } else {
-                sendText(chatId, "⚠️ Не вдалося оновити поле '" + field + "' для товару '" + singleProduct + "'");
+                sendText(chatId, "⚠️ Не вдалося оновити одиницю виміру.");
             }
         }
 
-        // --- Очищення стану для поля ---
         adminEditingField.remove(userId);
 
-        // --- Виводимо меню дій (без повтору тексту про поточний товар) ---
-        sendText(chatId, "Виберіть наступну дію або можете повернутись назад:");
+        sendText(chatId, "Виберіть наступну дію:");
         sendMessageSafely(createEditMenu(chatId, userId));
 
-        // --- Залишаємо користувача в режимі редагування ---
         userStates.put(userId, "editing");
     }
 
