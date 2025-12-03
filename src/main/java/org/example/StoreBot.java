@@ -1869,6 +1869,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
             // 🔹 Order Pickup
             case "order_pickup" -> {
+                if (text.equals("⬅️ Назад")) {
+                    sendText(chatId,
+                            "❗ Ви зараз оформлюєте замовлення.\n" +
+                                    "⬅️ Повернення назад буде доступне після завершення оформлення.");
+                    return;
+                }
+
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
                     sendText(chatId, "🛒 Ваш кошик порожній.");
@@ -1966,6 +1973,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
             // 🔹 City Delivery
             case "awaiting_city_delivery" -> {
+                if (text.equals("⬅️ Назад")) {
+                    sendText(chatId,
+                            "❗ Ви зараз оформлюєте замовлення.\n" +
+                                    "⬅️ Повернення назад буде доступне після завершення оформлення.");
+                    return;
+                }
+
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
                     sendText(chatId, "🛒 Ваш кошик порожній.");
@@ -2062,6 +2076,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
             // 🔹 Nova Poshta Delivery
             case "awaiting_post_delivery" -> {
+                if (text.equals("⬅️ Назад")) {
+                    sendText(chatId,
+                            "❗ Ви зараз оформлюєте замовлення.\n" +
+                                    "⬅️ Повернення назад буде доступне після завершення оформлення.");
+                    return;
+                }
+
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
                     sendText(chatId, "🛒 Ваш кошик порожній.");
