@@ -14,6 +14,8 @@ import org.telegram.telegrambots.meta.api.objects.InputFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendVideo;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
 import java.io.InputStream;
 import java.io.IOException;
@@ -46,6 +48,16 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Boolean> waitingForQuantity = new HashMap<>();
     private final Map<Long, Boolean> waitingForCatalogSearch = new HashMap<>();
     private final Map<Long, Integer> searchIndex = new HashMap<>();
+
+    // Для замовлення.
+    private final Map<Long, String> tempAddress = new HashMap<>();
+    private final Map<Long, String> tempFullname = new HashMap<>();
+    private final Map<Long, String> tempPhone = new HashMap<>();
+    private final Map<Long, String> tempCard = new HashMap<>();
+    private final Map<Long, Double> tempTotal = new HashMap<>();
+    private final Map<Long, String> tempDeliveryType = new HashMap<>();
+    private final Map<Long, String> tempOrderItems = new HashMap<>();
+    private final Map<Long, String> tempOrderCode = new HashMap<>();
 
     //Права
     private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню
@@ -1987,91 +1999,44 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                String orderCode = String.format("%04d", new Random().nextInt(10000));
-                String[] parts = text.split(",", 4); // Адреса, П.І., Телефон, Картка
+                String[] parts = text.split(",", 4);
                 String address = parts.length > 0 ? parts[0].trim() : "Невідомо";
-                String fullName = parts.length > 1 ? parts[1].trim() : "Невідомо";
+                String fullname = parts.length > 1 ? parts[1].trim() : "Невідомо";
                 String phone = parts.length > 2 ? parts[2].trim() : "Невідомо";
                 String card = parts.length > 3 ? parts[3].trim() : "0000";
 
-                StringBuilder itemsDb = new StringBuilder();
-                StringBuilder itemsForUser = new StringBuilder();
+                tempDeliveryType.put(userId, "Доставка по місту");
+                tempAddress.put(userId, address);
+                tempFullname.put(userId, fullname);
+                tempPhone.put(userId, phone);
+                tempCard.put(userId, card);
 
+                String orderCode = String.format("%04d", new Random().nextInt(10000));
+                tempOrderCode.put(userId, orderCode);
+
+                StringBuilder items = new StringBuilder();
                 double total = 0;
 
                 for (Map<String, Object> item : cart) {
+                    String name = item.get("name").toString();
+                    double price = Double.parseDouble(item.get("price").toString());
+                    int qty = item.get("quantity") == null ? 1 : Integer.parseInt(item.get("quantity").toString());
 
-                    String name = item.getOrDefault("name", "Без назви").toString();
-
-                    double price = 0;
-                    Object priceObj = item.get("price");
-                    if (priceObj instanceof Number n) price = n.doubleValue();
-                    else if (priceObj != null) {
-                        try { price = Double.parseDouble(priceObj.toString()); } catch (NumberFormatException ignored) {}
-                    }
-
-                    int quantity = 1;
-                    Object qObj = item.get("quantity");
-                    if (qObj instanceof Number qn) quantity = qn.intValue();
-                    else if (qObj != null) {
-                        try { quantity = Integer.parseInt(qObj.toString()); } catch (Exception ignored) {}
-                    }
-
-                    double lineTotal = price * quantity;
-                    total += lineTotal;
-
-                    itemsDb.append(name).append(":").append(price).append(":").append(quantity).append(";");
-
-                    itemsForUser.append("🛒 ").append(name).append("\n")
-                            .append("   🔢 Кількість: ").append(quantity).append("\n")
-                            .append("   💵 Ціна за 1: ").append(price).append(" грн\n")
-                            .append("   💰 Разом: ").append(lineTotal).append(" грн\n\n");
+                    total += price * qty;
+                    items.append(name).append(":").append(price).append(":").append(qty).append(";");
                 }
 
-                try (Connection conn = DatabaseManager.getConnection()) {
-                    PreparedStatement stmt = conn.prepareStatement(
-                            "INSERT INTO orders (userId, orderCode, deliveryType, city, fullName, phone, card, status, item, total, date) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
-                    );
-                    stmt.setLong(1, userId);              // ось тут передаємо userId
-                    stmt.setString(2, orderCode);
-                    stmt.setString(3, "Доставка по місту");
-                    stmt.setString(4, address);
-                    stmt.setString(5, fullName);
-                    stmt.setString(6, phone);
-                    stmt.setString(7, card);
-                    stmt.setString(8, "Нове");
-                    stmt.setString(9, itemsDb.toString());
-                    stmt.setDouble(10, total);
-                    stmt.executeUpdate();
-                    stmt.close();
+                tempOrderItems.put(userId, items.toString());
+                tempTotal.put(userId, total);
 
-                    PreparedStatement insertUser = conn.prepareStatement(
-                            "INSERT INTO user_cards (name, city, number, number_carts, bonus) VALUES (?, ?, ?, ?, ?)"
-                    );
-                    insertUser.setString(1, fullName);
-                    insertUser.setString(2, address);
-                    insertUser.setString(3, phone);
-                    insertUser.setString(4, card);
-                    insertUser.setString(5, "");
-                    insertUser.executeUpdate();
-                    insertUser.close();
-
-                    userCart.remove(userId);
-                    userStates.remove(userId);
-
-                    sendText(chatId,
-                            "✅ Ваше замовлення успішно оформлено!\n" +
-                                    "Код замовлення: " + orderCode + "\n\n" +
-                                    itemsForUser.toString() +
-                                    "💳 Всього: " + total + " грн\n" +
-                                    "Дякуємо за замовлення!"
-                    );
-
-                } catch (SQLException e) {
+                try {
+                    askPaymentMethod(userId, Long.valueOf(chatId));
+                } catch (TelegramApiException e) {
                     e.printStackTrace();
-                    sendText(chatId, "❌ Сталася помилка при збереженні замовлення.");
+                    sendText(chatId, "❌ Помилка при показі способів оплати.");
                 }
+
+                userStates.put(userId, "awaiting_payment_method");
             }
 
             // 🔹 Nova Poshta Delivery
@@ -2090,91 +2055,65 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                String orderCode = String.format("%04d", new Random().nextInt(10000));
-                String[] parts = text.split(",", 4); // Відділення НП, П.І., Телефон, Картка
-                String postOffice = parts.length > 0 ? parts[0].trim() : "Невідомо";
-                String fullName = parts.length > 1 ? parts[1].trim() : "Невідомо";
+                String[] parts = text.split(",", 4);
+                String post = parts.length > 0 ? parts[0].trim() : "Невідомо";
+                String fullname = parts.length > 1 ? parts[1].trim() : "Невідомо";
                 String phone = parts.length > 2 ? parts[2].trim() : "Невідомо";
                 String card = parts.length > 3 ? parts[3].trim() : "0000";
 
-                StringBuilder itemsDb = new StringBuilder();
-                StringBuilder itemsForUser = new StringBuilder();
+                tempDeliveryType.put(userId, "Нова пошта");
+                tempAddress.put(userId, post);
+                tempFullname.put(userId, fullname);
+                tempPhone.put(userId, phone);
+                tempCard.put(userId, card);
 
+                String orderCode = String.format("%04d", new Random().nextInt(10000));
+                tempOrderCode.put(userId, orderCode);
+
+                StringBuilder items = new StringBuilder();
                 double total = 0;
 
                 for (Map<String, Object> item : cart) {
+                    String name = item.get("name").toString();
+                    double price = Double.parseDouble(item.get("price").toString());
+                    int qty = item.get("quantity") == null ? 1 : Integer.parseInt(item.get("quantity").toString());
 
-                    String name = item.getOrDefault("name", "Без назви").toString();
-
-                    double price = 0;
-                    Object priceObj = item.get("price");
-                    if (priceObj instanceof Number n) price = n.doubleValue();
-                    else if (priceObj != null) {
-                        try { price = Double.parseDouble(priceObj.toString()); } catch (NumberFormatException ignored) {}
-                    }
-
-                    int quantity = 1;
-                    Object qObj = item.get("quantity");
-                    if (qObj instanceof Number qn) quantity = qn.intValue();
-                    else if (qObj != null) {
-                        try { quantity = Integer.parseInt(qObj.toString()); } catch (Exception ignored) {}
-                    }
-
-                    double lineTotal = price * quantity;
-                    total += lineTotal;
-
-                    itemsDb.append(name).append(":").append(price).append(":").append(quantity).append(";");
-
-                    itemsForUser.append("🛒 ").append(name).append("\n")
-                            .append("   🔢 Кількість: ").append(quantity).append("\n")
-                            .append("   💵 Ціна за 1: ").append(price).append(" грн\n")
-                            .append("   💰 Разом: ").append(lineTotal).append(" грн\n\n");
+                    total += price * qty;
+                    items.append(name).append(":").append(price).append(":").append(qty).append(";");
                 }
 
-                try (Connection conn = DatabaseManager.getConnection()) {
-                    PreparedStatement stmt = conn.prepareStatement(
-                            "INSERT INTO orders (userId, orderCode, deliveryType, city, fullName, phone, card, status, item, total, date) " +
-                                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
-                    );
-                    stmt.setLong(1, userId);              // ось тут передаємо userId
-                    stmt.setString(2, orderCode);
-                    stmt.setString(3, "Нова пошта");
-                    stmt.setString(4, postOffice);
-                    stmt.setString(5, fullName);
-                    stmt.setString(6, phone);
-                    stmt.setString(7, card);
-                    stmt.setString(8, "Нове");
-                    stmt.setString(9, itemsDb.toString());
-                    stmt.setDouble(10, total);
-                    stmt.executeUpdate();
-                    stmt.close();
+                tempOrderItems.put(userId, items.toString());
+                tempTotal.put(userId, total);
 
-                    PreparedStatement insertUser = conn.prepareStatement(
-                            "INSERT INTO user_cards (name, city, number, number_carts, bonus) VALUES (?, ?, ?, ?, ?)"
-                    );
-                    insertUser.setString(1, fullName);
-                    insertUser.setString(2, postOffice);
-                    insertUser.setString(3, phone);
-                    insertUser.setString(4, card);
-                    insertUser.setString(5, "");
-                    insertUser.executeUpdate();
-                    insertUser.close();
-
-                    userCart.remove(userId);
-                    userStates.remove(userId);
-
-                    sendText(chatId,
-                            "✅ Ваше замовлення успішно оформлено!\n" +
-                                    "Код замовлення: " + orderCode + "\n\n" +
-                                    itemsForUser.toString() +
-                                    "💳 Всього: " + total + " грн\n" +
-                                    "Дякуємо за замовлення!"
-                    );
-
-                } catch (SQLException e) {
+                try {
+                    askPaymentMethod(userId, Long.valueOf(chatId));
+                } catch (TelegramApiException e) {
                     e.printStackTrace();
-                    sendText(chatId, "❌ Сталася помилка при збереженні замовлення.");
+                    sendText(chatId, "❌ Помилка при показі способів оплати.");
                 }
+
+                userStates.put(userId, "awaiting_payment_method");
+            }
+
+            case "awaiting_payment_method" -> {
+
+                try {
+                    if (text.equals("💵 Готівка")) {
+                        createOrderWithPayment(userId, Long.valueOf(chatId), "Готівка", false);
+                        return;
+                    }
+
+                    if (text.equals("💳 Оплата карткою")) {
+                        createOrderWithPayment(userId, Long.valueOf(chatId), "Картка", true);
+                        return;
+                    }
+
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при створенні замовлення.");
+                }
+
+                sendText(chatId, "Будь ласка, виберіть спосіб оплати кнопкою.");
             }
 
             case "invites_menu" -> {
@@ -3780,6 +3719,32 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
+    private void sendPaymentRow(Long chatId, String paymentUrl) throws TelegramApiException {
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setResizeKeyboard(true);
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("💳 Оплатити замовлення");
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("⬅️ Назад");
+
+        markup.setKeyboard(List.of(row1, row2));
+
+        SendMessage msg = new SendMessage();
+        msg.setChatId(chatId.toString());
+        msg.setText(
+                "💳 Ваше замовлення створено!\n\n" +
+                        "Натисніть «Оплатити замовлення» і я відкрию сторінку оплати 👇"
+        );
+        msg.setReplyMarkup(markup);
+
+        execute(msg);
+
+        // зберігаємо URL для користувача
+        tempStorage.put(chatId + "_payUrl", paymentUrl);
+    }
+
     // Допоміжний метод для створення клавіатури відгуку
     private ReplyKeyboardMarkup buildFeedbackKeyboard() {
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
@@ -4444,5 +4409,112 @@ public class StoreBot extends TelegramLongPollingBot {
             return "Так, є доставка по місту, самовивіз і Нова Пошта 🚚";
 
         return null;
+    }
+
+    private void askPaymentMethod(Long userId, Long chatId) throws TelegramApiException {
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setResizeKeyboard(true);
+
+        KeyboardRow row = new KeyboardRow();
+        row.add("💵 Готівка");
+        row.add("💳 Оплата карткою");
+
+        markup.setKeyboard(List.of(row));
+
+        sendMessage(chatId,
+                "💰 Оберіть спосіб оплати:\n\n" +
+                        "💵 Готівка при отриманні\n" +
+                        "💳 Оплата карткою онлайн",
+                markup
+        );
+    }
+
+    private void createOrderWithPayment(Long userId, Long chatId, String paymentMethod, boolean needPayment)
+            throws TelegramApiException {
+
+        String orderCode = tempOrderCode.get(userId);
+        String deliveryType = tempDeliveryType.get(userId);
+        String address = tempAddress.get(userId);
+        String fullname = tempFullname.get(userId);
+        String phone = tempPhone.get(userId);
+        String card = tempCard.get(userId);
+        String items = tempOrderItems.get(userId);
+        double total = tempTotal.get(userId);
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement stmt = conn.prepareStatement(
+                    "INSERT INTO orders (userId, orderCode, deliveryType, city, fullName, phone, card, status, item, total, paymentMethod, date) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
+            );
+
+            stmt.setLong(1, userId);
+            stmt.setString(2, orderCode);
+            stmt.setString(3, deliveryType);
+            stmt.setString(4, address);
+            stmt.setString(5, fullname);
+            stmt.setString(6, phone);
+            stmt.setString(7, card);
+            stmt.setString(8, needPayment ? "Очікує оплати" : "Нове");
+            stmt.setString(9, items);
+            stmt.setDouble(10, total);
+            stmt.setString(11, paymentMethod);
+
+            stmt.executeUpdate();
+            stmt.close();
+
+            userCart.remove(userId);
+            userStates.remove(userId);
+
+            if (needPayment) {
+                String payUrl = generatePaymentUrl((int) total, orderCode);
+                sendPaymentButton(chatId, payUrl);
+
+                sendText(chatId,
+                        "💳 Ваше замовлення створено!\n" +
+                                "Код: " + orderCode + "\n\n" +
+                                "Для завершення — оплатіть замовлення.");
+            } else {
+                sendText(chatId,
+                        "✅ Ваше замовлення успішно оформлено!\n" +
+                                "Код: " + orderCode + "\n" +
+                                "Спосіб оплати: Готівка\n" +
+                                "Очікує видачі.");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendText(chatId, "❌ Помилка при створенні замовлення.");
+        }
+    }
+
+    private void sendPaymentButton(Long chatId, String url) throws TelegramApiException {
+        InlineKeyboardButton payButton = new InlineKeyboardButton();
+        payButton.setText("💳 Оплатити онлайн");
+        payButton.setUrl(url);
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+        rows.add(List.of(payButton));
+        markup.setKeyboard(rows);
+
+        SendMessage msg = new SendMessage();
+        msg.setChatId(chatId.toString());
+        msg.setText("💳 Натисніть кнопку нижче для оплати:");
+        msg.setReplyMarkup(markup);
+
+        execute(msg);
+    }
+
+    private String generatePaymentUrl(int amount, String orderCode) {
+        return "https://secure.wayforpay.com/pay?merchantAccount=YOUR_MERCHANT" +
+                "&merchantDomainName=gigahub.com" +
+                "&orderReference=" + orderCode +
+                "&orderDate=" + (System.currentTimeMillis() / 1000) +
+                "&amount=" + amount +
+                "&currency=UAH" +
+                "&productName=Замовлення%20" + orderCode +
+                "&productPrice=" + amount +
+                "&productCount=1";
     }
 }
