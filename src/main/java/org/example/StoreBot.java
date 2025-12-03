@@ -251,35 +251,37 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        if ("consultant_reply".equals(userStates.get(CONSULTANT_CHAT_ID)) && text != null) {
+        if ("consultant_reply".equals(userStates.get(CONSULTANT_CHAT_ID))
+                && text != null && !text.isBlank()) {
 
             Long target = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
 
+            // надсилаємо покупцю
             sendText(target, "📩 Відповідь консультанта:\n\n" + text);
+
+            // зберігаємо відповідь у історію
+            supportAnswers.computeIfAbsent(target, k -> new ArrayList<>())
+                    .add("📨 Відповідь консультанта:\n" + text);
+
+            // повідомляємо консультанта
             sendText(CONSULTANT_CHAT_ID, "✔ Повідомлення надіслано!");
 
-            // ⬅ Повертаємо консультанта в головне меню
+            // очищаємо стан
             userStates.remove(CONSULTANT_CHAT_ID);
-            sendMessage(createUserMenu(CONSULTANT_CHAT_ID.toString(), CONSULTANT_CHAT_ID));
+
             return;
         }
 
         if ("consultant_reply".equals(userStates.get(CONSULTANT_CHAT_ID))
                 && update.getMessage().hasPhoto()) {
 
+            Long target = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
+
+            List<PhotoSize> photos = update.getMessage().getPhoto();
+            PhotoSize largest = photos.get(photos.size() - 1);
+            String fileId = largest.getFileId();
+
             try {
-                Long target = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
-
-                if (target == null) {
-                    sendText(CONSULTANT_CHAT_ID, "❌ Немає активного покупця для відповіді.");
-                    userStates.remove(CONSULTANT_CHAT_ID);
-                    return;
-                }
-
-                List<PhotoSize> photos = update.getMessage().getPhoto();
-                PhotoSize largest = photos.get(photos.size() - 1);
-                String fileId = largest.getFileId();
-
                 SendPhoto ph = new SendPhoto();
                 ph.setChatId(target.toString());
                 ph.setPhoto(new InputFile(fileId));
@@ -287,17 +289,19 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 execute(ph);
 
-                sendText(CONSULTANT_CHAT_ID, "✔ Фото надіслано покупцю!");
+                // зберегти в історію як фото
+                supportAnswers.computeIfAbsent(target, k -> new ArrayList<>())
+                        .add("📸 Відповідь консультанта: [фото]");
 
-                // ⬅ Повертаємо консультанта в головне меню
-                userStates.remove(CONSULTANT_CHAT_ID);
-                sendMessage(createUserMenu(CONSULTANT_CHAT_ID.toString(), CONSULTANT_CHAT_ID));
+                sendText(CONSULTANT_CHAT_ID, "✔ Фото надіслано покупцю!");
 
             } catch (TelegramApiException e) {
                 e.printStackTrace();
-                sendText(CONSULTANT_CHAT_ID, "❌ Помилка при надсиланні фото покупцю.");
+                sendText(CONSULTANT_CHAT_ID, "❌ Помилка при надсиланні фото.");
             }
 
+            // вихід зі стану
+            userStates.remove(CONSULTANT_CHAT_ID);
             return;
         }
 
