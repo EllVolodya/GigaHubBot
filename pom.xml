@@ -65,6 +65,12 @@
             <version>9.4.51.v20230217</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.cloudinary</groupId>
+            <artifactId>cloudinary-http44</artifactId>
+            <version>1.39.0</version>
+        </dependency>
+
     </dependencies>
 
     <build>
