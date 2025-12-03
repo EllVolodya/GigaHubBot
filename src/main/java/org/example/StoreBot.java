@@ -258,7 +258,9 @@ public class StoreBot extends TelegramLongPollingBot {
             sendText(target, "📩 Відповідь консультанта:\n\n" + text);
             sendText(CONSULTANT_CHAT_ID, "✔ Повідомлення надіслано!");
 
+            // ⬅ Повертаємо консультанта в головне меню
             userStates.remove(CONSULTANT_CHAT_ID);
+            sendMessage(createUserMenu(CONSULTANT_CHAT_ID.toString(), CONSULTANT_CHAT_ID));
             return;
         }
 
@@ -287,7 +289,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 sendText(CONSULTANT_CHAT_ID, "✔ Фото надіслано покупцю!");
 
+                // ⬅ Повертаємо консультанта в головне меню
                 userStates.remove(CONSULTANT_CHAT_ID);
+                sendMessage(createUserMenu(CONSULTANT_CHAT_ID.toString(), CONSULTANT_CHAT_ID));
 
             } catch (TelegramApiException e) {
                 e.printStackTrace();
