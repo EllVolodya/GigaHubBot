@@ -489,7 +489,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "🧹 Очистити кошик" -> clearCart(userId);
                 case BACK_BUTTON -> {
                     try {
-                        handleBack(chatId);
+                        handleBack(userId, chatId);
                     } catch (TelegramApiException e) {
                         LOGGER.severe("[Back Button Error] Failed to handle BACK_BUTTON for chatId=" + chatId + ": " + e.getMessage());
                         sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
@@ -1161,19 +1161,19 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔹 Назад
-    private void handleBack(String chatId) throws TelegramApiException {
-        Long userId = Long.parseLong(chatId);
+    private void handleBack(Long userId, String chatId) throws TelegramApiException {
         System.out.println("[handleBack] User " + userId + " pressed Back.");
 
-        // 🔸 1. Повне очищення тимчасових станів
-        getUserStates().remove(userId);
-        getLastShownProduct().remove(userId);
+        // 1. Очищаємо стани
+        userStates.remove(userId);
+        lastShownProduct.remove(userId);
         adminMatchList.remove(userId);
         productIndex.remove(userId);
 
-        // 🔸 2. Якщо користувач був у підкатегорії
+        // 2. Повернення з підкатегорії
         if (currentSubcategory.containsKey(userId)) {
             currentSubcategory.remove(userId);
+
             if (currentCategory.containsKey(userId)) {
                 sendSubcategories(userId, currentCategory.get(userId));
             } else {
@@ -1182,49 +1182,46 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔸 3. Якщо користувач був у категорії
+        // 3. Повернення з категорії
         if (currentCategory.containsKey(userId)) {
             currentCategory.remove(userId);
             sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
-        // 🔸 4. Якщо користувач у кошику
+        // 4. Повернення з кошика
         if (userCart.containsKey(userId)) {
             sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
-        // 🔸 5. Якщо користувач в адмін-меню
+        // 5. Повернення з адмін-меню
         if (adminOrderIndex.containsKey(userId)) {
             adminOrderIndex.remove(userId);
             sendMessage(createAdminMenu(chatId));
             return;
         }
 
-        // 🔸 6. Якщо користувач у меню розробника
+        // 6. Повернення з меню розробника
         if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
 
-        // 🔸 7. Якщо користувач був у редагуванні товару
+        // 7. Повернення після редагування товару
         if (adminEditingProduct.containsKey(userId) || adminSelectedProductsRange.containsKey(userId)) {
-            System.out.println("[handleBack] Returning admin " + userId + " to developer menu from editing.");
 
-            // Очищаємо тимчасові стани редагування
             adminEditingProduct.remove(userId);
             adminSelectedProductsRange.remove(userId);
             adminEditingField.remove(userId);
             userStates.remove(userId);
 
-            // Повернення в меню розробника
             sendText(chatId, "↩️ Ви повернулися до меню розробника.");
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
 
-        // 🔸 8. За замовчуванням — головне меню
+        // 8. Головне меню
         sendMessage(createUserMenu(chatId, userId));
     }
 
@@ -1846,7 +1843,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     case BACK_BUTTON -> {
                         try {
-                            handleBack(chatId); // chatId як String
+                            handleBack(userId, chatId); // chatId як String
                         } catch (TelegramApiException e) {
                             e.printStackTrace();
                             sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
@@ -3411,7 +3408,7 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔹 1. Кнопка Назад
         if (text.equals("⬅️ Назад")) {
             System.out.println("[handleText] Back button pressed");
-            handleBack(String.valueOf(chatId));
+            handleBack(chatId, chatId.toString());
             return;
         }
 
