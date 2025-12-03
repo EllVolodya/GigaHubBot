@@ -3838,19 +3838,28 @@ public class StoreBot extends TelegramLongPollingBot {
         return keyboard;
     }
 
-    private void handleAdminSearchSource(Long userId, String chatId, String text) throws TelegramApiException {
+    private void handleAdminSearchSource(Long userId, String chatId, String text)
+            throws TelegramApiException {
+
         if ("🔍 Пошук у MySQL".equals(text)) {
+
             adminSearchSource.put(userId, "mysql");
             userStates.put(userId, "awaiting_search");
+
             sendText(chatId, "Введіть ключові слова для пошуку у MySQL:");
-        } else if ("🔍 Пошук у YAML".equals(text)) {
+            return;
+        }
+
+        if ("🔍 Пошук у YAML".equals(text)) {
+
             adminSearchSource.put(userId, "yaml");
             userStates.put(userId, "awaiting_search");
+
             sendText(chatId, "Введіть ключові слова для пошуку у YAML:");
-        } else {
-            sendText(chatId, "❌ Невідома опція. Спробуйте ще раз.");
-            sendMessage(showAdminSearchSourceMenu(userId, Long.valueOf(chatId))); // ще раз показуємо меню
+            return;
         }
+
+        sendText(chatId, "❌ Невідома опція. Оберіть із меню.");
     }
 
     private void handleAdminSearchInput(Long userId, String chatId, String text) throws TelegramApiException {
