@@ -3646,7 +3646,7 @@ public class StoreBot extends TelegramLongPollingBot {
         sb.append("📦 ").append(name).append("\n");
 
         if (isCustomOrder) {
-            sb.append("💬 _Цей товар доступний лише під замовлення._\n")
+            sb.append("💬 Цей товар доступний лише під замовлення.\n")
                     .append("📞 Якщо хочеш дізнатись ціну — натисни кнопку *“Написати консультанту”*, і я миттю передам запит! 🔧😉");
         } else {
             sb.append("💰 Ціна: *").append(price).append(" грн* за ").append(unit)
