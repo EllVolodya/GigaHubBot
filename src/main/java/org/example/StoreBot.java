@@ -2473,7 +2473,6 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
         text = text.trim();
 
-        // ⬅️ Назад → вихід у головне меню
         if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
             getUserStates().remove(userId);
             try {
@@ -2486,7 +2485,6 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🛍️ Перейти в кошик → вимикаємо пошук перед відкриттям
         if (text.equalsIgnoreCase("🛍️ Перейти в кошик") || text.equalsIgnoreCase("Перейти в кошик")) {
             getUserStates().remove(userId);
             try {
@@ -2498,8 +2496,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
             return;
         }
-
-        // 🛠 Додати в кошик
+        
         if (text.equals("🛠 Додати в кошик")) {
             Map<String, Object> product = getLastShownProduct().get(userId);
             if (product != null) {
@@ -2516,12 +2513,13 @@ public class StoreBot extends TelegramLongPollingBot {
             // Якщо користувач ввів номер товару зі списку
             if (text.matches("\\d+")) {
                 searchManager.handleSearchNumber(userId, chatId, text);
-                // стан залишаємо тільки якщо користувач справді шукає номер
-            } else {
-                // Якщо користувач ввів текст → пошук
-                getUserStates().put(userId, "waiting_for_search"); // ставимо стан пошуку перед пошуком
-                searchManager.performSearch(userId, chatId, text);
+                return;
             }
+
+            // Якщо користувач ввів текст → пошук
+            getUserStates().put(userId, "waiting_for_search");
+            searchManager.performSearch(userId, chatId, text);
+
         } catch (TelegramApiException e) {
             e.printStackTrace();
             sendText(chatId, "⚠️ Сталася помилка при обробці пошуку товару.");

@@ -334,4 +334,39 @@ public class CatalogEditor {
         }
         return 0.0;
     }
+
+    public static List<Map<String, Object>> getAllProducts() {
+        List<Map<String, Object>> out = new ArrayList<>();
+
+        String sql = """
+            SELECT p.id, p.name, p.price, p.unit, p.description, p.photo,
+                   c.name AS category, s.name AS subcategory
+            FROM products p
+            LEFT JOIN subcategories s ON p.subcategory_id = s.id
+            LEFT JOIN categories c ON s.category_id = c.id
+            """;
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                Map<String, Object> p = new HashMap<>();
+                p.put("id", rs.getInt("id"));
+                p.put("name", rs.getString("name"));
+                p.put("price", rs.getObject("price"));
+                p.put("unit", rs.getString("unit"));
+                p.put("description", rs.getString("description"));
+                p.put("photo", rs.getString("photo"));
+                p.put("category", rs.getString("category"));
+                p.put("subcategory", rs.getString("subcategory"));
+                out.add(p);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return out;
+    }
 }
