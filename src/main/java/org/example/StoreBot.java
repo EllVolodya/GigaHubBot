@@ -2533,15 +2533,32 @@ public class StoreBot extends TelegramLongPollingBot {
         String chatId = String.valueOf(userId);
 
         String name = String.valueOf(product.getOrDefault("name", "Без назви"));
-        String price = String.valueOf(product.getOrDefault("price", "N/A"));
+        String price = String.valueOf(product.getOrDefault("price", "0"));
+        String unit = String.valueOf(product.getOrDefault("unit", "шт")).toLowerCase();
         String category = String.valueOf(product.getOrDefault("category", "❓"));
         String subcategory = String.valueOf(product.getOrDefault("subcategory", "❓"));
 
+        boolean isCustomOrder = unit.equals("під замовлення");
+
+        // 🔥 Ціна
+        String priceText;
+        if (isCustomOrder) {
+            priceText =
+                    "💬 *Товар доступний під замовлення*\n" +
+                            "📞 Для уточнення ціни — зверніться до консультанта.";
+        } else {
+            priceText = "💰 Ціна: *" + price + " грн* за " + unit;
+        }
+
+        // 🔥 Повідомлення
         String message = String.format(
-                "📦 %s\n💰 Ціна: %s грн за шт\n📂 %s → %s\n\n🔎 Виберіть дію нижче або введіть інший товар для пошуку.",
-                name, price, category, subcategory
+                "📦 *%s*\n%s\n\n" +
+                        "📂 Категорія: %s → %s\n\n" +
+                        "🔎 Оберіть дію нижче або введіть інший товар для пошуку.",
+                name, priceText, category, subcategory
         );
 
+        // 🔥 Клавіатура
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         keyboardMarkup.setResizeKeyboard(true);
         keyboardMarkup.setOneTimeKeyboard(false);
@@ -2549,7 +2566,13 @@ public class StoreBot extends TelegramLongPollingBot {
         List<KeyboardRow> keyboard = new ArrayList<>();
 
         KeyboardRow row1 = new KeyboardRow();
-        row1.add("🛠 Додати в кошик");
+
+        if (isCustomOrder) {
+            row1.add("✉ Написати консультанту");
+        } else {
+            row1.add("🛠 Додати в кошик");
+        }
+
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
@@ -2564,6 +2587,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
+        sendMessage.setParseMode("Markdown");
         sendMessage.setText(message);
         sendMessage.setReplyMarkup(keyboardMarkup);
 
@@ -2571,6 +2595,7 @@ public class StoreBot extends TelegramLongPollingBot {
             execute(sendMessage);
         } catch (TelegramApiException e) {
             e.printStackTrace();
+            sendText(chatId, "⚠️ Сталася помилка при відправці товару.");
         }
     }
 
