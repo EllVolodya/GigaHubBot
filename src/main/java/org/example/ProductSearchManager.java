@@ -13,6 +13,7 @@ public class ProductSearchManager {
 
     // 🔹 Основний метод пошуку
     public void performSearch(Long userId, String chatId, String text) throws TelegramApiException {
+
         text = text.trim();
         System.out.println("[performSearch] User " + userId + " input: '" + text + "'");
 
@@ -38,50 +39,63 @@ public class ProductSearchManager {
         }
 
         try {
-            CatalogSearcher searcher = new CatalogSearcher();
-            List<Map<String, Object>> foundProducts = searcher.searchMixedFromYAML(text);
-            System.out.println("[performSearch] Found products: " + foundProducts.size());
+            // ✅ Використовуємо новий SmartSearch
+            List<Map<String, Object>> foundProducts = SmartSearch.search(text);
+
+            System.out.println("[performSearch] Found products by SmartSearch: " + foundProducts.size());
 
             if (foundProducts.isEmpty()) {
-                bot.sendText(chatId, "❌ Товар не знайдено. Спробуйте інший запит.");
+                bot.sendText(chatId,
+                        "❌ Товар не знайдено.\n" +
+                                "🔎 Митрофан уже шукає кращі варіанти — спробуйте інший запит!");
 
-                // Після невдалого пошуку показуємо меню користувача
                 bot.sendUserMenu(userId);
                 return;
             }
 
-            // Зберігаємо результати пошуку
+            // Зберігаємо результати
             bot.getSearchResults().put(userId, foundProducts);
 
+            // Якщо знайдено декілька — показуємо список
             if (foundProducts.size() > 1) {
-                // Показуємо список товарів
-                StringBuilder sb = new StringBuilder("🔎 Знайдено кілька товарів:\n\n");
-                int idx = 1;
-                for (Map<String, Object> p : foundProducts) {
-                    sb.append(idx++).append(". ").append(p.get("name")).append("\n");
-                }
-                sb.append("\nВведіть номер товару, щоб побачити деталі.");
-                bot.sendText(chatId, sb.toString());
-            } else {
-                // Якщо один товар — показуємо відразу
-                Map<String, Object> product = foundProducts.get(0);
-                bot.getLastShownProduct().put(userId, product);
 
-                String productText = String.format(
-                        "📦 %s\n💰 Ціна: %s грн за шт\n📂 %s → %s",
-                        product.get("name"),
-                        product.get("price"),
-                        product.get("category"),
-                        product.get("subcategory")
-                );
-                bot.sendProductWithAddToCartRow(userId, chatId, productText);
+                StringBuilder sb = new StringBuilder("🔎 Митрофан знайшов кілька варіантів:\n\n");
+                int idx = 1;
+
+                for (Map<String, Object> product : foundProducts) {
+                    sb.append(idx++)
+                            .append(". ")
+                            .append(product.get("name"))
+                            .append("\n");
+                }
+
+                sb.append("\n👉 Введіть номер товару, щоб переглянути деталі.");
+
+                bot.sendText(chatId, sb.toString());
+                return;
             }
+
+            // Якщо один товар → показуємо одразу
+            Map<String, Object> product = foundProducts.get(0);
+
+            bot.getLastShownProduct().put(userId, product);
+
+            // Формуємо текст товару
+            String productText = String.format(
+                    "📦 %s\n💰 Ціна: %s грн за %s\n📂 Категорія: %s → %s",
+                    product.get("name"),
+                    product.get("price"),
+                    product.get("unit"),
+                    product.get("category"),
+                    product.get("subcategory")
+            );
+
+            // Показуємо список кнопок "Додати в кошик"
+            bot.sendProductWithAddToCartRow(userId, chatId, productText);
 
         } catch (Exception e) {
             e.printStackTrace();
-            bot.sendText(chatId, "⚠️ Помилка під час пошуку товару.");
-
-            // Після помилки теж показуємо меню користувача
+            bot.sendText(chatId, "⚠️ Помилка під час пошуку товару 😢");
             bot.sendUserMenu(userId);
         }
     }
