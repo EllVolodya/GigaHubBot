@@ -3643,10 +3643,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // ----- Формування тексту -----
         StringBuilder sb = new StringBuilder();
-        sb.append("📦 *").append(name).append("*\n");
+        sb.append("📦 ").append(name).append("\n");
 
         if (isCustomOrder) {
-            sb.append("💬 _Товар доступний лише під замовлення._\n")
+            sb.append("💬 Товар доступний лише під замовлення.\n")
                     .append("📞 Для уточнення ціни Митрофан вже готовий передати вас консультанту!");
         } else {
             sb.append("💰 Ціна: *").append(price).append(" грн* за ").append(unit);
