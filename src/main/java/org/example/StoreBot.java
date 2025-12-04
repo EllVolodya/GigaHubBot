@@ -193,7 +193,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(realChatId,
                         "🧺 Товар додано у кошик!\n\n" +
                                 "📦 " + product.get("name") + "\n" +
-                                "🔢 Кількість: *" + quantity + "\n\n" +
+                                "🔢 Кількість: " + quantity + "\n\n" +
                                 "Митрофан радісно поклав товар у твій кошик 😊\n" +
                                 "Можеш продовжувати покупки — я поруч!");
 
