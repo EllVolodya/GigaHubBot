@@ -2380,7 +2380,9 @@ public class StoreBot extends TelegramLongPollingBot {
         List<Map<String, Object>> products = searchResults.get(Long.parseLong(chatId));
 
         if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ Список товарів порожній. Будь ласка, спробуйте пошук знову.");
+            sendText(chatId,
+                    "🔍 Схоже, список товарів порожній.\n" +
+                            "Митрофан уже намагається знайти щось схоже 😉");
             userStates.remove(userId);
             return;
         }
@@ -2389,34 +2391,54 @@ public class StoreBot extends TelegramLongPollingBot {
         try {
             selectedIndex = Integer.parseInt(text.trim()) - 1;
         } catch (NumberFormatException e) {
-            sendText(chatId, "⚠️ Будь ласка, введіть правильний номер товару.");
+            sendText(chatId, "⚠️ Будь ласка, введіть *правильний номер* товару з списку.");
             return;
         }
 
         if (selectedIndex < 0 || selectedIndex >= products.size()) {
-            sendText(chatId, "⚠️ Номер товару поза діапазоном. Спробуйте ще раз.");
+            sendText(chatId, "⚠️ Номер поза діапазоном! Митрофан просить спробувати ще 😉");
             return;
         }
 
-        Map<String, Object> selectedProduct = products.get(selectedIndex);
+        Map<String, Object> product = products.get(selectedIndex);
 
+        String name = String.valueOf(product.getOrDefault("name", "Без назви"));
+        String price = String.valueOf(product.getOrDefault("price", "0"));
+        String unit = String.valueOf(product.getOrDefault("unit", "шт")).toLowerCase();
+        String category = String.valueOf(product.getOrDefault("category", "❓"));
+        String subcategory = String.valueOf(product.getOrDefault("subcategory", "❓"));
+
+        // 🔥 Формуємо текст ціни
+        String priceText;
+        boolean isCustom = unit.equals("під замовлення");
+
+        if (isCustom) {
+            priceText =
+                    "💬 *Товар доступний під замовлення*\n" +
+                            "📞 Ціну потрібно уточнити у консультанта.";
+        } else {
+            priceText = "💰 Ціна: *" + price + " грн* за " + unit;
+        }
+
+        // 🔥 Формуємо фінальне повідомлення
         String message = String.format(
-                "📦 %s\n💰 Ціна: %s грн за шт\n📂 %s → %s\n\n🔎 Якщо бажаєте, введіть інший товар для пошуку або натисніть 'Назад' для повернення в головне меню.",
-                selectedProduct.get("name"),
-                selectedProduct.get("price"),
-                selectedProduct.get("category"),
-                selectedProduct.get("subcategory")
+                "📦 *%s*\n%s\n\n📂 Категорія: %s → %s\n\n" +
+                        "🔎 Можете обрати дію нижче або ввести інший товар.",
+                name, priceText, category, subcategory
         );
 
-        // 🔹 Створюємо клавіатуру через KeyboardRow
+        // 🔹 Формуємо клавіатуру
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         keyboardMarkup.setResizeKeyboard(true);
-        keyboardMarkup.setOneTimeKeyboard(false);
 
         List<KeyboardRow> keyboard = new ArrayList<>();
 
         KeyboardRow row1 = new KeyboardRow();
-        row1.add("➕ Додати в кошик");
+        if (isCustom) {
+            row1.add("✉ Написати консультанту");
+        } else {
+            row1.add("➕ Додати в кошик");
+        }
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
@@ -2429,20 +2451,21 @@ public class StoreBot extends TelegramLongPollingBot {
 
         keyboardMarkup.setKeyboard(keyboard);
 
-        // Відправка повідомлення з кнопками
+        // 🔹 Відправка повідомлення
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(chatId);
         sendMessage.setText(message);
+        sendMessage.setParseMode("Markdown");
         sendMessage.setReplyMarkup(keyboardMarkup);
 
         try {
             execute(sendMessage);
         } catch (Exception e) {
             e.printStackTrace();
-            sendText(chatId, "⚠️ Помилка при відправці повідомлення.");
+            sendText(chatId, "⚠️ Митрофан не зміг відправити товар 😥 Спробуйте ще раз.");
         }
 
-        // Очищуємо тимчасові дані
+        // 🔹 Очищуємо тимчасові дані
         userStates.remove(userId);
         searchResults.remove(Long.parseLong(chatId));
     }
