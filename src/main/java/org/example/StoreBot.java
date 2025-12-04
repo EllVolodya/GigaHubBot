@@ -3646,10 +3646,11 @@ public class StoreBot extends TelegramLongPollingBot {
         sb.append("📦 ").append(name).append("\n");
 
         if (isCustomOrder) {
-            sb.append("💬 Товар доступний лише під замовлення.\n")
-                    .append("📞 Для уточнення ціни Митрофан вже готовий передати вас консультанту!");
+            sb.append("💬 _Цей товар доступний лише під замовлення._\n")
+                    .append("📞 Якщо хочеш дізнатись ціну — натисни кнопку *“Написати консультанту”*, і я миттю передам запит! 🔧😉");
         } else {
-            sb.append("💰 Ціна: *").append(price).append(" грн* за ").append(unit);
+            sb.append("💰 Ціна: *").append(price).append(" грн* за ").append(unit)
+                    .append("\n🛒 Якщо все підходить — просто натисни кнопку *“Додати в кошик”*, я все зроблю! 😎");
         }
 
         if (!manufacturer.isEmpty() && !"null".equalsIgnoreCase(manufacturer.trim()))
