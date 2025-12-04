@@ -580,7 +580,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "🔍 Пошук товару" -> {
                     userStates.put(userId, "waiting_for_search");
-                    sendText(chatId, "🔎 Введіть назву товару, який хочете знайти:");
+
+                    sendText(chatId,
+                            "🔍 Гаразд, друже! Митрофан вже взяв ліхтарик і пішов шукати між полицями 👷‍♂️✨\n\n" +
+                                    "Введи назву товару, модель або навіть те, як ти його називаєш у побуті.\n" +
+                                    "Я знайду найближчий варіант — навіть якщо ти напишеш «бойлер», а він у каталозі як «водонагрівач» 😉");
                 }
 
                 case "🔍 Пошук" -> {
@@ -2375,7 +2379,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, sb.toString());
                 return;
             }
-            
+
             Map<String, Object> product = foundProducts.get(0);
             lastShownProduct.put(userId, product);
 
