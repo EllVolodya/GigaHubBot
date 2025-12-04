@@ -3594,7 +3594,9 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
+    //🔸Показ товару
     private void sendProduct(Long chatId) throws TelegramApiException {
+
         String category = currentCategory.get(chatId);
         String subcategory = currentSubcategory.get(chatId);
 
@@ -3604,11 +3606,12 @@ public class StoreBot extends TelegramLongPollingBot {
         List<Map<String, Object>> products = searcher.getProducts(category, subcategory);
 
         if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ У цій підкатегорії немає товарів.");
+            sendText(chatId, "❌ У цій підкатегорії зараз порожньо.\n" +
+                    "Митрофан уже перевіряє полиці 😄");
             return;
         }
 
-        // Сортуємо
+        // Сортуємо по id
         products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
 
         if (index >= products.size() || index < 0) index = 0;
@@ -3616,13 +3619,14 @@ public class StoreBot extends TelegramLongPollingBot {
         Map<String, Object> product = products.get(index);
         lastShownProduct.put(chatId, product);
 
+        // ----- Дані -----
         String name = safeToString(product.get("name"), "Без назви");
-        String price = safeToString(product.get("price"), "N/A");
-        String unit = safeToString(product.get("unit"), "шт");
+        String price = safeToString(product.get("price"), "0");
+        String unit = safeToString(product.get("unit"), "шт").toLowerCase();
         String description = safeToString(product.get("description"), "");
         String photo = safeToString(product.get("photo"), "");
 
-        // 🏭 Виробник
+        // Виробник
         String manufacturer = "";
         Object manufacturerObj = product.get("manufacturer");
         try {
@@ -3635,9 +3639,18 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         } catch (Exception ignored) {}
 
-        // 🧾 Текст
-        StringBuilder sb = new StringBuilder("📦 ").append(name)
-                .append("\n💰 Ціна: ").append(price).append(" грн за ").append(unit);
+        boolean isCustomOrder = unit.equals("під замовлення");
+
+        // ----- Формування тексту -----
+        StringBuilder sb = new StringBuilder();
+        sb.append("📦 *").append(name).append("*\n");
+
+        if (isCustomOrder) {
+            sb.append("💬 _Товар доступний лише під замовлення._\n")
+                    .append("📞 Для уточнення ціни Митрофан вже готовий передати вас консультанту!");
+        } else {
+            sb.append("💰 Ціна: *").append(price).append(" грн* за ").append(unit);
+        }
 
         if (!manufacturer.isEmpty() && !"null".equalsIgnoreCase(manufacturer.trim()))
             sb.append("\n🏭 Виробник: ").append(manufacturer);
@@ -3645,14 +3658,20 @@ public class StoreBot extends TelegramLongPollingBot {
         if (!description.isEmpty() && !"null".equalsIgnoreCase(description.trim()))
             sb.append("\n📖 ").append(description);
 
-        // 🔘 ПРАВИЛЬНІ КНОПКИ
+        // ----- КНОПКИ -----
         KeyboardRow row1 = new KeyboardRow();
         row1.add("⬅ Назад");
         row1.add("🔍 Пошук");
         row1.add("➡ Далі");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("🛒 Додати в кошик");
+
+        if (isCustomOrder) {
+            row2.add("✉ Написати консультанту");
+        } else {
+            row2.add("🛒 Додати в кошик");
+        }
+
         row2.add("🛍️ Перейти в кошик");
 
         KeyboardRow row3 = new KeyboardRow();
@@ -3663,14 +3682,14 @@ public class StoreBot extends TelegramLongPollingBot {
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(keyboard);
         markup.setResizeKeyboard(true);
 
-        // 🖼️ Фото або текст
+        // ----- Фото або текст -----
         if (!photo.isEmpty() && !"null".equalsIgnoreCase(photo.trim())) {
             sendPhotoFromResources(chatId.toString(), photo, sb.toString(), markup);
         } else {
             sendTextWithMarkup(chatId, sb.toString(), markup);
         }
 
-        // 🔁 Оновлення індекса
+        // Перехід на наступний товар
         productIndex.put(chatId, (index + 1) % products.size());
     }
 
