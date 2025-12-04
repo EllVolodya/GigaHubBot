@@ -1104,7 +1104,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        StringBuilder sb = new StringBuilder("🧺 *Ваш кошик, друже!* \n")
+        StringBuilder sb = new StringBuilder("🧺 Ваш кошик, друже! \n")
                 .append("Митрофан перевірив полички і зібрав усе, що ви додали 👇\n\n");
 
         double total = 0;
@@ -1122,14 +1122,14 @@ public class StoreBot extends TelegramLongPollingBot {
             double lineTotal = price * quantity;
             total += lineTotal;
 
-            sb.append("🔸 *").append(i++).append(". ").append(name).append("*")
+            sb.append("🔸 ").append(i++).append(". ").append(name).append("")
                     .append("\n   🔢 Кількість: ").append(quantity)
                     .append("\n   💵 Ціна за 1: ").append(price).append(" грн")
                     .append("\n   💰 Сума: ").append(lineTotal).append(" грн\n\n");
         }
 
         sb.append("━━━━━━━━━━━━━━\n")
-                .append("💳 *Всього до оплати:* ").append(total).append(" грн\n")
+                .append("💳 Всього до оплати: ").append(total).append(" грн\n")
                 .append("🧱 Митрофан каже: «Готовий оформити замовлення, як тільки будеш готовий!» 🤖");
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
