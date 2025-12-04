@@ -3649,7 +3649,7 @@ public class StoreBot extends TelegramLongPollingBot {
             sb.append("💬 Цей товар доступний лише під замовлення.\n")
                     .append("📞 Якщо хочеш дізнатись ціну — натисни кнопку *“Написати консультанту”*, і я миттю передам запит! 🔧😉");
         } else {
-            sb.append("💰 Ціна: *").append(price).append(" грн* за ").append(unit); 
+            sb.append("💰 Ціна: ").append(price).append(" грн за ").append(unit);
         }
 
         if (!manufacturer.isEmpty() && !"null".equalsIgnoreCase(manufacturer.trim()))
