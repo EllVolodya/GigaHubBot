@@ -16,7 +16,7 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-
+import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -126,6 +126,27 @@ public class StoreBot extends TelegramLongPollingBot {
     public static StoreBot getInstance() {
         return instance;
     }
+
+    private String getStartParameter(Update update) {
+        if (update.getMessage() == null) return null;
+        if (update.getMessage().getText() == null) return null;
+
+        String text = update.getMessage().getText().trim();
+
+        // Якщо немає параметра
+        if (!text.startsWith("/start")) return null;
+
+        // Якщо просто /start → параметр відсутній
+        if (text.equals("/start")) return null;
+
+        // Вирізаємо після /start
+        String param = text.replace("/start", "").trim();
+
+        if (param.isEmpty()) return null;
+
+        return param;
+    }
+
     @Override
     public String getBotUsername() {
         return botUsername;
@@ -473,44 +494,35 @@ public class StoreBot extends TelegramLongPollingBot {
             switch (text) {
                 case "/start" -> {
                     clearUserState(userId);
+
                     Long chatIdLong = update.getMessage().getChatId();
                     String chatIdStr = chatIdLong.toString();
 
-                    String messageText = update.getMessage().getText();
+                    String inviteCode = getStartParameter(update);
+                    System.out.println("🔥 Витягнутий параметр: " + inviteCode);
 
-                    // Перевіряємо чи є параметр після /start
-                    if (messageText != null && messageText.startsWith("/start")) {
-
-                        String inviteCode = messageText.replace("/start", "").trim();
-                        inviteCode = inviteCode.replace(" ", ""); // якщо є пробіл
-                        inviteCode = inviteCode.toLowerCase();
-
-                        System.out.println("🔎 /start detected inviteCode = '" + inviteCode + "'");
-
-                        if (!inviteCode.isBlank()) {
-                            boolean incremented = new InviteManager().incrementInviteNumber(inviteCode);
-                            if (incremented) {
-                                System.out.println("✅ Лічильник number збільшено.");
-                            } else {
-                                System.out.println("❌ Invite не знайдено для: " + inviteCode);
-                            }
+                    if (inviteCode != null && !inviteCode.isBlank()) {
+                        boolean incremented = new InviteManager().incrementInviteNumber(inviteCode);
+                        if (incremented) {
+                            System.out.println("✅ Лічильник number збільшено.");
+                        } else {
+                            System.out.println("❌ Invite не знайдено.");
                         }
+                    } else {
+                        System.out.println("ℹ️ Параметр інвайту не передано.");
                     }
 
                     // Реєстрація користувача
-                    UserManager userManager = new UserManager();
-                    userManager.registerUser(chatIdLong, update.getMessage().getFrom().getFirstName(), chatIdStr);
+                    new UserManager().registerUser(chatIdLong,
+                            update.getMessage().getFrom().getFirstName(),
+                            chatIdStr
+                    );
 
-                    // Меню
                     try {
-                        SendMessage menuMsg = createUserMenu(chatIdStr, userId);
-                        execute(menuMsg);
-                    } catch (TelegramApiException e) {
+                        execute(createUserMenu(chatIdStr, userId));
+                    } catch (Exception e) {
                         e.printStackTrace();
-                        sendText(chatIdStr, "❌ Помилка надсилання меню користувача.");
                     }
-
-                    System.out.println("Користувач натиснув /start: " + chatIdLong);
                 }
 
                 case "🧱 Каталог товарів" -> sendCategories(userId);
