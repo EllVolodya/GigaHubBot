@@ -1260,10 +1260,25 @@ public class StoreBot extends TelegramLongPollingBot {
                 );
             }
 
-            case "🧱 Плитка" -> sendText(chatId, "🧱 Розрахунок плитки скоро буде додано!");
-            case "📏 Ламінат" -> sendText(chatId, "📏 Розрахунок ламінату скоро буде доступний!");
-            case "🔨 Вагонка" -> sendText(chatId, "🔨 Розрахунок вагонки в процесі!");
-            case "📐 Плінтус" -> sendText(chatId, "📐 Розрахунок плінтуса вже готується!");
+            case "🧱 Плитка" -> {
+                sendText(chatId, "🧱 Вкажіть площу поверхні у м²:");
+                userStates.put(userId, "calc_tile_area");
+            }
+
+            case "📏 Ламінат" -> {
+                sendText(chatId, "📏 Вкажіть площу кімнати у м²:");
+                userStates.put(userId, "calc_laminate_area");
+            }
+
+            case "🔨 Вагонка" -> {
+                sendText(chatId, "🔨 Вкажіть площу стін у м²:");
+                userStates.put(userId, "calc_wall_area");
+            }
+
+            case "📐 Плінтус" -> {
+                sendText(chatId, "📐 Вкажіть периметр кімнати у метрах:");
+                userStates.put(userId, "calc_baseboard");
+            }
 
             case "⬅ Назад", "Назад" -> sendText(chatId, "Повертаю назад 👋");
             default -> sendText(chatId, "❓ Оберіть дію з меню.");
