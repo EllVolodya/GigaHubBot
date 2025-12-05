@@ -66,6 +66,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Double> tempTotal = new HashMap<>();
     private final Map<Long, Double> tempLength = new HashMap<>();
     private final Map<Long, Double> tempWidth = new HashMap<>();
+    private final Map<Long, Double> tempArea = new HashMap<>();
 
     // 🔹 Константи WayForPay (заміниш своїми)
     private static final String MERCHANT_ACCOUNT = "YOUR_MERCHANT_ACCOUNT";
@@ -174,6 +175,8 @@ public class StoreBot extends TelegramLongPollingBot {
         String chatId = update.getMessage().getChatId().toString();
 
         Long realChatId = update.getMessage().getChatId();
+
+        String data = update.getCallbackQuery().getData();
 
         String text = update.getMessage().getText() != null
                 ? update.getMessage().getText().trim()
@@ -537,6 +540,15 @@ public class StoreBot extends TelegramLongPollingBot {
 
             // 🔹 Основні команди (кнопки)
             if (text == null) return;
+
+            switch (data) {
+
+                case "size_15_60" -> processTileCalc(userId, chatId, 0.15, 0.60);
+                case "size_30_30" -> processTileCalc(userId, chatId, 0.30, 0.30);
+                case "size_20_40" -> processTileCalc(userId, chatId, 0.20, 0.40);
+                case "size_40_40" -> processTileCalc(userId, chatId, 0.40, 0.40);
+                case "size_60_60" -> processTileCalc(userId, chatId, 0.60, 0.60);
+            }
 
             switch (text) {
                 case "🧱 Каталог товарів" -> sendCategories(userId);
@@ -1810,16 +1822,14 @@ public class StoreBot extends TelegramLongPollingBot {
                 double area = handleRoomWidth(userId, chatId, text);
                 if (area <= 0) return;
 
-                double need = area * 1.10;
+                // Нове — зберігаємо площу кімнати
+                tempArea.put(userId, area);
 
-                sendText(chatId,
-                        "🧱 *Розрахунок плитки*\n" +
-                                "📐 Площа: " + area + " м²\n" +
-                                "➕ Запас 10%\n" +
-                                "📦 Потрібно: *" + String.format("%.2f", need) + " м²*");
+                // Міняємо стан — очікуємо вибір розміру плитки
+                userStates.put(userId, "tile_size");
 
-                sendMaterialCalcMenu(chatId);
-                userStates.put(userId, "material_calc_menu");
+                // Відправляємо меню розмірів
+                sendTileSizeMenu(chatId);
             }
 
             case "laminate_length" -> handleRoomLength(userId, chatId, text, "laminate_width");
@@ -2661,6 +2671,30 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
+    private void sendTileSizeMenu(String chatId) {
+        SendMessage msg = new SendMessage(chatId,
+                "🧱 Оберіть розмір плитки:");
+
+        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+
+        List<List<InlineKeyboardButton>> buttons = List.of(
+                List.of(InlineKeyboardButton.builder().text("15×60").callbackData("size_15_60").build()),
+                List.of(InlineKeyboardButton.builder().text("30×30").callbackData("size_30_30").build()),
+                List.of(InlineKeyboardButton.builder().text("20×40").callbackData("size_20_40").build()),
+                List.of(InlineKeyboardButton.builder().text("40×40").callbackData("size_40_40").build()),
+                List.of(InlineKeyboardButton.builder().text("60×60").callbackData("size_60_60").build())
+        );
+
+        markup.setKeyboard(buttons);
+        msg.setReplyMarkup(markup);
+
+        try {
+            execute(msg);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     // 🔍 Пошук товару
     public void handleSearch(Long userId, String chatId, String text) {
         System.out.println("[handleSearch] User " + userId + " input: '" + text + "'");
@@ -3360,6 +3394,26 @@ public class StoreBot extends TelegramLongPollingBot {
         } catch (NumberFormatException e) {
             sendText(chatId, "❌ Будь ласка, введіть номер із списку.");
         }
+    }
+
+    private void processTileCalc(Long userId, String chatId, double width, double height) {
+
+        double area = tempArea.getOrDefault(userId, 0.0);
+
+        double tileArea = width * height; // площа однієї плитки в м²
+        double totalTiles = area / tileArea;
+        double withReserve = totalTiles * 1.10; // 10% запас
+        int pieces = (int) Math.ceil(withReserve);
+
+        sendText(chatId,
+                "🧱 *Розрахунок плитки*\n" +
+                        "📐 Площа кімнати: " + String.format("%.2f", area) + " м²\n" +
+                        "📏 Розмір плитки: " + (int)(width * 100) + "×" + (int)(height * 100) + " см\n" +
+                        "📦 Потрібно: *" + pieces + " шт*\n" +
+                        "➕ Включено 10% запас");
+
+        sendMaterialCalcMenu(chatId);
+        userStates.put(userId, "material_calc_menu");
     }
 
     private void handleAwaitingPhoto(Long userId, String chatId, Update update) {
