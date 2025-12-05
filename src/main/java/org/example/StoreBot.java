@@ -609,6 +609,22 @@ public class StoreBot extends TelegramLongPollingBot {
                             : "💌 Відповіді консультантів:\n\n" + String.join("\n\n", answers);
                     sendText(chatId, reply);
                 }
+                case "🧮 Будівельний калькулятор" -> {
+                    userStates.put(userId, "material_calc_menu");
+                    sendText(chatId,
+                            "🧮 *Будівельний калькулятор Митрофана!*\n\n" +
+                                    "Я можу швидко обчислити:\n" +
+                                    "🎨 Скільки потрібно *фарби*\n" +
+                                    "🧱 Скільки піде *плитки*\n" +
+                                    "📏 Скільки дощок *ламінату* треба\n" +
+                                    "🔨 Скільки *вагонки* треба\n" +
+                                    "📐 Скільки потрібно *плінтусів*\n\n" +
+                                    "Оберіть тип розрахунку нижче:"
+                    );
+
+                    sendMaterialCalcMenu(chatId);
+                }
+
 
                 case "🔍 Пошук товару" -> {
                     userStates.put(userId, "waiting_for_search");
@@ -3360,31 +3376,83 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private SendMessage createHelpMenu(String chatId) {
+
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
+
         List<KeyboardRow> keyboard = new ArrayList<>();
+
         KeyboardRow row1 = new KeyboardRow();
         row1.add("✉️ Написати консультанту");
         row1.add("💌 Відповіді");
         keyboard.add(row1);
+
         KeyboardRow row2 = new KeyboardRow();
-        row2.add(new KeyboardButton(BACK_BUTTON));
+        row2.add("🧮 Будівельний калькулятор");
         keyboard.add(row2);
+
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add(new KeyboardButton(BACK_BUTTON));
+        keyboard.add(row3);
+
         markup.setKeyboard(keyboard);
+
         return SendMessage.builder()
                 .chatId(chatId)
-                .text("\uD83D\uDCD6 Митрофан до твоїх послуг, друже!\n" +
-                        "\n" +
-                        "Якщо щось хочеш уточнити — я поруч \uD83D\uDC47\n" +
-                        "\n" +
-                        "✉\uFE0F Написати консультанту\n" +
-                        "Я передам твоє питання нашим будівельним майстрам. Вони підкажуть, порадять і допоможуть обрати найкраще \uD83E\uDDF1\uD83D\uDCAC\n" +
-                        "\n" +
-                        "\uD83D\uDC8C Переглянути відповіді\n" +
-                        "Тут зберігаю всі відповіді консультанта — щоб нічого не загубилося.")
+                .text(
+                        "📘 *Митрофан на зв’язку!*\n\n" +
+                                "Тут зібрав усе, що допоможе тобі швидко отримати потрібну інформацію 👇\n\n" +
+
+                                "✉️ *Написати консультанту*\n" +
+                                "Передам твоє питання нашим майстрам — підкажуть і допоможуть обрати найкращий варіант.\n\n" +
+
+                                "💌 *Переглянути відповіді*\n" +
+                                "Тут знаходяться всі відповіді консультанта. Нічого не загубиться!\n\n" +
+
+                                "🧮 *Будівельний калькулятор*\n" +
+                                "Допоможу порахувати: скільки потрібно фарби, плитки, ламінату, вагонки або плінтуса."
+                )
                 .parseMode("Markdown")
                 .replyMarkup(markup)
                 .build();
+    }
+
+    private void sendMaterialCalcMenu(String chatId) {
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setResizeKeyboard(true);
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("🎨 Фарба");
+        row1.add("🧱 Плитка");
+        keyboard.add(row1);
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("📏 Ламінат");
+        row2.add("🔨 Вагонка");
+        keyboard.add(row2);
+
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add("📐 Плінтус");
+        keyboard.add(row3);
+
+        KeyboardRow row4 = new KeyboardRow();
+        row4.add(new KeyboardButton(BACK_BUTTON));
+        keyboard.add(row4);
+
+        markup.setKeyboard(keyboard);
+
+        SendMessage msg = SendMessage.builder()
+                .chatId(chatId)
+                .text("🔧 Оберіть, що потрібно порахувати:")
+                .replyMarkup(markup)
+                .build();
+
+        try {
+            execute(msg);
+        } catch (Exception ignored) {}
     }
 
     private SendMessage createInvitesMenu(String chatId) {
