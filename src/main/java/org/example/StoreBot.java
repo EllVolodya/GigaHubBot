@@ -188,6 +188,49 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if (text.startsWith("/start")) {
+
+            try {
+                clearUserState(userId);
+
+                Long chatIdLong = update.getMessage().getChatId();
+                String chatIdStr = chatIdLong.toString();
+
+                // параметр після /start
+                String inviteCode = text.replace("/start", "").trim();
+
+                if (!inviteCode.isEmpty()) {
+                    System.out.println("🔥 inviteCode = " + inviteCode);
+
+                    InviteManager inviteManager = new InviteManager();
+                    boolean ok = inviteManager.incrementInviteNumber(inviteCode);
+
+                    if (ok) System.out.println("✅ Лічильник збільшено");
+                    else    System.out.println("❌ Invite не знайдено");
+                }
+
+                // реєстрація
+                new UserManager().registerUser(
+                        chatIdLong,
+                        update.getMessage().getFrom().getFirstName(),
+                        chatIdStr
+                );
+
+                // меню
+                execute(createUserMenu(chatIdStr, userId));
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+                sendText(update.getMessage().getChatId().toString(),
+                        "❌ Сталася помилка бази даних при обробці інвайту.");
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(update.getMessage().getChatId().toString(),
+                        "❌ Помилка надсилання меню.");
+            }
+            return; // важливо!
+        }
+
         if (waitingForQuantity.getOrDefault(realChatId, false)) {
 
             try {
@@ -492,39 +535,6 @@ public class StoreBot extends TelegramLongPollingBot {
             if (text == null) return;
 
             switch (text) {
-                case "/start" -> {
-                    clearUserState(userId);
-
-                    Long chatIdLong = update.getMessage().getChatId();
-                    String chatIdStr = chatIdLong.toString();
-
-                    String inviteCode = getStartParameter(update);
-                    System.out.println("🔥 Витягнутий параметр: " + inviteCode);
-
-                    if (inviteCode != null && !inviteCode.isBlank()) {
-                        boolean incremented = new InviteManager().incrementInviteNumber(inviteCode);
-                        if (incremented) {
-                            System.out.println("✅ Лічильник number збільшено.");
-                        } else {
-                            System.out.println("❌ Invite не знайдено.");
-                        }
-                    } else {
-                        System.out.println("ℹ️ Параметр інвайту не передано.");
-                    }
-
-                    // Реєстрація користувача
-                    new UserManager().registerUser(chatIdLong,
-                            update.getMessage().getFrom().getFirstName(),
-                            chatIdStr
-                    );
-
-                    try {
-                        execute(createUserMenu(chatIdStr, userId));
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-
                 case "🧱 Каталог товарів" -> sendCategories(userId);
                 case "📋 Кошик" -> {
                     try {
