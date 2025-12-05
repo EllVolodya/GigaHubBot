@@ -64,6 +64,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, String> tempOrderCode = new HashMap<>();
     private final Map<Long, String> tempOrderItems = new HashMap<>();
     private final Map<Long, Double> tempTotal = new HashMap<>();
+    private final Map<Long, Double> tempLength = new HashMap<>();
+    private final Map<Long, Double> tempWidth = new HashMap<>();
 
     // 🔹 Константи WayForPay (заміниш своїми)
     private static final String MERCHANT_ACCOUNT = "YOUR_MERCHANT_ACCOUNT";
@@ -1251,36 +1253,32 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private void handleMaterialCalcMenu(Long userId, String chatId, String text) {
         switch (text) {
+
             case "🎨 Фарба" -> {
-                userStates.put(userId, "calc_paint_area");
-                sendText(chatId,
-                        "🎨 *Розрахунок фарби*\n\n" +
-                                "Введи площу, яку хочеш пофарбувати (в м²).\n" +
-                                "Наприклад: `12.5`"
-                );
+                userStates.put(userId, "paint_length");
+                sendText(chatId, "🧱 Вкажи *довжину кімнати* у метрах:");
             }
 
             case "🧱 Плитка" -> {
-                sendText(chatId, "🧱 Вкажіть площу поверхні у м²:");
-                userStates.put(userId, "calc_tile_area");
+                userStates.put(userId, "tile_length");
+                sendText(chatId, "🧱 Вкажи *довжину кімнати* у метрах:");
             }
 
             case "📏 Ламінат" -> {
-                sendText(chatId, "📏 Вкажіть площу кімнати у м²:");
-                userStates.put(userId, "calc_laminate_area");
+                userStates.put(userId, "laminate_length");
+                sendText(chatId, "📏 Вкажи *довжину кімнати* у метрах:");
             }
 
             case "🔨 Вагонка" -> {
-                sendText(chatId, "🔨 Вкажіть площу стін у м²:");
-                userStates.put(userId, "calc_wall_area");
+                userStates.put(userId, "wall_length");
+                sendText(chatId, "🔨 Вкажи *довжину стін* у метрах:");
             }
 
             case "📐 Плінтус" -> {
-                sendText(chatId, "📐 Вкажіть периметр кімнати у метрах:");
-                userStates.put(userId, "calc_baseboard");
+                userStates.put(userId, "baseboard_length");
+                sendText(chatId, "📐 Вкажи *довжину кімнати* у метрах:");
             }
 
-            case "⬅ Назад", "Назад" -> sendText(chatId, "Повертаю назад 👋");
             default -> sendText(chatId, "❓ Оберіть дію з меню.");
         }
     }
@@ -1417,6 +1415,32 @@ public class StoreBot extends TelegramLongPollingBot {
 
         } catch (Exception e) {
             sendText(chatId, "⚠️ Введіть число, наприклад 20.5");
+        }
+    }
+
+    private void handleRoomLength(Long userId, String chatId, String text, String nextState) {
+        try {
+            double length = Double.parseDouble(text.replace(",", "."));
+            tempLength.put(userId, length);
+
+            userStates.put(userId, nextState);
+            sendText(chatId, "➡️ Тепер вкажи *ширину кімнати* у метрах:");
+        } catch (Exception e) {
+            sendText(chatId, "⚠️ Введи число, наприклад 4.2");
+        }
+    }
+
+    private double handleRoomWidth(Long userId, String chatId, String text) {
+        try {
+            double width = Double.parseDouble(text.replace(",", "."));
+            tempWidth.put(userId, width);
+
+            double length = tempLength.getOrDefault(userId, 0.0);
+            return length * width;
+
+        } catch (Exception e) {
+            sendText(chatId, "⚠️ Введи число, наприклад 3.5");
+            return -1;
         }
     }
 
@@ -1720,6 +1744,8 @@ public class StoreBot extends TelegramLongPollingBot {
             case "calc_laminate_area" -> handleLaminateArea(userId, chatId, text);
             case "calc_wall_area" -> handleWallArea(userId, chatId, text);
             case "calc_baseboard_length" -> handleBaseboardLength(userId, chatId, text);
+
+            case "paint_length" -> handleRoomLength(userId, chatId, text, "paint_width");
             case "choose_search_source" -> {
                 try {
                     handleAdminSearchSource(userId, chatId, text);
@@ -1767,6 +1793,90 @@ public class StoreBot extends TelegramLongPollingBot {
                     // Перемикаємо користувача у стан вибору товару
                     userStates.put(userId, "choose_yaml_product");
                 }
+            }
+
+            case "paint_width" -> {
+                double area = handleRoomWidth(userId, chatId, text);
+                if (area <= 0) return;
+
+                paintTemp.put(userId, area);
+                userStates.put(userId, "calc_paint_layers");
+
+                sendText(chatId,
+                        "🎨 Площа кімнати: *" + String.format("%.2f", area) + " м²*\n" +
+                                "Тепер вкажи кількість шарів фарби (1–5):");
+            }
+
+            case "tile_length" -> handleRoomLength(userId, chatId, text, "tile_width");
+
+            case "tile_width" -> {
+                double area = handleRoomWidth(userId, chatId, text);
+                if (area <= 0) return;
+
+                double need = area * 1.10;
+
+                sendText(chatId,
+                        "🧱 *Розрахунок плитки*\n" +
+                                "📐 Площа: " + area + " м²\n" +
+                                "➕ Запас 10%\n" +
+                                "📦 Потрібно: *" + String.format("%.2f", need) + " м²*");
+
+                sendMaterialCalcMenu(chatId);
+                userStates.remove(userId);
+            }
+
+            case "laminate_length" -> handleRoomLength(userId, chatId, text, "laminate_width");
+
+            case "laminate_width" -> {
+                double area = handleRoomWidth(userId, chatId, text);
+                if (area <= 0) return;
+
+                double need = area * 1.07;
+
+                sendText(chatId,
+                        "📏 *Розрахунок ламінату*\n" +
+                                "📐 Площа кімнати: " + area + " м²\n" +
+                                "➕ Запас 7%\n" +
+                                "📦 Потрібно: *" + String.format("%.2f", need) + " м²*");
+
+                sendMaterialCalcMenu(chatId);
+                userStates.remove(userId);
+            }
+
+            case "wall_length" -> handleRoomLength(userId, chatId, text, "wall_width");
+
+            case "wall_width" -> {
+                double area = handleRoomWidth(userId, chatId, text);
+                if (area <= 0) return;
+
+                double need = area * 1.10;
+
+                sendText(chatId,
+                        "🔨 *Розрахунок вагонки*\n" +
+                                "📐 Площа стін: " + area + " м²\n" +
+                                "➕ Запас 10%\n" +
+                                "🪵 Потрібно: *" + String.format("%.2f", need) + " м²*");
+
+                sendMaterialCalcMenu(chatId);
+                userStates.remove(userId);
+            }
+
+            case "baseboard_length" -> handleRoomLength(userId, chatId, text, "baseboard_width");
+
+            case "baseboard_width" -> {
+                double area = handleRoomWidth(userId, chatId, text);
+                if (area <= 0) return;
+
+                double perimeter = (tempLength.get(userId) + tempWidth.get(userId)) * 2;
+                double pieces = Math.ceil(perimeter / 2.5);
+
+                sendText(chatId,
+                        "📐 *Розрахунок плінтуса*\n" +
+                                "📏 Периметр кімнати: " + String.format("%.2f", perimeter) + " м\n" +
+                                "🪵 Потрібно планок: *" + pieces + " шт*");
+
+                sendMaterialCalcMenu(chatId);
+                userStates.remove(userId);
             }
 
             case "choose_yaml_product" -> {
