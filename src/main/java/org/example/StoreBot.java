@@ -16,7 +16,6 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.MessageEntity;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -52,6 +51,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Boolean> waitingForQuantity = new HashMap<>();
     private final Map<Long, Boolean> waitingForCatalogSearch = new HashMap<>();
     private final Map<Long, Integer> searchIndex = new HashMap<>();
+    private final Map<Long, Double> paintArea = new HashMap<>();
+    private final Map<Long, Integer> paintLayers = new HashMap<>();
 
     // Для замовлення.
     private final Map<Long, String> tempDeliveryType = new HashMap<>();
@@ -1063,6 +1064,11 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
                 }
 
+                case "material_calc_menu" -> handleMaterialCalcMenu(userId, chatId, text);
+                case "calc_paint_area" -> handlePaintArea(userId, chatId, text);
+                case "calc_paint_layers" -> handlePaintLayers(userId, chatId, text);
+                case "calc_paint_consumption" -> handlePaintConsumption(userId, chatId, text);
+
                 default -> handleText(userId, text);
             }
 
@@ -1256,6 +1262,108 @@ public class StoreBot extends TelegramLongPollingBot {
         // якщо ще немає запису, додаємо false
         developerMenuState.putIfAbsent(userId, false);
         return developerMenuState.get(userId);
+    }
+
+    private void handleMaterialCalcMenu(Long userId, String chatId, String text) {
+        switch (text) {
+            case "🎨 Фарба" -> {
+                userStates.put(userId, "calc_paint_area");
+                sendText(chatId,
+                        "🎨 *Розрахунок фарби*\n\n" +
+                                "Введи площу, яку хочеш пофарбувати (в м²).\n" +
+                                "Наприклад: `12.5`"
+                );
+            }
+
+            case "🧱 Плитка" -> sendText(chatId, "🧱 Розрахунок плитки скоро буде додано!");
+            case "📏 Ламінат" -> sendText(chatId, "📏 Розрахунок ламінату скоро буде доступний!");
+            case "🔨 Вагонка" -> sendText(chatId, "🔨 Розрахунок вагонки в процесі!");
+            case "📐 Плінтус" -> sendText(chatId, "📐 Розрахунок плінтуса вже готується!");
+
+            case "⬅ Назад", "Назад" -> sendText(chatId, "Повертаю назад 👋");
+            default -> sendText(chatId, "❓ Оберіть дію з меню.");
+        }
+    }
+
+    private void handlePaintArea(Long userId, String chatId, String text) {
+        try {
+            double area = Double.parseDouble(text.replace(",", "."));
+
+            if (area <= 0) {
+                sendText(chatId, "⚠️ Площа має бути більшою за 0. Спробуй ще раз.");
+                return;
+            }
+
+            paintArea.put(userId, area);
+            userStates.put(userId, "calc_paint_layers");
+
+            sendText(chatId,
+                    "✨ Супер! Площа: *" + area + " м²*\n\n" +
+                            "Тепер введи *кількість шарів фарби*.\n" +
+                            "Зазвичай це 1 або 2."
+            );
+
+        } catch (Exception e) {
+            sendText(chatId, "⚠️ Введи число, наприклад: `12.5`");
+        }
+    }
+
+    private void handlePaintLayers(Long userId, String chatId, String text) {
+        try {
+            int layers = Integer.parseInt(text.trim());
+            if (layers < 1 || layers > 5) {
+                sendText(chatId, "⚠️ Зазвичай шарів від 1 до 5. Введи коректне число.");
+                return;
+            }
+
+            paintLayers.put(userId, layers);
+            userStates.put(userId, "calc_paint_consumption");
+
+            sendText(chatId,
+                    "🔍 Чудово! Тепер введи *витрату фарби*.\n" +
+                            "Зазвичай на банці пише: `0.1 – 0.18 л/м²`.\n\n" +
+                            "Приклад: `0.15`"
+            );
+
+        } catch (Exception e) {
+            sendText(chatId, "⚠️ Введи число, наприклад: `2`");
+        }
+    }
+
+    private void handlePaintConsumption(Long userId, String chatId, String text) {
+        try {
+            double consumption = Double.parseDouble(text.replace(",", "."));
+
+            if (consumption <= 0 || consumption > 1) {
+                sendText(chatId, "⚠️ Введи значення в межах 0.05 – 1.0\n(літрів на 1 м²)");
+                return;
+            }
+
+            double area = paintArea.getOrDefault(userId, 0.0);
+            int layers = paintLayers.getOrDefault(userId, 1);
+
+            double totalLiters = area * consumption * layers;
+            double cansNeeded = Math.ceil(totalLiters / 2.5); // якщо банка 2.5 л
+
+            sendText(chatId,
+                    "🎨 *Результат розрахунку фарби:*\n\n" +
+                            "📐 Площа: *" + area + " м²*\n" +
+                            "🖌 Шарів: *" + layers + "*\n" +
+                            "⚗️ Витрата: *" + consumption + " л/м²*\n\n" +
+                            "📦 Потрібно всього: *" + round(totalLiters) + " л*\n" +
+                            "🪣 Це приблизно: *" + (int)cansNeeded + " банки* (по 2.5 л)\n\n" +
+                            "Якщо хочеш — можу відразу підібрати фарбу з каталогу 😉"
+            );
+
+            userStates.put(userId, "material_calc_menu");
+
+        } catch (Exception e) {
+            sendText(chatId, "⚠️ Введи число, наприклад: `0.15`");
+        }
+    }
+
+    private double round(double v) {
+        return Math.round(v * 100.0) / 100.0;
     }
 
     // 🔹 Назад
