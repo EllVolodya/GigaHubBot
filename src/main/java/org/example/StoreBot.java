@@ -1254,6 +1254,12 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleMaterialCalcMenu(Long userId, String chatId, String text) {
         switch (text) {
 
+            case "⬅️ Назад", "Назад" -> {
+                // повернення в головне меню
+                userStates.remove(userId);
+                sendMessage(createUserMenu(chatId, userId));
+            }
+
             case "🎨 Фарба" -> {
                 userStates.put(userId, "paint_length");
                 sendText(chatId, "🧱 Вкажи *довжину кімнати* у метрах:");
