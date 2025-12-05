@@ -477,21 +477,31 @@ public class StoreBot extends TelegramLongPollingBot {
                     String chatIdStr = chatIdLong.toString();
 
                     String messageText = update.getMessage().getText();
-                    if (messageText != null && messageText.length() > 6) {
-                        String inviteCode = messageText.substring(7).trim();
+
+                    // Перевіряємо чи є параметр після /start
+                    if (messageText != null && messageText.startsWith("/start")) {
+
+                        String inviteCode = messageText.replace("/start", "").trim();
+                        inviteCode = inviteCode.replace(" ", ""); // якщо є пробіл
+                        inviteCode = inviteCode.toLowerCase();
+
+                        System.out.println("🔎 /start detected inviteCode = '" + inviteCode + "'");
+
                         if (!inviteCode.isBlank()) {
                             boolean incremented = new InviteManager().incrementInviteNumber(inviteCode);
                             if (incremented) {
-                                System.out.println("✅ Лічильник number для invite " + inviteCode + " збільшено.");
+                                System.out.println("✅ Лічильник number збільшено.");
                             } else {
-                                System.out.println("❌ Invite не знайдено: " + inviteCode);
+                                System.out.println("❌ Invite не знайдено для: " + inviteCode);
                             }
                         }
                     }
 
+                    // Реєстрація користувача
                     UserManager userManager = new UserManager();
                     userManager.registerUser(chatIdLong, update.getMessage().getFrom().getFirstName(), chatIdStr);
 
+                    // Меню
                     try {
                         SendMessage menuMsg = createUserMenu(chatIdStr, userId);
                         execute(menuMsg);
