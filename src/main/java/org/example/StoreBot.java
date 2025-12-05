@@ -1445,12 +1445,12 @@ public class StoreBot extends TelegramLongPollingBot {
         return Math.round(v * 100.0) / 100.0;
     }
 
-    // 🔹 Назад
     private void handleBack(Long userId, String chatId) throws TelegramApiException {
         System.out.println("[handleBack] User " + userId + " pressed Back.");
 
-        // ❗ 0. Блокування кнопки Назад під час оформлення замовлення
         String state = userStates.get(userId);
+
+        // ❗ 0. Блокування кнопки Назад під час оформлення замовлення
         if ("awaiting_delivery_choice".equals(state) ||
                 "order_pickup".equals(state) ||
                 "awaiting_city_delivery".equals(state) ||
@@ -1459,6 +1459,33 @@ public class StoreBot extends TelegramLongPollingBot {
             sendText(chatId,
                     "❗ Повернення назад недоступне під час оформлення замовлення.\n" +
                             "📝 Будь ласка, завершіть заповнення даних або оформіть замовлення.");
+            return;
+        }
+
+        // ❗ 0.2 Повернення назад з КАЛЬКУЛЯТОРА МАТЕРІАЛІВ
+        Set<String> MATERIAL_STATES = Set.of(
+                "material_calc_menu",
+                "paint_length", "paint_width",
+                "calc_paint_layers", "calc_paint_consumption",
+                "tile_length", "tile_width", "tile_size",
+                "laminate_length", "laminate_width",
+                "wall_length", "wall_width",
+                "baseboard_length", "baseboard_width"
+        );
+
+        if (state != null && MATERIAL_STATES.contains(state)) {
+
+            // очищаємо тимчасові дані калькулятора
+            tempLength.remove(userId);
+            tempWidth.remove(userId);
+            paintTemp.remove(userId);
+            paintLayers.remove(userId);
+
+            // ставимо стан null
+            userStates.remove(userId);
+
+            // повернення в ГОЛОВНЕ МЕНЮ
+            sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
