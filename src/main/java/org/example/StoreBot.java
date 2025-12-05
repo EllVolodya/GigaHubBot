@@ -1330,8 +1330,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             "🪣 Потрібно приблизно: *" + String.format("%.2f", liters) + " л*\n\n" +
                             "Хочеш порахувати ще щось?");
             sendMaterialCalcMenu(chatId);
-
-            userStates.remove(userId);
+            userStates.put(userId, "material_calc_menu");
 
         } catch (Exception e) {
             sendText(chatId, "⚠️ Вкажіть число, наприклад 0.15");
@@ -1350,8 +1349,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             "📦 Потрібно: *" + String.format("%.2f", reserve) + " м²*\n\n" +
                             "Бажаєш розрахувати ще щось?");
             sendMaterialCalcMenu(chatId);
-
-            userStates.remove(userId);
+            userStates.put(userId, "material_calc_menu");
 
         } catch (Exception e) {
             sendText(chatId, "⚠️ Введіть число, наприклад 12.3");
@@ -1370,8 +1368,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             "📦 Потрібно: *" + Math.ceil(pieces) + " шт*\n\n" +
                             "Готово! Обери наступний матеріал:");
             sendMaterialCalcMenu(chatId);
-
-            userStates.remove(userId);
+            userStates.put(userId, "material_calc_menu");
 
         } catch (Exception e) {
             sendText(chatId, "⚠️ Введіть число, наприклад 18.2");
@@ -1391,7 +1388,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             "Готово! Обери інший розрахунок:");
 
             sendMaterialCalcMenu(chatId);
-            userStates.remove(userId);
+            userStates.put(userId, "material_calc_menu");
 
         } catch (Exception e) {
             sendText(chatId, "⚠️ Введіть число, наприклад 14.5");
@@ -1411,7 +1408,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             "Готово!");
 
             sendMaterialCalcMenu(chatId);
-            userStates.remove(userId);
+            userStates.put(userId, "material_calc_menu");
 
         } catch (Exception e) {
             sendText(chatId, "⚠️ Введіть число, наприклад 20.5");
@@ -1822,7 +1819,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "📦 Потрібно: *" + String.format("%.2f", need) + " м²*");
 
                 sendMaterialCalcMenu(chatId);
-                userStates.remove(userId);
+                userStates.put(userId, "material_calc_menu");
             }
 
             case "laminate_length" -> handleRoomLength(userId, chatId, text, "laminate_width");
@@ -1840,7 +1837,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "📦 Потрібно: *" + String.format("%.2f", need) + " м²*");
 
                 sendMaterialCalcMenu(chatId);
-                userStates.remove(userId);
+                userStates.put(userId, "material_calc_menu");
             }
 
             case "wall_length" -> handleRoomLength(userId, chatId, text, "wall_width");
@@ -1858,7 +1855,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "🪵 Потрібно: *" + String.format("%.2f", need) + " м²*");
 
                 sendMaterialCalcMenu(chatId);
-                userStates.remove(userId);
+                userStates.put(userId, "material_calc_menu");
             }
 
             case "baseboard_length" -> handleRoomLength(userId, chatId, text, "baseboard_width");
@@ -1876,7 +1873,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "🪵 Потрібно планок: *" + pieces + " шт*");
 
                 sendMaterialCalcMenu(chatId);
-                userStates.remove(userId);
+                userStates.put(userId, "material_calc_menu");
             }
 
             case "choose_yaml_product" -> {
