@@ -1054,16 +1054,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
                 }
 
-                case "material_calc_menu" -> handleMaterialCalcMenu(userId, chatId, text);
-                case "calc_paint_area" -> handlePaintArea(userId, chatId, text);
-                case "calc_paint_layers" -> handlePaintLayers(userId, chatId, text);
-                case "calc_paint_consumption" -> handlePaintConsumption(userId, chatId, text);
-
-                case "calc_tile_area" -> handleTileArea(userId, chatId, text);
-                case "calc_laminate_area" -> handleLaminateArea(userId, chatId, text);
-                case "calc_wall_area" -> handleWallArea(userId, chatId, text);
-                case "calc_baseboard_length" -> handleBaseboardLength(userId, chatId, text);
-
                 default -> handleText(userId, text);
             }
 
@@ -1706,6 +1696,15 @@ public class StoreBot extends TelegramLongPollingBot {
             case "category_management" -> handleCategoryManagementState(userId, chatId, text);
             case "waiting_for_search" -> handleWaitingForSearch(userId, chatId, text);
             case "waiting_for_product_number" -> handleWaitingForProductNumber(userId, chatId, text);
+            case "material_calc_menu" -> handleMaterialCalcMenu(userId, chatId, text);
+            case "calc_paint_area" -> handlePaintArea(userId, chatId, text);
+            case "calc_paint_layers" -> handlePaintLayers(userId, chatId, text);
+            case "calc_paint_consumption" -> handlePaintConsumption(userId, chatId, text);
+
+            case "calc_tile_area" -> handleTileArea(userId, chatId, text);
+            case "calc_laminate_area" -> handleLaminateArea(userId, chatId, text);
+            case "calc_wall_area" -> handleWallArea(userId, chatId, text);
+            case "calc_baseboard_length" -> handleBaseboardLength(userId, chatId, text);
             case "choose_search_source" -> {
                 try {
                     handleAdminSearchSource(userId, chatId, text);
