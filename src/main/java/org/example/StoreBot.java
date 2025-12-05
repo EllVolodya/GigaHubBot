@@ -612,17 +612,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
                 case "🧮 Будівельний калькулятор" -> {
                     userStates.put(userId, "material_calc_menu");
-                    sendText(chatId,
-                            "🧮 *Будівельний калькулятор Митрофана!*\n\n" +
-                                    "Я можу швидко обчислити:\n" +
-                                    "🎨 Скільки потрібно *фарби*\n" +
-                                    "🧱 Скільки піде *плитки*\n" +
-                                    "📏 Скільки дощок *ламінату* треба\n" +
-                                    "🔨 Скільки *вагонки* треба\n" +
-                                    "📐 Скільки потрібно *плінтусів*\n\n" +
-                                    "Оберіть тип розрахунку нижче:"
-                    );
-
                     sendMaterialCalcMenu(chatId);
                 }
 
