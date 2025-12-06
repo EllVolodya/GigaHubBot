@@ -70,28 +70,26 @@ public class WayForPayService {
     public String createInvoice(String orderCode, int amount) {
 
         long orderDate = System.currentTimeMillis() / 1000;
-
-        // ✔ Українські символи збережені
         String productName = "Замовлення " + orderCode;
 
-        // ✔ правильний виклик sign()
-        String signature = sign(
+        // --- ❗ ПРАВИЛЬНА ПОСЛІДОВНІСТЬ ПІДПИСУ ---
+        String signature = generateSignature(
                 MERCHANT_ACCOUNT,
-                MERCHANT_DOMAIN,
                 orderCode,
                 String.valueOf(orderDate),
                 String.valueOf(amount),
                 "UAH",
                 productName,
                 "1",
-                String.valueOf(amount)
+                String.valueOf(amount),
+                MERCHANT_SECRET
         );
 
         JsonObject body = new JsonObject();
         body.addProperty("transactionType", "CREATE_INVOICE");
         body.addProperty("apiVersion", 1);
         body.addProperty("merchantAccount", MERCHANT_ACCOUNT);
-        body.addProperty("merchantDomainName", MERCHANT_DOMAIN);
+        body.addProperty("merchantDomainName", "gigahub.com.ua");
         body.addProperty("merchantSignature", signature);
         body.addProperty("orderReference", orderCode);
         body.addProperty("orderDate", orderDate);
@@ -114,40 +112,50 @@ public class WayForPayService {
 
             String jsonBody = gson.toJson(body);
 
-            System.out.println("👉 WayForPay request body (GSON):");
+            System.out.println("FINAL JSON:");
             System.out.println(jsonBody);
 
             try (OutputStream os = conn.getOutputStream()) {
                 os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
             }
 
-            InputStream is;
-
-            if (conn.getResponseCode() == 200) {
-                is = conn.getInputStream();
-            } else {
-                is = conn.getErrorStream();
-            }
+            InputStream is = conn.getResponseCode() == 200
+                    ? conn.getInputStream()
+                    : conn.getErrorStream();
 
             String json = new BufferedReader(new InputStreamReader(is))
                     .lines()
                     .reduce("", (a, b) -> a + b);
 
-            System.out.println("🔍 WayForPay RAW response: " + json);
+            System.out.println("WayForPay response: " + json);
 
-            JsonObject jsonResponse = gson.fromJson(json, JsonObject.class);
+            JsonObject response = gson.fromJson(json, JsonObject.class);
 
-            if (jsonResponse.has("invoiceUrl")) {
-                return jsonResponse.get("invoiceUrl").getAsString();
-            } else {
-                System.out.println("❌ WayForPay Error JSON:");
-                System.out.println(json);
-                return null;
+            if (response.has("invoiceUrl")) {
+                return response.get("invoiceUrl").getAsString();
             }
+
+            return null;
 
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
+
+    private String generateSignature(String... params) {
+        try {
+            String data = String.join(";", params);
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(data.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder();
+            for (byte b : digest) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }
