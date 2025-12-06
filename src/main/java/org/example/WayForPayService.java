@@ -22,10 +22,10 @@ public class WayForPayService {
     public String createInvoice(String orderCode, int amount) {
 
         try {
-            String productName = "Order_" + orderCode;     // ⚠️ Лише англійська!
+            String productName = "Order_" + orderCode;
             long orderDate = System.currentTimeMillis() / 1000;
 
-            // ==== Формуємо строку для підпису (ВАЖЛИВО!) ====
+            // === Signature string ===
             String signatureData =
                     MERCHANT_ACCOUNT + ";" +
                             MERCHANT_DOMAIN + ";" +
@@ -40,9 +40,10 @@ public class WayForPayService {
 
             String merchantSignature = md5(signatureData);
 
-            // ==== Формуємо JSON запит ====
+            // === JSON Request ===
             JsonObject request = new JsonObject();
             request.addProperty("transactionType", "CREATE_INVOICE");
+            request.addProperty("apiVersion", 1);  // <<< ОБОВ’ЯЗКОВЕ ПОЛЕ !!!
             request.addProperty("merchantAccount", MERCHANT_ACCOUNT);
             request.addProperty("merchantDomainName", MERCHANT_DOMAIN);
             request.addProperty("merchantSignature", merchantSignature);
@@ -60,11 +61,10 @@ public class WayForPayService {
             System.out.println("FINAL REQUEST JSON:");
             System.out.println(gson.toJson(request));
 
-            // ===== Надсилаємо запит =====
+            // Send POST
             String response = sendPost(request.toString());
             System.out.println("WayForPay response: " + response);
 
-            // ===== Парсимо відповідь =====
             JsonObject resp = gson.fromJson(response, JsonObject.class);
             if (resp.has("invoiceUrl")) {
                 return resp.get("invoiceUrl").getAsString();
@@ -90,12 +90,12 @@ public class WayForPayService {
             os.write(json.getBytes(StandardCharsets.UTF_8));
         }
 
-        BufferedReader reader;
-        if (conn.getResponseCode() == 200) {
-            reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-        } else {
-            reader = new BufferedReader(new InputStreamReader(conn.getErrorStream()));
-        }
+        BufferedReader reader =
+                new BufferedReader(new InputStreamReader(
+                        conn.getResponseCode() == 200 ?
+                                conn.getInputStream() :
+                                conn.getErrorStream()
+                ));
 
         StringBuilder result = new StringBuilder();
         String line;
@@ -109,15 +109,12 @@ public class WayForPayService {
 
     private static String md5(String input) throws Exception {
         MessageDigest md = MessageDigest.getInstance("MD5");
-        byte[] messageDigest = md.digest(input.getBytes("UTF-8"));
+        byte[] bytes = md.digest(input.getBytes("UTF-8"));
 
-        StringBuilder hexString = new StringBuilder();
-        for (byte b : messageDigest) {
-            String hex = Integer.toHexString(0xFF & b);
-            if (hex.length() == 1) hexString.append('0');
-            hexString.append(hex);
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b & 0xFF));
         }
-
-        return hexString.toString();
+        return sb.toString();
     }
 }
