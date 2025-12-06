@@ -14,7 +14,7 @@ public class WayForPayService {
     private static final String API_URL = "https://api.wayforpay.com/api";
 
     private static final String MERCHANT_ACCOUNT = "gigahub_com_ua1";
-    private static final String MERCHANT_SECRET = "169f041d72364f273bea894dbe93bd7ecae6b4b6";
+    private static final String MERCHANT_SECRET = "8723037eda8285f659a8a9e3d92404fc23c4f2e1";
     private static final String MERCHANT_DOMAIN = "gigahub.com.ua";
 
     private static final Gson gson = new Gson();
