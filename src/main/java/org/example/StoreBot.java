@@ -23,8 +23,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Document;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import java.io.File;
@@ -80,19 +78,12 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Double> tempLength = new HashMap<>();
     private final Map<Long, Double> tempWidth = new HashMap<>();
 
-    // 🔹 Константи WayForPay (заміниш своїми)
-    private static final String MERCHANT_ACCOUNT = "freelance_user_688b1c35af55c";
-    private static final String MERCHANT_SECRET = "52d8e5b871968d3c50a0023ed9b632b9b802986a";
-    private static final String MERCHANT_DOMAIN = "gigahub.com.ua";
-
     //Права
     private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню
     private final List<Long> DEVELOPERS = List.of(620298889L, 1030917576L, 533570832L); // тут айді розробників меню
     private final Long CONSULTANT_CHAT_ID = 620298889L;
 
     // 🔹 Адмінські стани
-    private final Map<Long, Boolean> adminConnected = new HashMap<>();
-
     private final Map<Long, Long> adminReplyTarget = new HashMap<>();
 
     private final Map<Long, String> adminEditingProduct = new HashMap<>();
