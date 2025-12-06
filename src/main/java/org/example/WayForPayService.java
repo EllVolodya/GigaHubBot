@@ -21,7 +21,7 @@ public class WayForPayService {
 
     private static final String MERCHANT_ACCOUNT = "freelance_user_688b1c35af55c";
     private static final String MERCHANT_SECRET = "52d8e5b871968d3c50a0023ed9b632b9b802986a";
-    private static final String MERCHANT_DOMAIN = "gigahub.com.ua";
+    private static final String MERCHANT_DOMAIN = "secure.wayforpay.com";
 
     private final Gson gson = new GsonBuilder()
             .disableHtmlEscaping()
@@ -72,7 +72,6 @@ public class WayForPayService {
         long orderDate = System.currentTimeMillis() / 1000;
         String productName = "Замовлення " + orderCode;
 
-        // --- ❗ ПРАВИЛЬНА ПОСЛІДОВНІСТЬ ПІДПИСУ ---
         String signature = generateSignature(
                 MERCHANT_ACCOUNT,
                 orderCode,
@@ -89,7 +88,7 @@ public class WayForPayService {
         body.addProperty("transactionType", "CREATE_INVOICE");
         body.addProperty("apiVersion", 1);
         body.addProperty("merchantAccount", MERCHANT_ACCOUNT);
-        body.addProperty("merchantDomainName", "gigahub.com.ua");
+        body.addProperty("merchantDomainName", MERCHANT_DOMAIN);
         body.addProperty("merchantSignature", signature);
         body.addProperty("orderReference", orderCode);
         body.addProperty("orderDate", orderDate);
@@ -146,12 +145,15 @@ public class WayForPayService {
     private String generateSignature(String... params) {
         try {
             String data = String.join(";", params);
+
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] digest = md.digest(data.getBytes(StandardCharsets.UTF_8));
+
             StringBuilder hex = new StringBuilder();
             for (byte b : digest) {
                 hex.append(String.format("%02x", b));
             }
+
             return hex.toString();
         } catch (Exception e) {
             throw new RuntimeException(e);
