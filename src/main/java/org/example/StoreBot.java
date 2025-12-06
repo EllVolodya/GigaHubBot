@@ -5293,11 +5293,13 @@ public class StoreBot extends TelegramLongPollingBot {
             String data = String.join(";", params);
 
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] md5 = md.digest((data + MERCHANT_SECRET).getBytes(StandardCharsets.UTF_8));
+            byte[] md5 = md.digest(data.getBytes(StandardCharsets.UTF_8));
 
-            return Base64.getEncoder().encodeToString(md5);
+            String base64 = Base64.getEncoder().encodeToString(md5);
+
+            return base64;
         } catch (Exception e) {
-            throw new RuntimeException("Signature error", e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -5327,9 +5329,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 "&orderDate=" + orderDate +
                 "&amount=" + amount +
                 "&currency=UAH" +
+                "&merchantSignature=" + signature +
                 "&productName[]=" + URLEncoder.encode(productName, StandardCharsets.UTF_8) +
                 "&productPrice[]=" + amount +
-                "&productCount[]=" + 1 +
-                "&merchantSignature=" + signature;
+                "&productCount[]=" + 1;
     }
 }
