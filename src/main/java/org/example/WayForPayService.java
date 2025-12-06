@@ -23,27 +23,27 @@ public class WayForPayService {
      * Правильний підпис для CREATE_INVOICE
      * Порядок параметрів строго з документації.
      */
-    private String createInvoiceSignature(
-            String merchantAccount,
-            String orderReference,
-            int amount,
-            String currency,
-            String productName,
-            int productCount,
-            int productPrice,
-            String secretKey
-    ) {
+    private String createSignature(String merchantAccount,
+                                   String merchantDomain,
+                                   String orderReference,
+                                   long orderDate,
+                                   int amount,
+                                   String currency,
+                                   String productName,
+                                   int productCount,
+                                   int productPrice) {
+
         try {
-            String data = String.join(";",
-                    merchantAccount,
-                    orderReference,
-                    String.valueOf(amount),
-                    currency,
-                    productName,
-                    String.valueOf(productCount),
-                    String.valueOf(productPrice),
-                    secretKey
-            );
+            String data = merchantAccount + ";" +
+                    merchantDomain + ";" +
+                    orderReference + ";" +
+                    orderDate + ";" +
+                    amount + ";" +
+                    currency + ";" +
+                    productName + ";" +
+                    productCount + ";" +
+                    productPrice + ";" +
+                    MERCHANT_SECRET;
 
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] digest = md.digest(data.getBytes(StandardCharsets.UTF_8));
@@ -65,15 +65,16 @@ public class WayForPayService {
         long orderDate = System.currentTimeMillis() / 1000;
         String productName = "Замовлення " + orderCode;
 
-        String signature = createInvoiceSignature(
+        String signature = createSignature(
                 MERCHANT_ACCOUNT,
+                MERCHANT_DOMAIN,
                 orderCode,
+                orderDate,
                 amount,
                 "UAH",
                 productName,
                 1,
-                amount,
-                MERCHANT_SECRET
+                amount
         );
 
         JsonObject body = new JsonObject();
