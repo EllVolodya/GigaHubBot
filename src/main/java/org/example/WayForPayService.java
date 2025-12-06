@@ -1,16 +1,10 @@
 package org.example;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 
 import javax.net.ssl.HttpsURLConnection;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-
+import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -19,40 +13,40 @@ public class WayForPayService {
 
     private static final String API_URL = "https://api.wayforpay.com/api";
 
-    private static final String MERCHANT_ACCOUNT = "freelance_user_688b1c35af55c";
-    private static final String MERCHANT_SECRET = "52d8e5b871968d3c50a0023ed9b632b9b802986a";
-    private static final String MERCHANT_DOMAIN = "secure.wayforpay.com";
+    private static final String MERCHANT_ACCOUNT = "gigahub_com_ua";
+    private static final String MERCHANT_SECRET = "169f041d72364f273bea894dbe93bd7ecae6b4b6";
+    private static final String MERCHANT_DOMAIN = "gigahub.com.ua";
 
-    private final Gson gson = new GsonBuilder()
-            .disableHtmlEscaping()
-            .setPrettyPrinting()
-            .create();
+    private final Gson gson = new Gson();
 
-    // ✔ правильний метод формування підпису
-    private String sign(String merchantAccount,
-                        String merchantDomainName,
-                        String orderReference,
-                        String orderDate,
-                        String amount,
-                        String currency,
-                        String productName,
-                        String productCount,
-                        String productPrice) {
+    /**
+     * Правильний підпис для CREATE_INVOICE
+     * Порядок параметрів строго з документації.
+     */
+    private String createInvoiceSignature(
+            String merchantAccount,
+            String orderReference,
+            int amount,
+            String currency,
+            String productName,
+            int productCount,
+            int productPrice,
+            String secretKey
+    ) {
         try {
-            String signatureSource =
-                    merchantAccount + ";" +
-                            merchantDomainName + ";" +
-                            orderReference + ";" +
-                            orderDate + ";" +
-                            amount + ";" +
-                            currency + ";" +
-                            productName + ";" +
-                            productCount + ";" +
-                            productPrice + ";" +
-                            MERCHANT_SECRET;
+            String data = String.join(";",
+                    merchantAccount,
+                    orderReference,
+                    String.valueOf(amount),
+                    currency,
+                    productName,
+                    String.valueOf(productCount),
+                    String.valueOf(productPrice),
+                    secretKey
+            );
 
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(signatureSource.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = md.digest(data.getBytes(StandardCharsets.UTF_8));
 
             StringBuilder hex = new StringBuilder();
             for (byte b : digest) {
@@ -66,21 +60,19 @@ public class WayForPayService {
         }
     }
 
-    // ✔ правильне створення інвойса
     public String createInvoice(String orderCode, int amount) {
 
         long orderDate = System.currentTimeMillis() / 1000;
         String productName = "Замовлення " + orderCode;
 
-        String signature = generateSignature(
+        String signature = createInvoiceSignature(
                 MERCHANT_ACCOUNT,
                 orderCode,
-                String.valueOf(orderDate),
-                String.valueOf(amount),
+                amount,
                 "UAH",
                 productName,
-                "1",
-                String.valueOf(amount),
+                1,
+                amount,
                 MERCHANT_SECRET
         );
 
@@ -134,30 +126,10 @@ public class WayForPayService {
                 return response.get("invoiceUrl").getAsString();
             }
 
-            return null;
-
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
         }
+
+        return null;
     }
-
-    private String generateSignature(String... params) {
-        try {
-            String data = String.join(";", params);
-
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(data.getBytes(StandardCharsets.UTF_8));
-
-            StringBuilder hex = new StringBuilder();
-            for (byte b : digest) {
-                hex.append(String.format("%02x", b));
-            }
-
-            return hex.toString();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
 }

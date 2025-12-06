@@ -5236,28 +5236,36 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (isOnline) {
 
-            WayForPayService wfp = new WayForPayService();   // ✔ Створюємо сервіс
-            String payUrl = wfp.createInvoice(orderCode, (int) total);   // ✔ Створюємо інвойс
+            // 🟦 Створюємо WayForPay сервіс
+            WayForPayService wfp = new WayForPayService();
 
-            if (payUrl == null) {    // ✔ Якщо WFP повернув помилку → показуємо користувачу
-                sendText(chatId.toString(), "❌ Помилка створення платіжної сесії. Спробуйте пізніше.");
+            // 🟦 Генеруємо посилання на оплату (invoiceUrl)
+            String payUrl = wfp.createInvoice(orderCode, (int) total);
+
+            // 🟥 Якщо WayForPay повернув помилку — показуємо повідомлення
+            if (payUrl == null || payUrl.isBlank()) {
+                sendText(chatId.toString(),
+                        "❌ Помилка створення платіжної сесії. Спробуйте пізніше.");
                 return;
             }
 
-            sendPaymentButton(chatId, payUrl);   // ✔ Даємо кнопку "Оплатити"
+            // 🟩 Відправляємо кнопку на оплату
+            sendPaymentButton(chatId, payUrl);
 
+            // 🟩 Сповіщення користувачу
             sendText(chatId.toString(),
                     "✅ Ваше замовлення сформовано!\n" +
-                            "🔢 Код замовлення: " + orderCode + "\n" +
-                            "💰 Сума: " + total + " грн\n\n" +
-                            "Для оплати натисніть кнопку нижче 👇");
+                            "🔢 Код замовлення: *" + orderCode + "*\n" +
+                            "💰 Сума: *" + total + " грн*\n\n" +
+                            "Натисніть кнопку нижче, щоб оплатити 👇");
+
         } else {
 
-            // ✔ Якщо не онлайн — звичайний текст
+            // 🟧 Оплата готівкою
             sendText(chatId.toString(),
                     "✅ Ваше замовлення оформлено!\n" +
-                            "🔢 Код: " + orderCode + "\n" +
-                            "Спосіб оплати: Готівка при отриманні.\n" +
+                            "🔢 Код: *" + orderCode + "*\n" +
+                            "Спосіб оплати: *Готівка при отриманні*.\n" +
                             "Дякуємо за замовлення! 🧱");
         }
     }
