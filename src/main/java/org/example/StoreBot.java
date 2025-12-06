@@ -1279,7 +1279,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private void handleExcelPriceUpdate(String chatId, String fileId) {
         try {
+            System.out.println("=== 📥 STARTING PRICE UPDATE FROM EXCEL ===");
+
             File file = downloadFile(fileId);
+            System.out.println("File downloaded: " + file.getAbsolutePath());
 
             FileInputStream fis = new FileInputStream(file);
             Workbook workbook = new XSSFWorkbook(fis);
@@ -1288,19 +1291,33 @@ public class StoreBot extends TelegramLongPollingBot {
             int updated = 0;
             int notFound = 0;
 
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {  // починаємо з 1 — бо перший рядок заголовки
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+
                 Row row = sheet.getRow(i);
-                if (row == null) continue;
+                if (row == null) {
+                    System.out.println("⚠️ Row " + i + " is empty — skipping");
+                    continue;
+                }
 
-                // === НАЗВА ТОВАРУ (колонка C = index 2) ===
+                // PRODUCT NAME (column C)
                 Cell nameCell = row.getCell(2);
-                if (nameCell == null) continue;
-                String productName = nameCell.getStringCellValue().trim();
-                if (productName.isEmpty()) continue;
+                if (nameCell == null) {
+                    System.out.println("⚠️ Missing product name in row " + i);
+                    continue;
+                }
 
-                // === ЦІНА (колонка H = index 7) ===
+                String productName = nameCell.getStringCellValue().trim();
+                if (productName.isEmpty()) {
+                    System.out.println("⚠️ Empty product name in row " + i);
+                    continue;
+                }
+
+                // PRICE (column H)
                 Cell priceCell = row.getCell(7);
-                if (priceCell == null) continue;
+                if (priceCell == null) {
+                    System.out.println("⚠️ Missing price in row " + i + " (" + productName + ")");
+                    continue;
+                }
 
                 double newPrice = 0;
 
@@ -1313,33 +1330,44 @@ public class StoreBot extends TelegramLongPollingBot {
                         try {
                             newPrice = Double.parseDouble(priceCell.getStringCellValue().trim());
                         } catch (Exception e) {
+                            System.out.println("❌ Invalid price format in row " + i + " (" + productName + ")");
                             continue;
                         }
                         break;
 
                     default:
+                        System.out.println("⚠️ Unsupported cell type for price in row " + i + " (" + productName + ")");
                         continue;
                 }
 
-                // спроба оновлення
+                System.out.println("➡️ Read: " + productName + " | new price = " + newPrice);
+
+                // Update in DB
                 if (updatePriceByName(productName, newPrice)) {
                     updated++;
+                    System.out.println("   ✅ UPDATED: " + productName + " → " + newPrice);
                 } else {
                     notFound++;
+                    System.out.println("   ❌ NOT FOUND IN DATABASE: " + productName);
                 }
             }
 
             workbook.close();
 
+            System.out.println("=== ✅ PRICE UPDATE COMPLETED ===");
+            System.out.println("Updated: " + updated);
+            System.out.println("Not found: " + notFound);
+
             sendText(chatId,
-                    "✅ *Оновлення завершено!*\n\n" +
-                            "🔄 Оновлено товарів: *" + updated + "*\n" +
-                            "❌ Не знайдено: *" + notFound + "*"
+                    "✅ *Price update completed!*\n\n" +
+                            "🔄 Updated products: *" + updated + "*\n" +
+                            "❌ Not found: *" + notFound + "*"
             );
 
         } catch (Exception e) {
+            System.out.println("=== ❌ ERROR PROCESSING EXCEL FILE ===");
             e.printStackTrace();
-            sendText(chatId, "❌ Помилка обробки Excel-файлу.");
+            sendText(chatId, "❌ Error processing Excel file.");
         }
     }
 
