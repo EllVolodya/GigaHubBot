@@ -77,20 +77,30 @@ public class WayForPayService {
                 os.write(body.toString().getBytes(StandardCharsets.UTF_8));
             }
 
-            InputStream response = conn.getInputStream();
-            String json = new BufferedReader(new InputStreamReader(response))
+            InputStream is;
+
+            if (conn.getResponseCode() == 200) {
+                is = conn.getInputStream();
+            } else {
+                is = conn.getErrorStream();
+            }
+
+            String json = new BufferedReader(new InputStreamReader(is))
                     .lines()
                     .reduce("", (a, b) -> a + b);
+
+            System.out.println("🔍 WayForPay RAW response: " + json);
 
             JsonObject jsonResponse = gson.fromJson(json, JsonObject.class);
 
             if (jsonResponse.has("invoiceUrl")) {
                 return jsonResponse.get("invoiceUrl").getAsString();
             } else {
-                System.out.println("❌ WayForPay Response Error:");
-                System.out.println(json);  // ← тут буде справжня помилка
+                System.out.println("❌ WayForPay Error JSON:");
+                System.out.println(json);
                 return null;
             }
+
 
         } catch (Exception e) {
             e.printStackTrace();
