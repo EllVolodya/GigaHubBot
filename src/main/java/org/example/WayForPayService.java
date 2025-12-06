@@ -15,22 +15,35 @@ public class WayForPayService {
 
     private static final String MERCHANT_ACCOUNT = "freelance_user_688b1c35af55c";
     private static final String MERCHANT_SECRET = "52d8e5b871968d3c50a0023ed9b632b9b802986a";
-    private static final String MERCHANT_DOMAIN = "gigahub.com.ua"; // може бути іналаштуєш сам
+    private static final String MERCHANT_DOMAIN = "gigahub.com.ua";
 
     private final Gson gson = new Gson();
 
-    private String sign(String... params) {
+    // ✔ правильний метод формування підпису
+    private String sign(String merchantAccount,
+                        String merchantDomainName,
+                        String orderReference,
+                        String orderDate,
+                        String amount,
+                        String currency,
+                        String productName,
+                        String productCount,
+                        String productPrice) {
         try {
-            StringBuilder sb = new StringBuilder();
-
-            for (String p : params) {
-                sb.append(p).append(";");
-            }
-
-            sb.append(MERCHANT_SECRET);
+            String signatureSource =
+                    merchantAccount + ";" +
+                            merchantDomainName + ";" +
+                            orderReference + ";" +
+                            orderDate + ";" +
+                            amount + ";" +
+                            currency + ";" +
+                            productName + ";" +
+                            productCount + ";" +
+                            productPrice + ";" +
+                            MERCHANT_SECRET;
 
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(sb.toString().getBytes(StandardCharsets.UTF_8));
+            byte[] digest = md.digest(signatureSource.getBytes(StandardCharsets.UTF_8));
 
             StringBuilder hex = new StringBuilder();
             for (byte b : digest) {
@@ -38,16 +51,21 @@ public class WayForPayService {
             }
 
             return hex.toString();
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
+    // ✔ правильне створення інвойса
     public String createInvoice(String orderCode, int amount) {
 
         long orderDate = System.currentTimeMillis() / 1000;
+
+        // ✔ Українські символи збережені
         String productName = "Замовлення " + orderCode;
 
+        // ✔ правильний виклик sign()
         String signature = sign(
                 MERCHANT_ACCOUNT,
                 MERCHANT_DOMAIN,
@@ -117,7 +135,6 @@ public class WayForPayService {
                 System.out.println(json);
                 return null;
             }
-
 
         } catch (Exception e) {
             e.printStackTrace();
