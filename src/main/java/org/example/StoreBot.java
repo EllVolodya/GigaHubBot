@@ -85,7 +85,7 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Константи WayForPay (заміниш своїми)
     private static final String MERCHANT_ACCOUNT = "freelance_user_688b1c35af55c";
     private static final String MERCHANT_SECRET = "52d8e5b871968d3c50a0023ed9b632b9b802986a";
-    private static final String MERCHANT_DOMAIN = "wayforpay.com";
+    private static final String MERCHANT_DOMAIN = "gigahub.com.ua";
 
     //Права
     private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню
