@@ -25,8 +25,8 @@ public class WayForPayService {
             String productName = "Order_" + orderCode;
             long orderDate = System.currentTimeMillis() / 1000;
 
-            // === Signature string ===
-            String signatureData =
+            // === 1. Signature base string (без секретного ключа) ===
+            String base =
                     MERCHANT_ACCOUNT + ";" +
                             MERCHANT_DOMAIN + ";" +
                             orderCode + ";" +
@@ -35,15 +35,18 @@ public class WayForPayService {
                             "UAH" + ";" +
                             productName + ";" +
                             1 + ";" +
-                            amount + ";" +
-                            MERCHANT_SECRET;
+                            amount;
 
-            String merchantSignature = md5(signatureData);
+            // === 2. Додаємо secretKey ===
+            String fullSignature = base + ";" + MERCHANT_SECRET;
+
+            // === 3. MD5 ===
+            String merchantSignature = md5(fullSignature);
 
             // === JSON Request ===
             JsonObject request = new JsonObject();
             request.addProperty("transactionType", "CREATE_INVOICE");
-            request.addProperty("apiVersion", 1);  // <<< ОБОВ’ЯЗКОВЕ ПОЛЕ !!!
+            request.addProperty("apiVersion", 1);
             request.addProperty("merchantAccount", MERCHANT_ACCOUNT);
             request.addProperty("merchantDomainName", MERCHANT_DOMAIN);
             request.addProperty("merchantSignature", merchantSignature);
@@ -58,10 +61,9 @@ public class WayForPayService {
             request.addProperty("serviceUrl",
                     "https://gigahubbot2-production.up.railway.app/pay/callback");
 
-            System.out.println("FINAL REQUEST JSON:");
+            System.out.println("\nFINAL REQUEST JSON:");
             System.out.println(gson.toJson(request));
 
-            // Send POST
             String response = sendPost(request.toString());
             System.out.println("WayForPay response: " + response);
 
@@ -90,12 +92,13 @@ public class WayForPayService {
             os.write(json.getBytes(StandardCharsets.UTF_8));
         }
 
-        BufferedReader reader =
-                new BufferedReader(new InputStreamReader(
+        BufferedReader reader = new BufferedReader(
+                new InputStreamReader(
                         conn.getResponseCode() == 200 ?
                                 conn.getInputStream() :
                                 conn.getErrorStream()
-                ));
+                )
+        );
 
         StringBuilder result = new StringBuilder();
         String line;
