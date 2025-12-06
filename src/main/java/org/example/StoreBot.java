@@ -1279,7 +1279,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private void handleExcelPriceUpdate(String chatId, String fileId) {
         try {
-            // Завантаження Excel-файлу
             File file = downloadFile(fileId);
 
             FileInputStream fis = new FileInputStream(file);
@@ -1289,18 +1288,40 @@ public class StoreBot extends TelegramLongPollingBot {
             int updated = 0;
             int notFound = 0;
 
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) { // Пропускаємо перший рядок (заголовки)
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) {  // починаємо з 1 — бо перший рядок заголовки
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
-                Cell nameCell = row.getCell(0);
-                Cell priceCell = row.getCell(1);
-
-                if (nameCell == null || priceCell == null) continue;
-
+                // === НАЗВА ТОВАРУ (колонка C = index 2) ===
+                Cell nameCell = row.getCell(2);
+                if (nameCell == null) continue;
                 String productName = nameCell.getStringCellValue().trim();
-                double newPrice = priceCell.getNumericCellValue();
+                if (productName.isEmpty()) continue;
 
+                // === ЦІНА (колонка H = index 7) ===
+                Cell priceCell = row.getCell(7);
+                if (priceCell == null) continue;
+
+                double newPrice = 0;
+
+                switch (priceCell.getCellType()) {
+                    case NUMERIC:
+                        newPrice = priceCell.getNumericCellValue();
+                        break;
+
+                    case STRING:
+                        try {
+                            newPrice = Double.parseDouble(priceCell.getStringCellValue().trim());
+                        } catch (Exception e) {
+                            continue;
+                        }
+                        break;
+
+                    default:
+                        continue;
+                }
+
+                // спроба оновлення
                 if (updatePriceByName(productName, newPrice)) {
                     updated++;
                 } else {
@@ -1311,14 +1332,14 @@ public class StoreBot extends TelegramLongPollingBot {
             workbook.close();
 
             sendText(chatId,
-                    "✅ *Оновлення завершено*\n" +
-                            "🔄 Оновлено: *" + updated + "* товарів\n" +
+                    "✅ *Оновлення завершено!*\n\n" +
+                            "🔄 Оновлено товарів: *" + updated + "*\n" +
                             "❌ Не знайдено: *" + notFound + "*"
             );
 
         } catch (Exception e) {
             e.printStackTrace();
-            sendText(chatId, "❌ Помилка при обробці Excel-файлу.");
+            sendText(chatId, "❌ Помилка обробки Excel-файлу.");
         }
     }
 
