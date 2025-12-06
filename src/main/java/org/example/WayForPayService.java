@@ -19,12 +19,18 @@ public class WayForPayService {
 
     private final Gson gson = new Gson();
 
-    private String sign(String data) {
+    private String sign(String... params) {
         try {
-            String toSign = data + MERCHANT_SECRET;
+            StringBuilder sb = new StringBuilder();
+
+            for (String p : params) {
+                sb.append(p).append(";");
+            }
+
+            sb.append(MERCHANT_SECRET);
 
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(toSign.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = md.digest(sb.toString().getBytes(StandardCharsets.UTF_8));
 
             StringBuilder hex = new StringBuilder();
             for (byte b : digest) {
