@@ -2852,19 +2852,17 @@ public class StoreBot extends TelegramLongPollingBot {
 
         System.out.println("[DEBUG] Update from userId=" + userId + ", state=" + currentState);
 
-        // ================================
-        // 1️⃣ DOCUMENTS (Excel files)
-        // ================================
-        if (msg.hasDocument()) {
+        Document doc = msg.getDocument();
+        if (doc != null) {
 
-            Document doc = msg.getDocument();
-            String fileName = doc.getFileName();
+            String fileName = doc.getFileName().toLowerCase();
 
-            System.out.println("[DEBUG] Document received: " + fileName);
+            System.out.println("[DEBUG] File received: " + fileName);
+            System.out.println("[DEBUG] Current state: " + currentState);
 
             if ("WAITING_FOR_XLSX_PRICES".equals(currentState)) {
 
-                if (fileName.toLowerCase().endsWith(".xlsx") || fileName.toLowerCase().endsWith(".xls")) {
+                if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
 
                     System.out.println("[DEBUG] Excel accepted → processing...");
                     clearState(userId);
@@ -2877,34 +2875,27 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            sendText(chatId, "⚠ Unexpected file. No command waiting right now.");
+            sendText(chatId, "⚠ Unexpected file. No command is waiting right now.");
             return;
         }
 
-        // ================================
-        // 2️⃣ TEXT MESSAGES
-        // ================================
         if (text != null) {
 
             System.out.println("[DEBUG] Text received: '" + text + "'");
 
-            // normalize text (fix emoji/probils etc)
             String lower = text.toLowerCase().trim();
 
-            // UNIVERSAL MATCH — catches ANY button variation
             if (lower.contains("оновити") && lower.contains("xlsx")) {
 
                 sendText(chatId, "📤 Send Excel (.xlsx) file to update product prices.");
+
                 setState(userId, "WAITING_FOR_XLSX_PRICES");
 
                 System.out.println("[DEBUG] State changed → WAITING_FOR_XLSX_PRICES");
                 return;
             }
 
-            // Other commands with switch (classic Java 17)
             switch (text) {
-
-                // You can add more cases here
                 default -> {
                     sendText(chatId, "❓ Unknown command.");
                     System.out.println("[DEBUG] Unknown command: " + text);
