@@ -2896,13 +2896,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 System.out.println("[DEBUG] State changed → WAITING_FOR_XLSX_PRICES");
                 return;
             }
-
-            switch (text) {
-                default -> {
-                    sendText(chatId, "❓ Unknown command.");
-                    System.out.println("[DEBUG] Unknown command: " + text);
-                }
-            }
         }
     }
 
