@@ -22,6 +22,11 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Document;
+
+import java.security.MessageDigest;
+import java.util.Base64;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import java.io.File;
@@ -30,9 +35,6 @@ import java.io.FileInputStream;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
-
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 
 import java.io.InputStream;
 import java.io.IOException;
@@ -81,9 +83,9 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Double> tempWidth = new HashMap<>();
 
     // 🔹 Константи WayForPay (заміниш своїми)
-    private static final String MERCHANT_ACCOUNT = "YOUR_MERCHANT_ACCOUNT";
-    private static final String MERCHANT_SECRET = "YOUR_MERCHANT_SECRET";
-    private static final String MERCHANT_DOMAIN = "YOUR_MERCHANT_DOMAIN";
+    private static final String MERCHANT_ACCOUNT = "freelance_user_688b1c35af55c";
+    private static final String MERCHANT_SECRET = "52d8e5b871968d3c50a0023ed9b632b9b802986a";
+    private static final String MERCHANT_DOMAIN = "wayforpay.com";
 
     //Права
     private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню
@@ -5292,15 +5294,37 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    private String generatePaymentUrl(int amount, String orderCode) {
-        long orderDate = System.currentTimeMillis() / 1000;
+    private String generateSignature(String... params) {
+        try {
+            String data = String.join(";", params);
 
-        // Назва товару для WayForPay
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] md5 = md.digest((data + MERCHANT_SECRET).getBytes(StandardCharsets.UTF_8));
+
+            return Base64.getEncoder().encodeToString(md5);
+        } catch (Exception e) {
+            throw new RuntimeException("Signature error", e);
+        }
+    }
+
+    private String generatePaymentUrl(int amount, String orderCode) {
+
+        long orderDate = System.currentTimeMillis() / 1000;
         String productName = "Замовлення " + orderCode;
 
-        // TODO: Додай генерацію підпису по документації WayForPay
-        // Зараз — спрощений варіант без підпису (для тестів)
-        String encodedName = URLEncoder.encode(productName, StandardCharsets.UTF_8);
+        String[] signatureParams = {
+                MERCHANT_ACCOUNT,
+                MERCHANT_DOMAIN,
+                orderCode,
+                String.valueOf(orderDate),
+                String.valueOf(amount),
+                "UAH",
+                productName,
+                "1",
+                String.valueOf(amount)
+        };
+
+        String signature = generateSignature(signatureParams);
 
         return "https://secure.wayforpay.com/pay?" +
                 "merchantAccount=" + MERCHANT_ACCOUNT +
@@ -5309,8 +5333,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 "&orderDate=" + orderDate +
                 "&amount=" + amount +
                 "&currency=UAH" +
-                "&productName=" + encodedName +
+                "&productName=" + URLEncoder.encode(productName, StandardCharsets.UTF_8) +
                 "&productPrice=" + amount +
-                "&productCount=1";
+                "&productCount=1" +
+                "&merchantSignature=" + signature;
     }
 }
