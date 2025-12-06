@@ -63,9 +63,9 @@ public class WayForPayService {
     public String createInvoice(String orderCode, int amount) {
 
         long orderDate = System.currentTimeMillis() / 1000;
-        String productName = "Замовлення " + orderCode;
+        String productName = "Order_" + orderCode;
 
-        String signature = createSignature(
+        String signature = generateInvoiceSignature(
                 MERCHANT_ACCOUNT,
                 MERCHANT_DOMAIN,
                 orderCode,
@@ -132,5 +132,42 @@ public class WayForPayService {
         }
 
         return null;
+    }
+
+    private String generateInvoiceSignature(String merchantAccount,
+                                            String merchantDomainName,
+                                            String orderReference,
+                                            long orderDate,
+                                            int amount,
+                                            String currency,
+                                            String productName,
+                                            int productCount,
+                                            int productPrice) {
+        try {
+            String data =
+                    merchantAccount + ";" +
+                            merchantDomainName + ";" +
+                            orderReference + ";" +
+                            orderDate + ";" +
+                            amount + ";" +
+                            currency + ";" +
+                            productName + ";" +
+                            productCount + ";" +
+                            productPrice + ";" +
+                            MERCHANT_SECRET;
+
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(data.getBytes(StandardCharsets.UTF_8));
+
+            StringBuilder hex = new StringBuilder();
+            for (byte b : digest) {
+                hex.append(String.format("%02x", b));
+            }
+
+            return hex.toString();
+
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }
