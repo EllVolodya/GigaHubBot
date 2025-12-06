@@ -5248,6 +5248,7 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔹 Якщо онлайн оплата — генеруємо лінк
         if (isOnline) {
             String payUrl = generatePaymentUrl((int) total, orderCode);
+            System.out.println("WAYFORPAY URL: " + payUrl); // ← ДОДАВ ЛОГ
             sendPaymentButton(chatId, payUrl);
 
             sendText(chatId.toString(),
@@ -5326,9 +5327,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 "&orderDate=" + orderDate +
                 "&amount=" + amount +
                 "&currency=UAH" +
-                "&productName=" + URLEncoder.encode(productName, StandardCharsets.UTF_8) +
-                "&productPrice=" + amount +
-                "&productCount=1" +
+                "&productName[]=" + URLEncoder.encode(productName, StandardCharsets.UTF_8) +
+                "&productPrice[]=" + amount +
+                "&productCount[]=" + 1 +
                 "&merchantSignature=" + signature;
     }
 }
