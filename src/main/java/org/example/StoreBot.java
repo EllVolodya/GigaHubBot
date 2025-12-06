@@ -23,8 +23,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Document;
 
-import java.security.MessageDigest;
-import java.util.Base64;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -5247,15 +5245,15 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (isOnline) {
 
-            WayForPayService wfp = new WayForPayService();
-            String payUrl = wfp.createInvoice(orderCode, (int) total);
+            WayForPayService wfp = new WayForPayService();   // ✔ Створюємо сервіс
+            String payUrl = wfp.createInvoice(orderCode, (int) total);   // ✔ Створюємо інвойс
 
-            if (payUrl == null) {
+            if (payUrl == null) {    // ✔ Якщо WFP повернув помилку → показуємо користувачу
                 sendText(chatId.toString(), "❌ Помилка створення платіжної сесії. Спробуйте пізніше.");
                 return;
             }
 
-            sendPaymentButton(chatId, payUrl);
+            sendPaymentButton(chatId, payUrl);   // ✔ Даємо кнопку "Оплатити"
 
             sendText(chatId.toString(),
                     "✅ Ваше замовлення сформовано!\n" +
@@ -5263,6 +5261,8 @@ public class StoreBot extends TelegramLongPollingBot {
                             "💰 Сума: " + total + " грн\n\n" +
                             "Для оплати натисніть кнопку нижче 👇");
         } else {
+
+            // ✔ Якщо не онлайн — звичайний текст
             sendText(chatId.toString(),
                     "✅ Ваше замовлення оформлено!\n" +
                             "🔢 Код: " + orderCode + "\n" +
@@ -5292,52 +5292,5 @@ public class StoreBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
-    }
-
-    private String generateSignature(String... params) {
-        try {
-            String data = String.join(";", params);
-
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] md5 = md.digest(data.getBytes(StandardCharsets.UTF_8));
-
-            String base64 = Base64.getEncoder().encodeToString(md5);
-
-            return base64;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private String generatePaymentUrl(int amount, String orderCode) {
-
-        long orderDate = System.currentTimeMillis() / 1000;
-        String productName = "Замовлення " + orderCode;
-
-        String[] signatureParams = {
-                MERCHANT_ACCOUNT,
-                MERCHANT_DOMAIN,
-                orderCode,
-                String.valueOf(orderDate),
-                String.valueOf(amount),
-                "UAH",
-                productName,
-                "1",
-                String.valueOf(amount)
-        };
-
-        String signature = generateSignature(signatureParams);
-
-        return "https://secure.wayforpay.com/pay?" +
-                "merchantAccount=" + MERCHANT_ACCOUNT +
-                "&merchantDomainName=" + MERCHANT_DOMAIN +
-                "&orderReference=" + orderCode +
-                "&orderDate=" + orderDate +
-                "&amount=" + amount +
-                "&currency=UAH" +
-                "&merchantSignature=" + signature +
-                "&productName[]=" + URLEncoder.encode(productName, StandardCharsets.UTF_8) +
-                "&productPrice[]=" + amount +
-                "&productCount[]=" + 1;
     }
 }
