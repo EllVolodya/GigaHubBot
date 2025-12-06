@@ -17,6 +17,18 @@ import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import java.io.File;
+import java.io.FileInputStream;
+
+import org.telegram.telegrambots.meta.api.objects.Document;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
@@ -28,10 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 
 import java.time.LocalDateTime;
 
@@ -824,9 +833,9 @@ public class StoreBot extends TelegramLongPollingBot {
                     developerState.put(chatId, "WAITING_FOR_YML_FULL");
                 }
 
-                case "💰 Оновити ціни (.yml)" -> {
-                    sendText(chatId, "📤 Надішліть .yml файл для оновлення лише цін (по назві товару).");
-                    developerState.put(chatId, "WAITING_FOR_YML_PRICES");
+                case "💰 Оновити ціни (.xlsx)" -> {
+                    sendText(chatId, "📤 Надішліть Excel (.xlsx) файл для *оновлення лише цін по назві товару*.");
+                    developerState.put(chatId, "WAITING_FOR_XLSX_PRICES");
                 }
 
                 case "✏️ Оновити ціну по назві товару" -> {
@@ -1098,6 +1107,23 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "№12, Іваненко Іван Іванович, +380501234567, 4444"
                 );
             }
+            if (developerState.getOrDefault(chatId, "").equals("WAITING_FOR_XLSX_PRICES")) {
+
+                if (update.getMessage().hasDocument()) {
+
+                    Document doc = update.getMessage().getDocument();
+
+                    if (!doc.getFileName().endsWith(".xlsx")) {
+                        sendText(chatId, "❌ Це не .xlsx файл. Надішліть коректний Excel.");
+                        return;
+                    }
+
+                    String fileId = doc.getFileId();
+                    handleExcelPriceUpdate(chatId, fileId);
+
+                    developerState.remove(chatId);
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1249,6 +1275,68 @@ public class StoreBot extends TelegramLongPollingBot {
         // якщо ще немає запису, додаємо false
         developerMenuState.putIfAbsent(userId, false);
         return developerMenuState.get(userId);
+    }
+
+    private void handleExcelPriceUpdate(String chatId, String fileId) {
+        try {
+            // Завантаження Excel-файлу
+            File file = downloadFile(fileId);
+
+            FileInputStream fis = new FileInputStream(file);
+            Workbook workbook = new XSSFWorkbook(fis);
+            Sheet sheet = workbook.getSheetAt(0);
+
+            int updated = 0;
+            int notFound = 0;
+
+            for (int i = 1; i <= sheet.getLastRowNum(); i++) { // Пропускаємо перший рядок (заголовки)
+                Row row = sheet.getRow(i);
+                if (row == null) continue;
+
+                Cell nameCell = row.getCell(0);
+                Cell priceCell = row.getCell(1);
+
+                if (nameCell == null || priceCell == null) continue;
+
+                String productName = nameCell.getStringCellValue().trim();
+                double newPrice = priceCell.getNumericCellValue();
+
+                if (updatePriceByName(productName, newPrice)) {
+                    updated++;
+                } else {
+                    notFound++;
+                }
+            }
+
+            workbook.close();
+
+            sendText(chatId,
+                    "✅ *Оновлення завершено*\n" +
+                            "🔄 Оновлено: *" + updated + "* товарів\n" +
+                            "❌ Не знайдено: *" + notFound + "*"
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendText(chatId, "❌ Помилка при обробці Excel-файлу.");
+        }
+    }
+
+    private boolean updatePriceByName(String name, double price) {
+        String sql = "UPDATE products SET price = ? WHERE name = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setDouble(1, price);
+            stmt.setString(2, name);
+
+            return stmt.executeUpdate() > 0;
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
     private void handleMaterialCalcMenu(Long userId, String chatId, String text) {
@@ -3576,7 +3664,7 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔄 Оновити каталог (.yml) і 💰 Оновити ціни (.yml)
         KeyboardRow row1 = new KeyboardRow();
         row1.add("🔄 Оновити каталог (.yml)");
-        row1.add("💰 Оновити ціни (.yml)");
+        row1.add("💰 Оновити ціни (.xlsx)");
         keyboard.add(row1);
 
         // ✏️ Оновити ціну по назві товару + назад
