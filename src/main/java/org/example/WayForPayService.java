@@ -15,6 +15,7 @@ public class WayForPayService {
 
     private static final String MERCHANT_ACCOUNT = "gigahub_com_ua";
     private static final String MERCHANT_PASSWORD = "754975783ad35c3395598f000c2672d5";
+    private static final String MERCHANT_SECRET = "169f041d72364f273bea894dbe93bd7ecae6b4b6";
     private static final String MERCHANT_DOMAIN = "gigahub.com.ua";
 
     private final Gson gson = new Gson();
@@ -53,7 +54,7 @@ public class WayForPayService {
                 productName,
                 "1",
                 String.valueOf(amount),
-                MERCHANT_PASSWORD  // 🔥 останнім
+                MERCHANT_SECRET  // 🔥 останнім
         );
 
         JsonObject body = new JsonObject();
