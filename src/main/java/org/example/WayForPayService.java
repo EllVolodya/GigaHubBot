@@ -19,42 +19,19 @@ public class WayForPayService {
 
     private final Gson gson = new Gson();
 
-    // ✔ SHA1 підпис для CREATE_INVOICE
-    private String generateInvoiceSignature(
-            String merchantAccount,
-            String merchantDomainName,
-            String orderReference,
-            long orderDate,
-            int amount,
-            String currency,
-            String productName,
-            int productCount,
-            int productPrice
-    ) {
+    private String generateSignatureMD5(String... params) {
         try {
-            String data = String.join(";",
-                    merchantAccount,
-                    merchantDomainName,
-                    orderReference,
-                    String.valueOf(orderDate),
-                    String.valueOf(amount),
-                    currency,
-                    productName,
-                    String.valueOf(productCount),
-                    String.valueOf(productPrice)
-            );
+            String str = String.join(";", params);
 
-            data = data + ";" + MERCHANT_PASSWORD;
-
-            MessageDigest md = MessageDigest.getInstance("SHA-1");
-            byte[] digest = md.digest(data.getBytes(StandardCharsets.UTF_8));
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(str.getBytes(StandardCharsets.UTF_8));
 
             StringBuilder hex = new StringBuilder();
             for (byte b : digest) {
                 hex.append(String.format("%02x", b));
             }
 
-            return hex.toString();
+            return hex.toString();  // 🔥 ПОВИННО БУТИ рівно 32 символи
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -64,20 +41,19 @@ public class WayForPayService {
     public String createInvoice(String orderCode, int amount) {
 
         long orderDate = System.currentTimeMillis() / 1000;
-
-        // ✔ англійська назва, стабільно для підпису
         String productName = "Order_" + orderCode;
 
-        String signature = generateInvoiceSignature(
+        String signature = generateSignatureMD5(
                 MERCHANT_ACCOUNT,
                 MERCHANT_DOMAIN,
                 orderCode,
-                orderDate,
-                amount,
+                String.valueOf(orderDate),
+                String.valueOf(amount),
                 "UAH",
                 productName,
-                1,
-                amount
+                "1",
+                String.valueOf(amount),
+                MERCHANT_PASSWORD  // 🔥 останнім
         );
 
         JsonObject body = new JsonObject();
