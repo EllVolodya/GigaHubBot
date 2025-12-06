@@ -8,7 +8,6 @@ import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.Base64;
 
 public class WayForPayService {
 
@@ -22,9 +21,17 @@ public class WayForPayService {
 
     private String sign(String data) {
         try {
+            String toSign = data + MERCHANT_SECRET;
+
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(data.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(digest);
+            byte[] digest = md.digest(toSign.getBytes(StandardCharsets.UTF_8));
+
+            StringBuilder hex = new StringBuilder();
+            for (byte b : digest) {
+                hex.append(String.format("%02x", b));
+            }
+
+            return hex.toString();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
