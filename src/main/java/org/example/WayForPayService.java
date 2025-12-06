@@ -67,13 +67,10 @@ public class WayForPayService {
 
     // ✔ правильне створення інвойса
     public String createInvoice(String orderCode, int amount) {
-
         long orderDate = System.currentTimeMillis() / 1000;
 
-        // ✔ Українські символи збережені
         String productName = "Замовлення " + orderCode;
 
-        // ✔ правильний виклик sign()
         String signature = sign(
                 MERCHANT_ACCOUNT,
                 MERCHANT_DOMAIN,
@@ -86,63 +83,54 @@ public class WayForPayService {
                 String.valueOf(amount)
         );
 
-        JsonObject body = new JsonObject();
-        body.addProperty("transactionType", "CREATE_INVOICE");
-        body.addProperty("apiVersion", 1);
-        body.addProperty("merchantAccount", MERCHANT_ACCOUNT);
-        body.addProperty("merchantDomainName", MERCHANT_DOMAIN);
-        body.addProperty("merchantSignature", signature);
-        body.addProperty("orderReference", orderCode);
-        body.addProperty("orderDate", orderDate);
-        body.addProperty("amount", amount);
-        body.addProperty("currency", "UAH");
+        // 🔥 Формуємо JSON ВРУЧНУ — БЕЗ GSON, БЕЗ ПРОБЛЕМ
+        String jsonBody = "{"
+                + "\"transactionType\":\"CREATE_INVOICE\","
+                + "\"apiVersion\":1,"
+                + "\"merchantAccount\":\"" + MERCHANT_ACCOUNT + "\","
+                + "\"merchantDomainName\":\"" + MERCHANT_DOMAIN + "\","
+                + "\"merchantSignature\":\"" + signature + "\","
+                + "\"orderReference\":\"" + orderCode + "\","
+                + "\"orderDate\":" + orderDate + ","
+                + "\"amount\":" + amount + ","
+                + "\"currency\":\"UAH\","
+                + "\"productName\":[\"" + productName + "\"],"
+                + "\"productPrice\":[" + amount + "],"
+                + "\"productCount\":[1],"
+                + "\"serviceUrl\":\"https://gigahubbot2-production.up.railway.app/pay/callback\","
+                + "\"returnUrl\":\"https://gigahub.com.ua\""
+                + "}";
 
-        body.add("productName", gson.toJsonTree(new String[]{productName}));
-        body.add("productPrice", gson.toJsonTree(new int[]{amount}));
-        body.add("productCount", gson.toJsonTree(new int[]{1}));
-
-        body.addProperty("serviceUrl", "https://gigahubbot2-production.up.railway.app/pay/callback");
-        body.addProperty("returnUrl", "https://gigahub.com.ua");
+        System.out.println("👉 FINAL BODY:");
+        System.out.println(jsonBody);
 
         try {
             URL url = new URL(API_URL);
             HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json;charset=utf-8");
+            conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
             conn.setDoOutput(true);
-
-            String jsonBody = gson.toJson(body);
-
-            System.out.println("👉 WayForPay request body (GSON):");
-            System.out.println(jsonBody);
 
             try (OutputStream os = conn.getOutputStream()) {
                 os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
             }
 
-            InputStream is;
+            InputStream response = conn.getResponseCode() == 200 ?
+                    conn.getInputStream() : conn.getErrorStream();
 
-            if (conn.getResponseCode() == 200) {
-                is = conn.getInputStream();
-            } else {
-                is = conn.getErrorStream();
-            }
-
-            String json = new BufferedReader(new InputStreamReader(is))
+            String result = new BufferedReader(new InputStreamReader(response))
                     .lines()
                     .reduce("", (a, b) -> a + b);
 
-            System.out.println("🔍 WayForPay RAW response: " + json);
+            System.out.println("🔍 WayForPay response: " + result);
 
-            JsonObject jsonResponse = gson.fromJson(json, JsonObject.class);
-
-            if (jsonResponse.has("invoiceUrl")) {
-                return jsonResponse.get("invoiceUrl").getAsString();
-            } else {
-                System.out.println("❌ WayForPay Error JSON:");
-                System.out.println(json);
-                return null;
+            if (result.contains("invoiceUrl")) {
+                int start = result.indexOf("invoiceUrl") + 13;
+                int end = result.indexOf("\"", start);
+                return result.substring(start, end);
             }
+
+            return null;
 
         } catch (Exception e) {
             e.printStackTrace();
