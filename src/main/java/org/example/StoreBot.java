@@ -20,10 +20,12 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import org.telegram.telegrambots.meta.api.objects.Message;
+import org.telegram.telegrambots.meta.api.objects.Document;
+import java.util.List;
+
 import java.io.File;
 import java.io.FileInputStream;
-
-import org.telegram.telegrambots.meta.api.objects.Document;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -36,7 +38,6 @@ import java.io.InputStream;
 import java.io.IOException;
 
 import java.util.*;
-import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
@@ -63,6 +64,9 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Double> paintArea = new HashMap<>();
     private final Map<Long, Double> paintTemp = new HashMap<>();
     private final Map<Long, Double> paintLayers = new HashMap<>();
+
+    private final StateManager stateManager = new StateManager();
+    private final Map<Long, String> state = new HashMap<>();
 
     // Для замовлення.
     private final Map<Long, String> tempDeliveryType = new HashMap<>();
@@ -189,6 +193,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 : "";
 
         String state = userStates.get(userId);
+        handleUpdate(update);
 
         System.out.println("[DEBUG] Received message from userId=" + userId + ": '" + text + "' (state=" + state + ")");
 
@@ -431,7 +436,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // 🔹 DEFAULT DELEGATION TO PHOTO HANDLER
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
-        photoHandler.handleUpdate(userId, chatId, update); // ← вставлено сюди
+        photoHandler.handleUpdate(userId, chatId, update);
 
         // ===== Optional: handle feedback / other states =====
         if (update.getMessage().hasText()) {
@@ -834,13 +839,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "💰 Оновити ціни (.xlsx)" -> {
-                    sendText(chatId, "📤 Надішліть Excel (.xlsx) файл для *оновлення лише цін по назві товару*.");
-                    developerState.put(chatId, "WAITING_FOR_XLSX_PRICES");
-                }
+                    sendText(chatId, "📤 Send the Excel (.xlsx) file to update product prices.");
 
-                case "✏️ Оновити ціну по назві товару" -> {
-                    sendText(chatId, "✏️ Введіть назву товару, ціну якого хочете змінити:");
-                    developerState.put(chatId, "WAITING_FOR_PRODUCT_NAME");
+                    stateManager.setState(userId, "WAITING_FOR_XLSX_PRICES");
                 }
 
                 // Адмін меню
@@ -2827,6 +2828,74 @@ public class StoreBot extends TelegramLongPollingBot {
                 if (logs.isEmpty()) sendText(chatId, "📝 Список онови поки що пустий.");
                 else sendText(chatId, "📝 Changelog:\n" + String.join("\n", logs));
                 userStates.remove(userId);
+            }
+        }
+    }
+
+    private String getState(Long userId) {
+        return state.get(userId);
+    }
+
+    private void clearState(Long userId) {
+        state.remove(userId);
+        System.out.println("[STATE] Cleared state for userId=" + userId);
+    }
+
+    private void handleUpdate(Update update) {
+
+        Message msg = update.getMessage();
+        Long userId = msg.getFrom().getId();
+        String chatId = msg.getChatId().toString();
+        String text = msg.getText();
+
+        String currentState = getState(userId);
+
+        System.out.println("[DEBUG] update from userId=" + userId + ", state=" + currentState);
+
+        // ==========================
+        // 1️⃣ DOCUMENTS (Excel)
+        // ==========================
+        if (msg.hasDocument()) {
+
+            Document doc = msg.getDocument();
+            String fileName = doc.getFileName();
+
+            System.out.println("[DEBUG] Document received: " + fileName);
+
+            if ("WAITING_FOR_XLSX_PRICES".equals(currentState)) {
+
+                if (fileName.endsWith(".xlsx") || fileName.endsWith(".xls")) {
+
+                    System.out.println("[DEBUG] Excel accepted → processing...");
+                    clearState(userId);
+
+                    handleExcelPriceUpdate(chatId, doc.getFileId());
+                    return;
+                }
+
+                sendText(chatId, "⚠ Please upload a valid Excel (.xlsx) file.");
+                return;
+            }
+
+            sendText(chatId, "⚠ Unexpected document. No command waiting.");
+            return;
+        }
+
+        // ==========================
+        // 3️⃣ TEXT COMMANDS
+        // ==========================
+        if (text != null) {
+
+            System.out.println("[DEBUG] Text: " + text);
+
+            switch (text) {
+
+                case "💰 Оновити ціни (.xlsx)" -> {
+                    sendText(chatId, "📤 Send Excel (.xlsx) file to update product prices.");
+                    setState(userId, "WAITING_FOR_XLSX_PRICES");
+                }
+
+                default -> sendText(chatId, "❓ Unknown command.");
             }
         }
     }
