@@ -51,6 +51,7 @@ public class WayForPayService {
 
         JsonObject body = new JsonObject();
         body.addProperty("transactionType", "CREATE_INVOICE");
+        body.addProperty("apiVersion", 1);
         body.addProperty("merchantAccount", MERCHANT_ACCOUNT);
         body.addProperty("merchantDomainName", MERCHANT_DOMAIN);
         body.addProperty("merchantSignature", signature);
