@@ -16,7 +16,7 @@ public class WayForPayService {
 
     private static final String MERCHANT_ACCOUNT = "freelance_user_688b1c35af55c";
     private static final String MERCHANT_SECRET = "52d8e5b871968d3c50a0023ed9b632b9b802986a";
-    private static final String MERCHANT_DOMAIN = "gigahub.com.ua"; // може бути іналаштуєш сам
+    private static final String MERCHANT_DOMAIN = "wayforpay.com"; // може бути іналаштуєш сам
 
     private final Gson gson = new Gson();
 
@@ -87,7 +87,8 @@ public class WayForPayService {
             if (jsonResponse.has("invoiceUrl")) {
                 return jsonResponse.get("invoiceUrl").getAsString();
             } else {
-                System.out.println("❌ WFP ERROR: " + json);
+                System.out.println("❌ WayForPay Response Error:");
+                System.out.println(json);  // ← тут буде справжня помилка
                 return null;
             }
 

@@ -5244,7 +5244,7 @@ public class StoreBot extends TelegramLongPollingBot {
         tempTotal.remove(userId);
         userCart.remove(userId);
         userStates.remove(userId);
-        
+
         if (isOnline) {
 
             WayForPayService wfp = new WayForPayService();
