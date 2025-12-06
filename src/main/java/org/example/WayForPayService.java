@@ -14,7 +14,6 @@ public class WayForPayService {
     private static final String API_URL = "https://api.wayforpay.com/api";
 
     private static final String MERCHANT_ACCOUNT = "gigahub_com_ua";
-    private static final String MERCHANT_PASSWORD = "754975783ad35c3395598f000c2672d5";
     private static final String MERCHANT_SECRET = "169f041d72364f273bea894dbe93bd7ecae6b4b6";
     private static final String MERCHANT_DOMAIN = "gigahub.com.ua";
 
@@ -22,28 +21,35 @@ public class WayForPayService {
 
     private String generateSignatureMD5(String... params) {
         try {
-            String str = String.join(";", params);
+            String data = String.join(";", params);
 
             MessageDigest md = MessageDigest.getInstance("MD5");
-            byte[] digest = md.digest(str.getBytes(StandardCharsets.UTF_8));
+            byte[] digest = md.digest(data.getBytes(StandardCharsets.UTF_8));
 
             StringBuilder hex = new StringBuilder();
             for (byte b : digest) {
                 hex.append(String.format("%02x", b));
             }
 
-            return hex.toString();  // 🔥 ПОВИННО БУТИ рівно 32 символи
+            String result = hex.toString();
+
+            System.out.println(">>> SIGNATURE STRING:");
+            System.out.println(data);
+            System.out.println(">>> MD5 SIGNATURE = " + result + " (len=" + result.length() + ")");
+
+            return result;
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    // ✔ Створення інвойсу
     public String createInvoice(String orderCode, int amount) {
 
         long orderDate = System.currentTimeMillis() / 1000;
         String productName = "Order_" + orderCode;
 
+        // 🔥 ОБОВ’ЯЗКОВО додаємо SECRET в кінець
         String signature = generateSignatureMD5(
                 MERCHANT_ACCOUNT,
                 MERCHANT_DOMAIN,
@@ -54,7 +60,7 @@ public class WayForPayService {
                 productName,
                 "1",
                 String.valueOf(amount),
-                MERCHANT_SECRET  // 🔥 останнім
+                MERCHANT_SECRET    // ← дуже важливо!
         );
 
         JsonObject body = new JsonObject();
@@ -83,7 +89,9 @@ public class WayForPayService {
             conn.setDoOutput(true);
 
             String jsonBody = gson.toJson(body);
-            System.out.println("FINAL JSON:\n" + jsonBody);
+
+            System.out.println("FINAL JSON:");
+            System.out.println(jsonBody);
 
             try (OutputStream os = conn.getOutputStream()) {
                 os.write(jsonBody.getBytes(StandardCharsets.UTF_8));
