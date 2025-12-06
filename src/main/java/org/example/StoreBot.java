@@ -2852,9 +2852,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         System.out.println("[DEBUG] update from userId=" + userId + ", state=" + currentState);
 
-        // ==========================
-        // 1️⃣ DOCUMENTS (Excel)
-        // ==========================
         if (msg.hasDocument()) {
 
             Document doc = msg.getDocument();
@@ -2881,9 +2878,6 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // ==========================
-        // 3️⃣ TEXT COMMANDS
-        // ==========================
         if (text != null) {
 
             System.out.println("[DEBUG] Text: " + text);
