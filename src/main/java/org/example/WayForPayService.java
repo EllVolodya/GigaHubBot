@@ -88,6 +88,8 @@ public class WayForPayService {
             conn.setDoOutput(true);
 
             try (OutputStream os = conn.getOutputStream()) {
+                System.out.println("👉 WayForPay request body:");
+                System.out.println(body.toString());
                 os.write(body.toString().getBytes(StandardCharsets.UTF_8));
             }
 
