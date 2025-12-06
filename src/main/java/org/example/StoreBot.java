@@ -5244,11 +5244,17 @@ public class StoreBot extends TelegramLongPollingBot {
         tempTotal.remove(userId);
         userCart.remove(userId);
         userStates.remove(userId);
-
-        // 🔹 Якщо онлайн оплата — генеруємо лінк
+        
         if (isOnline) {
-            String payUrl = generatePaymentUrl((int) total, orderCode);
-            System.out.println("WAYFORPAY URL: " + payUrl); // ← ДОДАВ ЛОГ
+
+            WayForPayService wfp = new WayForPayService();
+            String payUrl = wfp.createInvoice(orderCode, (int) total);
+
+            if (payUrl == null) {
+                sendText(chatId.toString(), "❌ Помилка створення платіжної сесії. Спробуйте пізніше.");
+                return;
+            }
+
             sendPaymentButton(chatId, payUrl);
 
             sendText(chatId.toString(),
