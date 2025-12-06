@@ -87,8 +87,9 @@ public class WayForPayService {
             conn.setRequestProperty("Content-Type", "application/json;charset=utf-8");
             conn.setDoOutput(true);
 
-            String jsonBody = body.toString();
-            System.out.println("👉 WayForPay request body:");
+            String jsonBody = gson.toJson(body);
+
+            System.out.println("👉 WayForPay request body (GSON):");
             System.out.println(jsonBody);
 
             try (OutputStream os = conn.getOutputStream()) {
