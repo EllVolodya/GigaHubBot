@@ -4,12 +4,6 @@ import java.util.*;
 
 public class SmartSearch {
 
-    /**
-     * 📌 Головна ідея:
-     * У нас є словник синонімів у групах.
-     * Якщо користувач ввів "бойлер" → ми автоматично шукаємо водонагрівачі, тени, комплектуючі.
-     */
-
     private static final Map<String, List<String>> SYNONYMS = Map.ofEntries(
 
             // 🔥 Група бойлерів
@@ -29,14 +23,16 @@ public class SmartSearch {
             Map.entry("гвозді", List.of("цвяхи")),
             Map.entry("цвяхи", List.of("гвозді")),
 
+            Map.entry("бокоріз", List.of("бокорізи", "кусачки", "кліщі")),
+            Map.entry("бокорізи", List.of("бокоріз", "кусачки", "кліщі")),
+            Map.entry("кусачки", List.of("бокорізи", "бокоріз")),
+            Map.entry("кліщі", List.of("бокорізи", "бокоріз")),
+
             // Шурупи
             Map.entry("шурупи", List.of("саморізи")),
             Map.entry("саморізи", List.of("шурупи"))
     );
 
-    // -----------------------------------------------------------
-    // ⭐ Головний метод пошуку
-    // -----------------------------------------------------------
     public static List<Map<String, Object>> search(String query) {
 
         query = query.toLowerCase().trim();
@@ -73,15 +69,11 @@ public class SmartSearch {
             }
         }
 
-        // Сортуємо найкраще вгору
         results.sort((a, b) -> Integer.compare((int) b.get("weight"), (int) a.get("weight")));
 
         return results;
     }
 
-    // -----------------------------------------------------------
-    // 📌 Збираємо всі варіанти пошуку (слово + синоніми)
-    // -----------------------------------------------------------
     private static Set<String> getVariants(String word) {
 
         Set<String> set = new HashSet<>();
@@ -107,9 +99,6 @@ public class SmartSearch {
         return set;
     }
 
-    // -----------------------------------------------------------
-    // 📌 Пошук по кореню
-    // -----------------------------------------------------------
     private static boolean rootMatch(String q, String name) {
         if (q.length() < 3) return false;
 
@@ -117,9 +106,6 @@ public class SmartSearch {
         return name.contains(root);
     }
 
-    // -----------------------------------------------------------
-    // 📌 Левенштейн (fuzzy)
-    // -----------------------------------------------------------
     public static int levenshteinDistance(String a, String b) {
 
         a = a.toLowerCase();
