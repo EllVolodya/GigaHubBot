@@ -20,7 +20,7 @@ import java.util.concurrent.Executors;
 public class PaymentCallbackServer {
 
     private static final long ADMIN_ID = 620298889L;
-    private static final String SECRET_KEY = "8723037eda8285f659a8a9e3d92404fc23c4f2e1";
+    private static final String SECRET_KEY = "486c4b45091656939c5a88442ce7aad9";
     private final StoreBot bot;
 
     public PaymentCallbackServer(StoreBot bot) {
