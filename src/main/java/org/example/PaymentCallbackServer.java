@@ -73,7 +73,7 @@ public class PaymentCallbackServer {
         try (Connection conn = DatabaseManager.getConnection()) {
 
             PreparedStatement sel = conn.prepareStatement(
-                    "SELECT userId, total FROM orders WHERE orderCode=?"
+                    "SELECT userId, total, paymentstatus FROM orders WHERE orderCode=?"
             );
             sel.setString(1, orderCode);
             ResultSet rs = sel.executeQuery();
@@ -85,6 +85,13 @@ public class PaymentCallbackServer {
 
             long userId = rs.getLong("userId");
             double total = rs.getDouble("total");
+            String oldStatus = rs.getString("paymentstatus");
+
+            // 🛑 Якщо вже оплачено — нічого не робимо
+            if ("Оплачено".equalsIgnoreCase(oldStatus)) {
+                System.out.println("ℹ️ Callback ignored — order already PAID: " + orderCode);
+                return;
+            }
 
             boolean amountCorrect = Math.abs(total - receivedAmount) < 0.01;
 
@@ -92,6 +99,7 @@ public class PaymentCallbackServer {
                     ? (amountCorrect ? "Оплачено" : "Підозріла сума")
                     : "Відхилено";
 
+            // 📝 Оновлюємо статус
             PreparedStatement upd = conn.prepareStatement(
                     "UPDATE orders SET paymentstatus=? WHERE orderCode=?"
             );
@@ -99,7 +107,7 @@ public class PaymentCallbackServer {
             upd.setString(2, orderCode);
             upd.executeUpdate();
 
-            // 🔔 User notify
+            // 🔔 Повідомлення користувачу
             String userMsg = switch (finalStatus) {
                 case "Оплачено" -> "✅ Ваше замовлення *" + orderCode + "* успішно оплачено!";
                 case "Підозріла сума" -> "⚠ Оплата отримана, але сума не співпадає!";
@@ -107,7 +115,7 @@ public class PaymentCallbackServer {
             };
             bot.sendText(String.valueOf(userId), userMsg);
 
-            // 🔔 Admin notify
+            // 🔔 Повідомлення адміну
             String adminMsg =
                     "💳 *Оплата замовлення*\n" +
                             "🔢 Код: *" + orderCode + "*\n" +
