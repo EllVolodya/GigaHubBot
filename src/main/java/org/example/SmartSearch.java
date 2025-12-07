@@ -19,11 +19,6 @@ public class SmartSearch {
             Map.entry("гвозді", List.of("цвяхи")),
             Map.entry("цвяхи", List.of("гвозді")),
 
-            Map.entry("бокоріз", List.of("бокорізи", "кусачки", "кліщі")),
-            Map.entry("бокорізи", List.of("бокоріз", "кусачки", "кліщі")),
-            Map.entry("кусачки", List.of("бокорізи", "бокоріз")),
-            Map.entry("кліщі", List.of("бокорізи", "бокоріз")),
-
             Map.entry("шурупи", List.of("саморізи")),
             Map.entry("саморізи", List.of("шурупи"))
     );
