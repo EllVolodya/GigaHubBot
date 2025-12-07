@@ -19,7 +19,7 @@ public class WayForPayService {
 
     // Якщо хочеш — перенеси в Environment Variables на Railway
     private static final String MERCHANT_ACCOUNT = "gigahub_com_ua1";
-    private static final String MERCHANT_SECRET = "8723037eda8285f659a8a9e3d92404fc23c4f2e1";
+    private static final String MERCHANT_SECRET = "486c4b45091656939c5a88442ce7aad9";
     private static final String MERCHANT_DOMAIN = "gigahub.com.ua";
 
     private static final Gson gson = new Gson();
