@@ -62,7 +62,7 @@ public class PaymentCallbackServer {
             return;
         }
 
-        // КРИТИЧНО: перевірка підпису
+        // КРИТИЧНО: перевірка підпису (WayForPay надсилає merchantSignature, а не signature)
         if (!isValidSignature(json)) {
             System.out.println("INVALID SIGNATURE FROM WAYFORPAY!");
             sendResponse(exchange, "invalid signature", 400);
@@ -81,11 +81,20 @@ public class PaymentCallbackServer {
     }
 
     private boolean isValidSignature(JsonObject json) {
-        if (!json.has("signature")) return false;
+        // WayForPay у callback надсилає merchantSignature (а не signature)
+        String receivedSignature = null;
+        if (json.has("signature")) {
+            receivedSignature = json.get("signature").getAsString();
+            json.remove("signature");
+        } else if (json.has("merchantSignature")) {
+            receivedSignature = json.get("merchantSignature").getAsString();
+            json.remove("merchantSignature");
+        }
 
-        String receivedSignature = json.get("signature").getAsString();
-        JsonObject copy = json.deepCopy();
-        copy.remove("signature");
+        if (receivedSignature == null) {
+            System.out.println("Підпис відсутній у callback!");
+            return false;
+        }
 
         String[] fields = {
                 "merchantAccount", "orderReference", "amount", "currency",
@@ -94,7 +103,7 @@ public class PaymentCallbackServer {
 
         StringBuilder data = new StringBuilder();
         for (String field : fields) {
-            JsonElement el = copy.get(field);
+            JsonElement el = json.get(field);
             if (el != null && !el.isJsonNull()) {
                 data.append(el.getAsString());
             }
@@ -102,6 +111,12 @@ public class PaymentCallbackServer {
         }
 
         String calculated = hmacMD5(data.toString(), SECRET_KEY);
+
+        // Дебаг — щоб бачити в логах
+        System.out.println("Calculated HMAC-MD5: " + calculated);
+        System.out.println("Received signature: " + receivedSignature);
+        System.out.println("Signature valid: " + calculated.equals(receivedSignature));
+
         return calculated.equals(receivedSignature);
     }
 
