@@ -1,6 +1,7 @@
 package org.example;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 
 import javax.crypto.Mac;
@@ -9,13 +10,14 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Arrays;
 
 public class WayForPayService {
 
     private static final String API_URL = "https://api.wayforpay.com/api";
 
-    // ВАЖНО: Якщо розгортаєш на Railway — краще винести в Environment Variables!
+    // Якщо хочеш — перенеси в Environment Variables на Railway
     private static final String MERCHANT_ACCOUNT = "gigahub_com_ua1";
     private static final String MERCHANT_SECRET = "8723037eda8285f659a8a9e3d92404fc23c4f2e1";
     private static final String MERCHANT_DOMAIN = "gigahub.com.ua";
@@ -24,26 +26,32 @@ public class WayForPayService {
 
     public String createInvoice(String orderCode, int amount) {
         try {
-            String productName = "Order_" + orderCode;
             long orderDate = System.currentTimeMillis() / 1000;
+            String productName = "Order_" + orderCode;
 
-            // Правильні масиви (навіть якщо 1 елемент)
-            String[] productNameArr = {productName};
-            int[] productCountArr = {1};
-            String[] productPriceArr = {String.valueOf(amount)};
+            // Правильні масиви
+            String[] productNames = {productName};
+            int[] productCounts = {1};
+            String[] productPrices = {String.valueOf(amount)};
 
-            // Генеруємо правильний підпис
-            String merchantSignature = generateSignature(
+            // Використовуємо HMAC-SHA256 (64 символи) — після активації в кабінеті
+            // Якщо ще не активували — закоментуй рядок нижче і розкоментуй MD5-версію внизу
+            String merchantSignature = generateHmacSha256Signature(
                     MERCHANT_ACCOUNT,
                     MERCHANT_DOMAIN,
                     orderCode,
                     orderDate,
                     String.valueOf(amount),
                     "UAH",
-                    productNameArr,
-                    productCountArr,
-                    productPriceArr
+                    productNames,
+                    productCounts,
+                    productPrices
             );
+
+            // ← Тимчасовий варіант на MD5 (32 символи), якщо підтримка ще не увімкнула SHA256
+            // String merchantSignature = generateMd5Signature(
+            //         MERCHANT_ACCOUNT, MERCHANT_DOMAIN, orderCode, orderDate,
+            //         String.valueOf(amount), "UAH", productNames, productCounts, productPrices);
 
             JsonObject request = new JsonObject();
             request.addProperty("transactionType", "CREATE_INVOICE");
@@ -55,23 +63,33 @@ public class WayForPayService {
             request.addProperty("orderDate", orderDate);
             request.addProperty("amount", amount);
             request.addProperty("currency", "UAH");
-            request.add("productName", gson.toJsonTree(productNameArr));
-            request.add("productCount", gson.toJsonTree(productCountArr));
-            request.add("productPrice", gson.toJsonTree(productPriceArr));
+
+            // Масиви як JSON-масиви
+            JsonArray nameArr = new JsonArray();
+            for (String s : productNames) nameArr.add(s);
+            JsonArray countArr = new JsonArray();
+            for (int i : productCounts) countArr.add(i);
+            JsonArray priceArr = new JsonArray();
+            for (String s : productPrices) priceArr.add(s);
+
+            request.add("productName", nameArr);
+            request.add("productCount", countArr);
+            request.add("productPrice", priceArr);
+
             request.addProperty("returnUrl", "https://gigahub.com.ua");
             request.addProperty("serviceUrl", "https://gigahubbot2-production.up.railway.app/pay/callback");
 
-            System.out.println("\nFINAL REQUEST JSON:");
-            System.out.println(gson.toJson(request));
+            System.out.println("FINAL REQUEST JSON: " + gson.toJson(request));
 
             String response = sendPost(request.toString());
             System.out.println("WayForPay response: " + response);
 
             JsonObject resp = gson.fromJson(response, JsonObject.class);
+
             if (resp.has("invoiceUrl")) {
                 return resp.get("invoiceUrl").getAsString();
             } else {
-                System.out.println("WayForPay error: " + response);
+                System.err.println("WayForPay error: " + response);
                 return null;
             }
 
@@ -81,56 +99,89 @@ public class WayForPayService {
         }
     }
 
-    // Правильна генерація підпису (HMAC-SHA256)
-    private String generateSignature(
-            String merchantAccount,
-            String merchantDomainName,
-            String orderReference,
-            long orderDate,
-            String amount,
-            String currency,
-            String[] productName,
-            int[] productCount,
-            String[] productPrice
-    ) {
-        String[] fields = {
+    // === НОВИЙ ПІДПИС: HMAC-SHA256 (64 символи) ===
+    private String generateHmacSha256Signature(
+            String merchantAccount, String merchantDomainName,
+            String orderReference, long orderDate, String amount, String currency,
+            String[] productName, int[] productCount, String[] productPrice) {
+
+        String joinedNames = String.join(";;", productName);
+        String joinedCounts = Arrays.stream(productCount)
+                .mapToObj(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(";;"));
+        String joinedPrices = String.join(";;", productPrice);
+
+        String rawString = String.join(";",
                 merchantAccount,
                 merchantDomainName,
                 orderReference,
                 String.valueOf(orderDate),
                 amount,
                 currency,
-                String.join(";;", productName),
-                String.join(";;", Arrays.stream(productCount).mapToObj(String::valueOf).toArray(String[]::new)),
-                String.join(";;", productPrice)
-        };
+                joinedNames,
+                joinedCounts,
+                joinedPrices
+        );
 
-        String concatenated = String.join(";", fields);
+        // Екранування
+        String escaped = rawString.replace("\\", "\\\\").replace(";", "\\;");
 
-        // Екранування символів ; і \
-        concatenated = concatenated.replace("\\", "\\\\").replace(";", "\\;");
+        return hmacSha256(escaped, MERCHANT_SECRET);
+    }
 
-        return hmacSha256(concatenated, MERCHANT_SECRET);
+    // === СТАРИЙ ПІДПИС: MD5 (32 символи) — працює одразу ===
+    private String generateMd5Signature(
+            String merchantAccount, String merchantDomainName,
+            String orderReference, long orderDate, String amount, String currency,
+            String[] productName, int[] productCount, String[] productPrice) {
+
+        String joinedNames = String.join(";;", productName);
+        String joinedCounts = Arrays.stream(productCount)
+                .mapToObj(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(";;"));
+        String joinedPrices = String.join(";;", productPrice);
+
+        String rawString = String.join(";",
+                merchantAccount, merchantDomainName, orderReference,
+                String.valueOf(orderDate), amount, currency,
+                joinedNames, joinedCounts, joinedPrices
+        );
+
+        String escaped = rawString.replace("\\", "\\\\").replace(";", "\\;");
+        return md5(escaped + ";" + MERCHANT_SECRET);
     }
 
     private String hmacSha256(String data, String key) {
         try {
-            Mac sha256_HMAC = Mac.getInstance("HmacSHA256");
-            SecretKeySpec secret_key = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-            sha256_HMAC.init(secret_key);
-            byte[] hash = sha256_HMAC.doFinal(data.getBytes(StandardCharsets.UTF_8));
-
+            Mac mac = Mac.getInstance("HmacSHA256");
+            SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+            mac.init(secretKey);
+            byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
             StringBuilder sb = new StringBuilder();
             for (byte b : hash) {
                 sb.append(String.format("%02x", b));
             }
             return sb.toString();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to generate HMAC-SHA256", e);
+            throw new RuntimeException(e);
         }
     }
 
-    private String sendPost(String json) throws Exception {
+    private String md5(String input) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private String sendPost(String json) throws IOException {
         URL url = new URL(API_URL);
         HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
         conn.setRequestMethod("POST");
@@ -142,16 +193,16 @@ public class WayForPayService {
         }
 
         int responseCode = conn.getResponseCode();
-        InputStream stream = responseCode >= 200 && responseCode < 300 ?
-                conn.getInputStream() : conn.getErrorStream();
+        InputStream inputStream = (responseCode >= 200 && responseCode < 300)
+                ? conn.getInputStream() : conn.getErrorStream();
 
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
-            StringBuilder result = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8))) {
+            StringBuilder response = new StringBuilder();
             String line;
-            while ((line = reader.readLine()) != null) {
-                result.append(line);
+            while ((line = br.readLine()) != null) {
+                response.append(line);
             }
-            return result.toString();
+            return response.toString();
         }
     }
 }
