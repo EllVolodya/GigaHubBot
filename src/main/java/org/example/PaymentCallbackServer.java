@@ -81,41 +81,44 @@ public class PaymentCallbackServer {
     }
 
     private boolean isValidSignature(JsonObject json) {
-        // WayForPay у callback надсилає merchantSignature (а не signature)
-        String receivedSignature = null;
-        if (json.has("signature")) {
-            receivedSignature = json.get("signature").getAsString();
-            json.remove("signature");
-        } else if (json.has("merchantSignature")) {
-            receivedSignature = json.get("merchantSignature").getAsString();
-            json.remove("merchantSignature");
-        }
-
-        if (receivedSignature == null) {
-            System.out.println("Підпис відсутній у callback!");
+        // Крок 1: отримуємо підпис (він приходить як merchantSignature)
+        if (!json.has("merchantSignature")) {
+            System.out.println("merchantSignature відсутній!");
             return false;
         }
+        String receivedSignature = json.get("merchantSignature").getAsString();
 
+        // Крок 2: створюємо КОПІЮ json і видаляємо підпис
+        JsonObject copy = json.deepCopy();
+        copy.remove("merchantSignature");
+
+        // Крок 3: строго за порядком з документації
         String[] fields = {
-                "merchantAccount", "orderReference", "amount", "currency",
-                "authCode", "cardPan", "transactionStatus", "reasonCode"
+                "merchantAccount",
+                "orderReference",
+                "amount",
+                "currency",
+                "authCode",
+                "cardPan",           // ← обов’язково маскований: 41****5399
+                "transactionStatus",
+                "reasonCode"
         };
 
         StringBuilder data = new StringBuilder();
         for (String field : fields) {
-            JsonElement el = json.get(field);
-            if (el != null && !el.isJsonNull()) {
-                data.append(el.getAsString());
+            if (copy.has(field) && !copy.get(field).isJsonNull()) {
+                data.append(copy.get(field).getAsString());
             }
             data.append(";");
         }
 
+        // Ключ — саме Merchant Password (32 символи)!
         String calculated = hmacMD5(data.toString(), SECRET_KEY);
 
-        // Дебаг — щоб бачити в логах
-        System.out.println("Calculated HMAC-MD5: " + calculated);
-        System.out.println("Received signature: " + receivedSignature);
-        System.out.println("Signature valid: " + calculated.equals(receivedSignature));
+        System.out.println("Data for sign: " + data.toString());
+        System.out.println("Calculated: " + calculated);
+        System.out.println("Received:   " + receivedSignature);
+        System.out.println("Valid: " + calculated.equals(receivedSignature));
 
         return calculated.equals(receivedSignature);
     }
@@ -130,7 +133,7 @@ public class PaymentCallbackServer {
             for (byte b : bytes) {
                 sb.append(String.format("%02x", b));
             }
-            return sb.toString();
+            return sb.toString().toLowerCase();
         } catch (Exception e) {
             e.printStackTrace();
             return "";
