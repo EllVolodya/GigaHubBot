@@ -19,7 +19,7 @@ public class WayForPayService {
 
     // Якщо хочеш — перенеси в Environment Variables на Railway
     private static final String MERCHANT_ACCOUNT = "gigahub_com_ua1";
-    private static final String MERCHANT_SECRET = "486c4b45091656939c5a88442ce7aad9";
+    private static final String MERCHANT_SECRET = "8723037eda8285f659a8a9e3d92404fc23c4f2e1";
     private static final String MERCHANT_DOMAIN = "gigahub.com.ua";
 
     private static final Gson gson = new Gson();
@@ -135,20 +135,20 @@ public class WayForPayService {
             String orderReference, long orderDate, String amount, String currency,
             String[] productName, int[] productCount, String[] productPrice) {
 
-        String joinedNames = String.join(";;", productName);
-        String joinedCounts = Arrays.stream(productCount)
-                .mapToObj(String::valueOf)
-                .collect(java.util.stream.Collectors.joining(";;"));
-        String joinedPrices = String.join(";;", productPrice);
+        String fields = merchantAccount + ";" +
+                merchantDomainName + ";" +
+                orderReference + ";" +
+                orderDate + ";" +
+                amount + ";" +
+                currency + ";" +
+                String.join(";;", productName) + ";" +
+                String.join(";;", Arrays.stream(productCount)
+                        .mapToObj(String::valueOf)
+                        .collect(java.util.stream.Collectors.joining(";;"))) + ";" +
+                String.join(";;", productPrice);
 
-        String rawString = String.join(";",
-                merchantAccount, merchantDomainName, orderReference,
-                String.valueOf(orderDate), amount, currency,
-                joinedNames, joinedCounts, joinedPrices
-        );
-
-        String escaped = rawString.replace("\\", "\\\\").replace(";", "\\;");
-        return md5(escaped + ";" + MERCHANT_SECRET);
+        // БЕЗ ЕКРАНУВАННЯ і БЕЗ додавання ключа в кінець рядка — саме так треба!
+        return md5(fields + ";" + MERCHANT_SECRET);
     }
 
     private String hmacSha256(String data, String key) {
