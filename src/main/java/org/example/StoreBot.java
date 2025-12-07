@@ -2612,20 +2612,50 @@ public class StoreBot extends TelegramLongPollingBot {
                         "\n" +
                         "Митрофан тримає термінал… а ну, що вибираєш? \uD83D\uDE04");
             }
-
             case "invites_menu" -> {
                 switch (text) {
                     case "➕ Додати запрошення" -> {
                         userStates.put(userId, "add_invite");
                         sendText(chatId, "✏️ Введіть дані нового запрошення у форматі:\nName;Kasa;City");
+
+                        // Кнопка «Назад»
+                        KeyboardRow row2 = new KeyboardRow();
+                        row2.add(BACK_BUTTON);
+
+                        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+                        keyboardMarkup.setKeyboard(List.of(row2));
+                        keyboardMarkup.setResizeKeyboard(true);
+                        keyboardMarkup.setOneTimeKeyboard(true);
+
+                        sendMessage(chatId, " ", keyboardMarkup);  // пустий текст — тільки клавіатура
                     }
                     case "🗑️ Видалити запрошення" -> {
                         userStates.put(userId, "delete_invite");
                         sendText(chatId, "✏️ Введіть ID запрошення для видалення:");
+
+                        KeyboardRow row2 = new KeyboardRow();
+                        row2.add(BACK_BUTTON);
+
+                        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+                        keyboardMarkup.setKeyboard(List.of(row2));
+                        keyboardMarkup.setResizeKeyboard(true);
+                        keyboardMarkup.setOneTimeKeyboard(true);
+
+                        sendMessage(chatId, " ", keyboardMarkup);
                     }
                     case "✏️ Редагувати запрошення" -> {
                         userStates.put(userId, "edit_invite");
                         sendText(chatId, "✏️ Введіть дані для редагування у форматі:\nID;Name;Kasa;City");
+
+                        KeyboardRow row2 = new KeyboardRow();
+                        row2.add(BACK_BUTTON);
+
+                        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+                        keyboardMarkup.setKeyboard(List.of(row2));
+                        keyboardMarkup.setResizeKeyboard(true);
+                        keyboardMarkup.setOneTimeKeyboard(true);
+
+                        sendMessage(chatId, " ", keyboardMarkup);
                     }
                     case "📄 Показати всі запрошення" -> {
                         String sql = "SELECT * FROM invites ORDER BY id ASC";
@@ -2635,7 +2665,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             try (PreparedStatement stmt = conn.prepareStatement(sql);
                                  ResultSet rs = stmt.executeQuery()) {
 
-                                StringBuilder sb = new StringBuilder("🔗 Статистика запрошень:\n\n");
+                                StringBuilder sb = new StringBuilder("Статистика запрошень:\n\n");
                                 boolean hasInvites = false;
 
                                 while (rs.next()) {
@@ -2658,8 +2688,31 @@ public class StoreBot extends TelegramLongPollingBot {
                             e.printStackTrace();
                             sendText(chatId, "❌ Сталася помилка при отриманні запрошень.");
                         }
+
+                        // Кнопка «Назад» після виведення списку
+                        KeyboardRow row2 = new KeyboardRow();
+                        row2.add(BACK_BUTTON);
+
+                        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+                        keyboardMarkup.setKeyboard(List.of(row2));
+                        keyboardMarkup.setResizeKeyboard(true);
+                        keyboardMarkup.setOneTimeKeyboard(true);
+
+                        sendMessage(chatId, " ", keyboardMarkup);
                     }
-                    default -> sendText(chatId, "❌ Некоректна команда.");
+                    default -> {
+                        sendText(chatId, "❌ Некоректна команда.");
+
+                        KeyboardRow row2 = new KeyboardRow();
+                        row2.add(BACK_BUTTON);
+
+                        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+                        keyboardMarkup.setKeyboard(List.of(row2));
+                        keyboardMarkup.setResizeKeyboard(true);
+                        keyboardMarkup.setOneTimeKeyboard(true);
+
+                        sendMessage(chatId, " ", keyboardMarkup);
+                    }
                 }
             }
 
