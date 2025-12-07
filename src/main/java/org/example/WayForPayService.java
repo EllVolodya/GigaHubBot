@@ -135,20 +135,47 @@ public class WayForPayService {
             String orderReference, long orderDate, String amount, String currency,
             String[] productName, int[] productCount, String[] productPrice) {
 
-        String fields = merchantAccount + ";" +
-                merchantDomainName + ";" +
-                orderReference + ";" +
-                orderDate + ";" +
-                amount + ";" +
-                currency + ";" +
-                String.join(";;", productName) + ";" +
-                String.join(";;", Arrays.stream(productCount)
-                        .mapToObj(String::valueOf)
-                        .collect(java.util.stream.Collectors.joining(";;"))) + ";" +
-                String.join(";;", productPrice);
+        // Формуємо масиви з ;; (подвійна крапка з комою для елементів масиву)
+        String joinedNames = String.join(";;", productName);
+        String joinedCounts = Arrays.stream(productCount)
+                .mapToObj(String::valueOf)
+                .collect(java.util.stream.Collectors.joining(";;"));
+        String joinedPrices = String.join(";;", productPrice);
 
-        // БЕЗ ЕКРАНУВАННЯ і БЕЗ додавання ключа в кінець рядка — саме так треба!
-        return md5(fields + ";" + MERCHANT_SECRET);
+        // Рядок строго по документації: поля через ; (UTF-8)
+        String rawString = String.join(";",
+                merchantAccount,
+                merchantDomainName,
+                orderReference,
+                String.valueOf(orderDate),
+                amount,
+                currency,
+                joinedNames,
+                joinedCounts,
+                joinedPrices
+        );
+
+        // Дебаг: виводимо рядок у логи, щоб перевірити
+        System.out.println("DEBUG SIGNATURE STRING: " + rawString);
+
+        // HMAC_MD5 (не простий MD5!)
+        return hmacMd5(rawString, MERCHANT_SECRET);
+    }
+
+    private String hmacMd5(String data, String key) {
+        try {
+            Mac mac = Mac.getInstance("HmacMD5");
+            SecretKeySpec secretKey = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacMD5");
+            mac.init(secretKey);
+            byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to generate HMAC-MD5", e);
+        }
     }
 
     private String hmacSha256(String data, String key) {
