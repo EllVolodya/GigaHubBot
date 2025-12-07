@@ -36,7 +36,7 @@ public class WayForPayService {
 
             // Використовуємо HMAC-SHA256 (64 символи) — після активації в кабінеті
             // Якщо ще не активували — закоментуй рядок нижче і розкоментуй MD5-версію внизу
-            String merchantSignature = generateHmacSha256Signature(
+            String merchantSignature = generateMd5Signature(
                     MERCHANT_ACCOUNT,
                     MERCHANT_DOMAIN,
                     orderCode,
