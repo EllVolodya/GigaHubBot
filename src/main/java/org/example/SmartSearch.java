@@ -4,8 +4,8 @@ import java.util.*;
 
 public class SmartSearch {
 
+    // 🔹 Синоніми + пов’язані слова
     private static final Map<String, List<String>> SYNONYMS = Map.ofEntries(
-
             Map.entry("бойлер", List.of("водонагрівач", "тен", "фланець", "клапан", "анод")),
             Map.entry("водонагрівач", List.of("бойлер", "тен")),
             Map.entry("тен", List.of("бойлер", "водонагрівач")),
@@ -19,10 +19,18 @@ public class SmartSearch {
             Map.entry("гвозді", List.of("цвяхи")),
             Map.entry("цвяхи", List.of("гвозді")),
 
+            Map.entry("бокоріз", List.of("бокорізи", "кусачки", "кліщі")),
+            Map.entry("бокорізи", List.of("бокоріз", "кусачки", "кліщі")),
+            Map.entry("кусачки", List.of("бокорізи", "бокоріз")),
+            Map.entry("кліщі", List.of("бокорізи", "бокоріз")),
+
             Map.entry("шурупи", List.of("саморізи")),
             Map.entry("саморізи", List.of("шурупи"))
     );
 
+    // ================================
+    // 🔥 УНІВЕРСАЛЬНИЙ ПОШУК
+    // ================================
     public static List<Map<String, Object>> search(String query) {
 
         query = query.toLowerCase().trim();
@@ -30,27 +38,30 @@ public class SmartSearch {
         List<Map<String, Object>> all = CatalogEditor.getAllProducts();
         List<Map<String, Object>> results = new ArrayList<>();
 
+        // 🔥 Всі варіанти слів, які підходять під запит
         Set<String> variants = getVariants(query);
 
         for (Map<String, Object> p : all) {
 
             String name = p.get("name").toString().toLowerCase();
+
             int weight = 0;
 
-            // 1️⃣ Точний збіг по name (найважливіше)
-            if (name.contains(query)) weight += 50;
+            // 1️⃣ Найважливіше — пряме входження
+            if (name.contains(query)) weight += 100;
 
             // 2️⃣ Синоніми
             for (String v : variants) {
-                if (name.contains(v)) weight += 35;
+                if (name.contains(v)) weight += 70;
             }
 
-            // 3️⃣ Root-match
-            if (rootMatch(query, name)) weight += 20;
+            // 3️⃣ Root-match (підтримка множини)
+            if (rootMatch(query, name)) weight += 40;
 
-            // 4️⃣ Fuzzy-match
-            if (levenshteinDistance(query, name) <= 2) weight += 10;
+            // 4️⃣ Fuzzy-match (до 2 помилок)
+            if (levenshtein(query, name) <= 2) weight += 20;
 
+            // Додаємо товар, якщо хоч щось збіглося
             if (weight > 0) {
                 p.put("weight", weight);
                 results.add(p);
@@ -63,6 +74,9 @@ public class SmartSearch {
         return results;
     }
 
+    // ================================
+    // 🔹 Отримання всіх словоформ
+    // ================================
     private static Set<String> getVariants(String word) {
         Set<String> set = new HashSet<>();
         set.add(word);
@@ -71,11 +85,7 @@ public class SmartSearch {
             String key = entry.getKey();
             List<String> values = entry.getValue();
 
-            if (word.contains(key)) {
-                set.add(key);
-                set.addAll(values);
-            }
-            if (values.stream().anyMatch(word::contains)) {
+            if (word.contains(key) || values.contains(word)) {
                 set.add(key);
                 set.addAll(values);
             }
@@ -83,16 +93,22 @@ public class SmartSearch {
         return set;
     }
 
+    // ================================
+    // 🔹 Root-match (множина → однина)
+    // ================================
     private static boolean rootMatch(String q, String name) {
         if (q.length() < 4) return false;
 
-        String root1 = q.substring(0, q.length() - 1);
-        String root2 = q.substring(0, q.length() - 2);
+        String r1 = q.substring(0, q.length() - 1);
+        String r2 = q.substring(0, q.length() - 2);
 
-        return name.contains(root1) || name.contains(root2);
+        return name.contains(r1) || name.contains(r2);
     }
 
-    public static int levenshteinDistance(String a, String b) {
+    // ================================
+    // 🔹 Levenshtein (fuzzy)
+    // ================================
+    private static int levenshtein(String a, String b) {
 
         a = a.toLowerCase();
         b = b.toLowerCase();
@@ -103,12 +119,10 @@ public class SmartSearch {
             costs[j] = j;
 
         for (int i = 1; i <= a.length(); i++) {
-
             costs[0] = i;
             int nw = i - 1;
 
             for (int j = 1; j <= b.length(); j++) {
-
                 int cj = Math.min(
                         1 + Math.min(costs[j], costs[j - 1]),
                         a.charAt(i - 1) == b.charAt(j - 1) ? nw : nw + 1
@@ -118,7 +132,6 @@ public class SmartSearch {
                 costs[j] = cj;
             }
         }
-
         return costs[b.length()];
     }
 }
