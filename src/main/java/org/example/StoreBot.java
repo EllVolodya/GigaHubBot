@@ -1690,24 +1690,29 @@ public class StoreBot extends TelegramLongPollingBot {
         String category = currentCategory.get(chatId);
         String subcategory = currentSubcategory.get(chatId);
 
+        if (category == null || subcategory == null) return;
+
         CatalogSearcher searcher = new CatalogSearcher();
         List<Map<String, Object>> products = searcher.getProducts(category, subcategory);
 
         if (products == null || products.isEmpty()) {
             sendText(chatId, "У цій підкатегорії немає товарів.");
             productIndex.remove(chatId);
-            lastShownProduct.remove(chatId);
             return;
         }
 
         products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
 
-        // Якщо індексу ще немає — починаємо з -1, щоб наступний був 0
-        int index = productIndex.getOrDefault(chatId, -1) + 1;
-        index = index % products.size();
+        // Унікальний ключ: chatId + категорія + підкатегорія (через хеш або просто String)
+        long uniqueKey = (chatId.toString() + category + subcategory).hashCode();
+        Long key = uniqueKey; // щоб покласти в Map<Long, Integer>
 
-        productIndex.put(chatId, index);
-        Map<String, Object> product = products.get(index);
+        int lastIndex = productIndex.getOrDefault(key, -1);
+        int nextIndex = (lastIndex + 1) % products.size();
+
+        productIndex.put(key, nextIndex);  // тепер працює без помилок!
+
+        Map<String, Object> product = products.get(nextIndex);
         lastShownProduct.put(chatId, product);
 
         sendProductMessage(chatId, product);
