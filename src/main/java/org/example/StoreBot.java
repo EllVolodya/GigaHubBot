@@ -1685,28 +1685,28 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessage(createUserMenu(chatId, userId));
     }
 
-    // 🔹 Показ наступного товару по id
     private void showNextProduct(Long chatId) throws TelegramApiException {
 
         String category = currentCategory.get(chatId);
         String subcategory = currentSubcategory.get(chatId);
 
-        int index = productIndex.getOrDefault(chatId, 0);
-
         CatalogSearcher searcher = new CatalogSearcher();
         List<Map<String, Object>> products = searcher.getProducts(category, subcategory);
 
         if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ У цій підкатегорії немає товарів.");
+            sendText(chatId, "У цій підкатегорії немає товарів.");
+            productIndex.remove(chatId);
+            lastShownProduct.remove(chatId);
             return;
         }
 
         products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
 
-        // ⬆️ Перехід вперед ПЕРЕД відображенням
-        index = (index + 1) % products.size();
-        productIndex.put(chatId, index);
+        // Якщо індексу ще немає — починаємо з -1, щоб наступний був 0
+        int index = productIndex.getOrDefault(chatId, -1) + 1;
+        index = index % products.size();
 
+        productIndex.put(chatId, index);
         Map<String, Object> product = products.get(index);
         lastShownProduct.put(chatId, product);
 
