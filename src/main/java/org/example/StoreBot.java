@@ -4284,39 +4284,58 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    //🔸Показ товару
+    //🔸 Показ товару
     private void sendProduct(Long chatId) throws TelegramApiException {
 
         String category = currentCategory.get(chatId);
         String subcategory = currentSubcategory.get(chatId);
 
-        int index = productIndex.getOrDefault(chatId, 0);
+        if (category == null || subcategory == null) {
+            sendText(chatId, "Помилка: категорія не вибрана.");
+            return;
+        }
 
         CatalogSearcher searcher = new CatalogSearcher();
         List<Map<String, Object>> products = searcher.getProducts(category, subcategory);
 
         if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ У цій підкатегорії зараз порожньо.\n" +
-                    "Митрофан уже перевіряє полиці 😄");
+            sendText(chatId, "❌ У цій підкатегорії зараз порожньо.\\n\" +\n" +
+                    "                    \"Митрофан уже перевіряє полиці \uD83D\uDE04");
             return;
         }
 
-        // Сортуємо по id
+        // Сортуємо по ID — гарантія порядку
         products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
 
-        if (index >= products.size() || index < 0) index = 0;
+        // Унікальний ключ для цієї підкатегорії
+        long uniqueKey = (chatId + category + subcategory).hashCode();
+        Long key = uniqueKey;
 
-        Map<String, Object> product = products.get(index);
+        // Отримуємо збережений індекс або null
+        Integer savedIndex = productIndex.get(key);
+        int currentIndex;
+
+        if (savedIndex == null) {
+            // Перший раз у цій підкатегорії — показуємо перший товар
+            currentIndex = 0;
+        } else {
+            // Вже були — показуємо НАСТУПНИЙ після збереженого
+            currentIndex = (savedIndex + 1) % products.size();
+        }
+
+        // Зберігаємо поточний індекс (на випадок, якщо користувач вийде і зайде знову)
+        productIndex.put(key, currentIndex);
+
+        Map<String, Object> product = products.get(currentIndex);
         lastShownProduct.put(chatId, product);
 
-        // ----- Дані -----
+        // ----- Далі твій старий код формування повідомлення (нічого не чіпаємо) -----
         String name = safeToString(product.get("name"), "Без назви");
         String price = safeToString(product.get("price"), "0");
         String unit = safeToString(product.get("unit"), "шт").toLowerCase();
         String description = safeToString(product.get("description"), "");
         String photo = safeToString(product.get("photo"), "");
 
-        // Виробник
         String manufacturer = "";
         Object manufacturerObj = product.get("manufacturer");
         try {
@@ -4331,7 +4350,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         boolean isCustomOrder = unit.equals("під замовлення");
 
-        // ----- Формування тексту -----
         StringBuilder sb = new StringBuilder();
         sb.append("📦 ").append(name).append("\n");
 
@@ -4348,7 +4366,7 @@ public class StoreBot extends TelegramLongPollingBot {
         if (!description.isEmpty() && !"null".equalsIgnoreCase(description.trim()))
             sb.append("\n📖 ").append(description);
 
-        // ----- КНОПКИ -----
+        // Кнопки
         KeyboardRow row1 = new KeyboardRow();
         row1.add("⬅ Назад");
         row1.add("🔍 Пошук");
@@ -4367,20 +4385,15 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow row3 = new KeyboardRow();
         row3.add(BACK_BUTTON);
 
-        List<KeyboardRow> keyboard = List.of(row1, row2, row3);
-
-        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(keyboard);
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(List.of(row1, row2, row3));
         markup.setResizeKeyboard(true);
 
-        // ----- Фото або текст -----
+        // Відправка
         if (!photo.isEmpty() && !"null".equalsIgnoreCase(photo.trim())) {
             sendPhotoFromResources(chatId.toString(), photo, sb.toString(), markup);
         } else {
             sendTextWithMarkup(chatId, sb.toString(), markup);
         }
-
-        // Перехід на наступний товар
-        productIndex.put(chatId, (index + 1) % products.size());
     }
 
     // 🔸 Допоміжний метод — безпечне перетворення в String
