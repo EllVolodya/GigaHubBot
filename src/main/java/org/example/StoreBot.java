@@ -1701,20 +1701,24 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // Гарантія порядку — сортуємо по ID
         products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
 
-        // Унікальний ключ для підкатегорії ключ
         long uniqueKey = (chatId.toString() + category + subcategory).hashCode();
         Long key = uniqueKey;
 
-        // Ось і вся магія: було -1 → стало 0 при першому вході
-        int lastIndex = productIndex.getOrDefault(key, -1);
-        int nextIndex = (lastIndex + 1) % products.size(); // тепер при -1 → 0 → перший товар!
+        Integer savedIndex = productIndex.get(key);
+        int currentIndex;
 
-        productIndex.put(key, nextIndex);
+        if (savedIndex == null) {
+            // Перший раз у цій підкатегорії — показуємо перший товар
+            currentIndex = 0;
+        } else {
+            // Вже були — переходимо до наступного
+            currentIndex = (savedIndex + 1) % products.size();
+        }
 
-        Map<String, Object> product = products.get(nextIndex);
+        productIndex.put(key, currentIndex);
+        Map<String, Object> product = products.get(currentIndex);
         lastShownProduct.put(chatId, product);
 
         sendProductMessage(chatId, product);
