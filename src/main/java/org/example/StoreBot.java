@@ -2624,105 +2624,74 @@ public class StoreBot extends TelegramLongPollingBot {
                         "Митрофан тримає термінал… а ну, що вибираєш? \uD83D\uDE04");
             }
             case "invites_menu" -> {
+                // Створюємо безпечну клавіатуру з кнопкою «Назад» (не порожній текст!)
+                KeyboardRow backRow = new KeyboardRow();
+                backRow.add(BACK_BUTTON);
+
+                ReplyKeyboardMarkup backKeyboard = new ReplyKeyboardMarkup();
+                backKeyboard.setKeyboard(List.of(backRow));
+                backKeyboard.setResizeKeyboard(true);
+                backKeyboard.setOneTimeKeyboard(true);
+
                 switch (text) {
                     case "➕ Додати запрошення" -> {
                         userStates.put(userId, "add_invite");
-                        sendText(chatId, "✏️ Введіть дані нового запрошення у форматі:\nName;Kasa;City");
-
-                        // Кнопка «Назад»
-                        KeyboardRow row2 = new KeyboardRow();
-                        row2.add(BACK_BUTTON);
-
-                        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-                        keyboardMarkup.setKeyboard(List.of(row2));
-                        keyboardMarkup.setResizeKeyboard(true);
-                        keyboardMarkup.setOneTimeKeyboard(true);
-
-                        sendMessage(chatId, " ", keyboardMarkup);  // пустий текст — тільки клавіатура
+                        sendText(chatId, "Введіть дані нового запрошення у форматі:\nName;Kasa;City");
+                        // Надсилаємо клавіатуру з НЕВИДИМИМ символом — Telegram приймає, помилки 400 не буде
+                        sendMessage(chatId, "\u200B", backKeyboard);
                     }
+
                     case "🗑️ Видалити запрошення" -> {
                         userStates.put(userId, "delete_invite");
-                        sendText(chatId, "✏️ Введіть ID запрошення для видалення:");
-
-                        KeyboardRow row2 = new KeyboardRow();
-                        row2.add(BACK_BUTTON);
-
-                        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-                        keyboardMarkup.setKeyboard(List.of(row2));
-                        keyboardMarkup.setResizeKeyboard(true);
-                        keyboardMarkup.setOneTimeKeyboard(true);
-
-                        sendMessage(chatId, " ", keyboardMarkup);
+                        sendText(chatId, "Введіть ID запрошення для видалення:");
+                        sendMessage(chatId, "\u200B", backKeyboard);
                     }
+
                     case "✏️ Редагувати запрошення" -> {
                         userStates.put(userId, "edit_invite");
-                        sendText(chatId, "✏️ Введіть дані для редагування у форматі:\nID;Name;Kasa;City");
-
-                        KeyboardRow row2 = new KeyboardRow();
-                        row2.add(BACK_BUTTON);
-
-                        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-                        keyboardMarkup.setKeyboard(List.of(row2));
-                        keyboardMarkup.setResizeKeyboard(true);
-                        keyboardMarkup.setOneTimeKeyboard(true);
-
-                        sendMessage(chatId, " ", keyboardMarkup);
+                        sendText(chatId, "Введіть дані для редагування у форматі:\nID;Name;Kasa;City");
+                        sendMessage(chatId, "\u200B", backKeyboard);
                     }
+
                     case "📄 Показати всі запрошення" -> {
                         String sql = "SELECT * FROM invites ORDER BY id ASC";
 
-                        try {
-                            Connection conn = DatabaseManager.getConnection();
-                            try (PreparedStatement stmt = conn.prepareStatement(sql);
-                                 ResultSet rs = stmt.executeQuery()) {
+                        try (Connection conn = DatabaseManager.getConnection();
+                             PreparedStatement stmt = conn.prepareStatement(sql);
+                             ResultSet rs = stmt.executeQuery()) {
 
-                                StringBuilder sb = new StringBuilder("Статистика запрошень:\n\n");
-                                boolean hasInvites = false;
+                            StringBuilder sb = new StringBuilder("Статистика запрошень:\n\n");
+                            boolean hasInvites = false;
 
-                                while (rs.next()) {
-                                    hasInvites = true;
-                                    sb.append("🆔 ID: ").append(rs.getInt("id")).append("\n")
-                                            .append("👤 Ім'я: ").append(rs.getString("name")).append("\n")
-                                            .append("💰 Каса: ").append(rs.getString("kasa")).append("\n")
-                                            .append("🏙️ Місто: ").append(rs.getString("city")).append("\n")
-                                            .append("📈 Кількість приєднались: ").append(rs.getInt("number")).append("\n")
-                                            .append("-----------------------------\n");
-                                }
-
-                                if (!hasInvites) {
-                                    sendText(chatId, "Поки що немає запрошень.");
-                                } else {
-                                    sendText(chatId, sb.toString());
-                                }
+                            while (rs.next()) {
+                                hasInvites = true;
+                                sb.append("🆔 ID: ").append(rs.getInt("id")).append("\n")
+                                        .append("👤 Ім'я: ").append(rs.getString("name")).append("\n")
+                                        .append("💰 Каса: ").append(rs.getString("kasa")).append("\n")
+                                        .append("🏙️ Місто: ").append(rs.getString("city")).append("\n")
+                                        .append("📈 Кількість приєднались: ").append(rs.getInt("number")).append("\n")
+                                        .append("-----------------------------\n");
                             }
+
+                            if (!hasInvites) {
+                                sendText(chatId, "Поки що немає запрошень.");
+                            } else {
+                                sendText(chatId, sb.toString());
+                            }
+
+                            // Після списку — клавіатура з невидимим символом
+                            sendMessage(chatId, "\u200B", backKeyboard);
+
                         } catch (SQLException e) {
                             e.printStackTrace();
                             sendText(chatId, "❌ Сталася помилка при отриманні запрошень.");
+                            sendMessage(chatId, "\u200B", backKeyboard);
                         }
-
-                        // Кнопка «Назад» після виведення списку
-                        KeyboardRow row2 = new KeyboardRow();
-                        row2.add(BACK_BUTTON);
-
-                        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-                        keyboardMarkup.setKeyboard(List.of(row2));
-                        keyboardMarkup.setResizeKeyboard(true);
-                        keyboardMarkup.setOneTimeKeyboard(true);
-
-                        sendMessage(chatId, " ", keyboardMarkup);
                     }
+
                     default -> {
                         sendText(chatId, "❌ Некоректна команда.");
-
-                        KeyboardRow row2 = new KeyboardRow();
-                        row2.add(BACK_BUTTON);
-
-                        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-                        keyboardMarkup.setKeyboard(List.of(row2));
-                        keyboardMarkup.setResizeKeyboard(true);
-                        keyboardMarkup.setOneTimeKeyboard(true);
-
-                        sendMessage(chatId, " ", keyboardMarkup);
+                        sendMessage(chatId, "\u200B", backKeyboard);
                     }
                 }
             }
