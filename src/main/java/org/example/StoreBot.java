@@ -2656,23 +2656,23 @@ public class StoreBot extends TelegramLongPollingBot {
                 backKeyboard.setOneTimeKeyboard(true);
 
                 switch (text) {
+
                     case "➕ Додати запрошення" -> {
                         userStates.put(userId, "add_invite");
                         sendText(chatId, "Введіть дані нового запрошення у форматі:\nName;Kasa;City");
-                        // 100 % працює — Telegram приймає цей символ
-                        sendMessage(chatId, "‎", backKeyboard);  // ‎ = U+200E (Left-to-Right Mark)
+                        sendMessage(chatId, "‎⠀", backKeyboard); // ВИПРАВЛЕНО
                     }
 
                     case "🗑️ Видалити запрошення" -> {
                         userStates.put(userId, "delete_invite");
                         sendText(chatId, "Введіть ID запрошення для видалення:");
-                        sendMessage(chatId, "‎", backKeyboard);
+                        sendMessage(chatId, "‎⠀", backKeyboard); // ВИПРАВЛЕНО
                     }
 
                     case "✏️ Редагувати запрошення" -> {
                         userStates.put(userId, "edit_invite");
                         sendText(chatId, "Введіть дані для редагування у форматі:\nID;Name;Kasa;City");
-                        sendMessage(chatId, "‎", backKeyboard);
+                        sendMessage(chatId, "‎⠀", backKeyboard); // ВИПРАВЛЕНО
                     }
 
                     case "📄 Показати всі запрошення" -> {
@@ -2701,20 +2701,18 @@ public class StoreBot extends TelegramLongPollingBot {
                                 sendText(chatId, "Поки що немає запрошень.");
                             }
 
-                            // Ось цей рядок — головний трюк
-                            sendMessage(chatId, "‎", backKeyboard);  // невидимий символ, помилки 400 НЕ БУДЕ
+                            sendMessage(chatId, "‎⠀", backKeyboard); // ВИПРАВЛЕНО
 
                         } catch (SQLException e) {
                             e.printStackTrace();
                             sendText(chatId, "Сталася помилка при отриманні запрошень.");
-                            sendMessage(chatId, "‎", backKeyboard);
+                            sendMessage(chatId, "‎⠀", backKeyboard); // ВИПРАВЛЕНО
                         }
                     }
 
-                    // Якщо хтось натиснув «Назад» або щось інше
                     default -> {
                         sendText(chatId, "Некоректна команда.");
-                        sendMessage(chatId, "‎", backKeyboard);
+                        sendMessage(chatId, "‎⠀", backKeyboard); // ВИПРАВЛЕНО
                     }
                 }
             }
