@@ -5207,10 +5207,15 @@ public class StoreBot extends TelegramLongPollingBot {
         ReplyKeyboardMarkup km = new ReplyKeyboardMarkup();
         km.setResizeKeyboard(true);
 
-        KeyboardRow row = new KeyboardRow();
-        row.add("💬 Відповісти покупцю");
+        // Рядок з кнопкою відповісти
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("💬 Відповісти покупцю");
 
-        km.setKeyboard(List.of(row));
+        // Рядок з кнопкою назад (використовує BACK_BUTTON)
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add(BACK_BUTTON);
+
+        km.setKeyboard(List.of(row1, row2));
         replyBtn.setReplyMarkup(km);
 
         execute(replyBtn);
