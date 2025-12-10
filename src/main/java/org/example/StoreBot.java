@@ -608,8 +608,13 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "💬 Допомога" -> sendMessage(createHelpMenu(chatId));
                 case "✉️ Написати консультанту" -> {
                     userStates.put(userId, "ask_consultant");
-                    sendText(chatId, "✏\uFE0F Напишіть своє питання — я передам консультанту.  \n" +
-                            "Фото теж можна кидати \uD83D\uDCF8\uD83D\uDE09");
+
+                    sendText(chatId, """
+                    ✏️ Напишіть своє питання — я передам консультанту.
+                    Фото теж можна кидати 📸😉
+                    """);
+
+                    break;
                 }
                 case "💌 Відповіді" -> {
                     List<String> answers = supportAnswers.get(userId);
@@ -2173,7 +2178,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     PhotoSize largest = photos.get(photos.size() - 1);
                     String fileId = largest.getFileId();
 
-                    // ✏️ Текст під фотографією
                     String caption = update.getMessage().getCaption();
                     if (caption == null) caption = "";
 
@@ -2185,13 +2189,12 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "📸 Фото від покупця:\n" +
                                         "🆔 User ID: " + userId + "\n" +
                                         "💬 Chat ID: " + realChatId + "\n\n" +
-                                        (caption.isEmpty() ? "" : ("📝 Підпис до фото:\n" + caption))
+                                        (caption.isEmpty() ? "" : "📝 Підпис:\n" + caption)
                         );
 
                         execute(msg);
 
                         sendReplyButtonToConsultant(userId);
-
                         sendText(realChatId, "📸 Ваше фото передано консультанту!");
 
                     } catch (Exception e) {
@@ -2200,26 +2203,27 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     userStates.remove(userId);
-                    return;
+                    break;
                 }
+
 
                 // ✏️ Якщо користувач відправив текст
                 if (text != null && !text.isBlank()) {
 
-                    // автоматична відповідь бота (AI-підказка)
+                    // AI-підказка
                     String botReply = botAutoAnswer(text);
 
                     if (botReply != null) {
                         sendText(realChatId, botReply + "\n\n✉️ Якщо хочеш поговорити з консультантом — натисни кнопку.");
                         userStates.remove(userId);
-                        return;
+                        break;
                     }
 
-                    // якщо бот не знає → передаємо консультанту
+                    // Передаємо консультанту
                     try {
                         SendMessage adminMsg = new SendMessage(
                                 CONSULTANT_CHAT_ID.toString(),
-                                "📩 Нове текстове повідомлення від покупця:\n" +
+                                "📩 Нове повідомлення від покупця:\n" +
                                         "🆔 User ID: " + userId + "\n" +
                                         "💬 Chat ID: " + realChatId + "\n\n" +
                                         "📝 Текст:\n" + text
@@ -2228,7 +2232,6 @@ public class StoreBot extends TelegramLongPollingBot {
                         execute(adminMsg);
 
                         sendReplyButtonToConsultant(userId);
-
                         sendText(realChatId, "Ваше повідомлення передано консультанту!");
 
                     } catch (Exception e) {
@@ -2237,8 +2240,10 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     userStates.remove(userId);
-                    return;
+                    break;
                 }
+
+                break;
             }
 
             // 📌 Введення ID користувача для відповіді
