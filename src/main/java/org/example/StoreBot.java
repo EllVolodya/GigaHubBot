@@ -3179,7 +3179,7 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow row1 = new KeyboardRow();
 
         if (isCustomOrder) {
-            row1.add("✉ Написати консультанту");
+            row1.add("Написати консультанту");
         } else {
             row1.add("🛠 Додати в кошик");
         }
@@ -3929,7 +3929,7 @@ public class StoreBot extends TelegramLongPollingBot {
         List<KeyboardRow> keyboard = new ArrayList<>();
 
         KeyboardRow row1 = new KeyboardRow();
-        row1.add("✉️ Написати консультанту");
+        row1.add("Написати консультанту");
         row1.add("💌 Відповіді");
         keyboard.add(row1);
 
@@ -4348,7 +4348,7 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow row2 = new KeyboardRow();
 
         if (isCustomOrder) {
-            row2.add("✉ Написати консультанту");
+            row2.add("Написати консультанту");
         } else {
             row2.add("🛒 Додати в кошик");
         }
