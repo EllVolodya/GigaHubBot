@@ -62,6 +62,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Double> paintArea = new HashMap<>();
     private final Map<Long, Double> paintTemp = new HashMap<>();
     private final Map<Long, Double> paintLayers = new HashMap<>();
+    private final Map<Long, String> lastUserMessage = new HashMap<>();
 
     private final StateManager stateManager = new StateManager();
     private final Map<Long, String> state = new HashMap<>();
@@ -906,17 +907,29 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "💬 Відповісти покупцю" -> {
-                    Long target = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
+                    Long targetUserId = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
 
-                    if (target == null) {
-                        sendText(CONSULTANT_CHAT_ID, "❌ Немає покупця для відповіді.");
+                    if (targetUserId == null) {
+                        sendText(CONSULTANT_CHAT_ID, "❌ Немає покупця, який чекає відповіді.");
                         return;
                     }
 
-                    userStates.put(CONSULTANT_CHAT_ID, "consultant_reply");
+                    // Отримуємо останнє повідомлення цього покупця
+                    String lastMsg = lastUserMessage.get(targetUserId);
+                    if (lastMsg == null) lastMsg = "— (останнє повідомлення не збережено)";
 
-                    sendText(CONSULTANT_CHAT_ID,
-                            "✏️ Напишіть відповідь або надішліть фото — я передам покупцю.");
+                    // Виводимо продавцю деталі покупця
+                    sendText(
+                            CONSULTANT_CHAT_ID,
+                            "🧍‍♂️ Покупець:\n" +
+                                    "🆔 User ID: " + targetUserId + "\n" +
+                                    "💬 Повідомлення: " + lastMsg + "\n\n" +
+                                    "✏️ Напишіть відповідь або надішліть фото — я передам покупцю."
+                    );
+
+                    // Переводимо продавця в режим відповіді
+                    userStates.put(CONSULTANT_CHAT_ID, "consultant_reply");
+                    break;
                 }
 
                 case "✅ Підтвердити" -> {
@@ -2180,6 +2193,9 @@ public class StoreBot extends TelegramLongPollingBot {
                     String caption = update.getMessage().getCaption();
                     if (caption == null) caption = "";
 
+                    // 🔥 ЗБЕРІГАЄМО ОСТАННЄ ПОВІДОМЛЕННЯ ПОКУПЦЯ
+                    lastUserMessage.put(userId, caption.isBlank() ? "📸 Фото без підпису" : caption);
+
                     try {
                         SendPhoto msg = new SendPhoto();
                         msg.setChatId(CONSULTANT_CHAT_ID.toString());
@@ -2208,6 +2224,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 // ✏️ Якщо користувач відправив текст
                 if (text != null && !text.isBlank()) {
+
+                    // 🔥 ЗБЕРІГАЄМО ОСТАННІЙ ТЕКСТ ПОКУПЦЯ
+                    lastUserMessage.put(userId, text);
 
                     // AI-підказка
                     String botReply = botAutoAnswer(text);
