@@ -606,14 +606,13 @@ public class StoreBot extends TelegramLongPollingBot {
                     execute(message);
                 }
                 case "💬 Допомога" -> sendMessage(createHelpMenu(chatId));
-                case "✉️ Написати консультанту" -> {
+                case "Написати консультанту" -> {
                     userStates.put(userId, "ask_consultant");
 
                     sendText(chatId, """
-                    ✏️ Напишіть своє питання — я передам консультанту.
-                    Фото теж можна кидати 📸😉
-                    """);
-
+                        ✏️ Напишіть своє питання — я передам консультанту.
+                        Фото теж можна кидати 📸😉
+                        """);
                     break;
                 }
                 case "💌 Відповіді" -> {
@@ -1790,7 +1789,7 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow row2 = new KeyboardRow();
 
         if (unit.equals("під замовлення")) {
-            row2.add("✉ Написати консультанту");
+            row2.add("Написати консультанту");
         } else {
             row2.add("🛒 Додати в кошик");
         }
@@ -3049,7 +3048,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row1 = new KeyboardRow();
         if (isCustom) {
-            row1.add("✉ Написати консультанту");
+            row1.add("Написати консультанту");
         } else {
             row1.add("➕ Додати в кошик");
         }
