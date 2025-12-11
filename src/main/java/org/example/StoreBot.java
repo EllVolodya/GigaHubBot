@@ -541,8 +541,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            if (text.startsWith("⬅") || text.contains("Назад")) {
+            if (text != null && text.equals("Назад")) {
 
+                // вихід з підменю запрошень у меню розробника
                 userStates.remove(userId);
                 adminEditingProduct.remove(userId);
                 adminSelectedProductsRange.remove(userId);
