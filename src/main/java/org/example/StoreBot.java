@@ -2667,16 +2667,28 @@ public class StoreBot extends TelegramLongPollingBot {
                         "Митрофан тримає термінал… а ну, що вибираєш? \uD83D\uDE04");
             }
             case "invites_menu" -> {
-
-                // Окрема клавіатура з кнопкою Назад
+                // Клавіатура з кнопкою «Назад», яка працює ТІЛЬКИ в цьому меню
                 ReplyKeyboardMarkup backKeyboard = new ReplyKeyboardMarkup();
                 backKeyboard.setResizeKeyboard(true);
                 backKeyboard.setOneTimeKeyboard(false);
 
                 KeyboardRow row = new KeyboardRow();
-                row.add("Назад");
+                row.add("Назад");                    // саме ця кнопка
                 backKeyboard.setKeyboard(List.of(row));
 
+                // ВАЖЛИВО: обробляємо натискання «Назад» ПЕРЕД усім іншим
+                if (text != null && text.equals("Назад")) {
+                    // очищаємо всі стани і повертаємося в головне меню розробника
+                    userStates.remove(userId);
+                    adminEditingProduct.remove(userId);
+                    adminSelectedProductsRange.remove(userId);
+                    adminEditingField.remove(userId);
+
+                    sendMessage(createDeveloperMenu(chatId));
+                    return;                              // виходимо, щоб не попасти в default нижче
+                }
+
+                // Основні кнопки меню запрошень
                 switch (text) {
 
                     case "➕ Додати запрошення" -> {
@@ -2698,14 +2710,13 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     case "📄 Показати всі запрошення" -> {
-
                         String sql = "SELECT * FROM invites ORDER BY id ASC";
 
                         try (Connection conn = DatabaseManager.getConnection();
                              PreparedStatement stmt = conn.prepareStatement(sql);
                              ResultSet rs = stmt.executeQuery()) {
 
-                            StringBuilder sb = new StringBuilder("📊 Статистика запрошень:\n\n");
+                            StringBuilder sb = new StringBuilder("Статистика запрошень:\n\n");
                             boolean hasInvites = false;
 
                             while (rs.next()) {
@@ -2718,22 +2729,20 @@ public class StoreBot extends TelegramLongPollingBot {
                                         .append("-----------------------------\n");
                             }
 
-                            if (hasInvites)
-                                sendText(chatId, sb.toString());
-                            else
-                                sendText(chatId, "Поки що немає запрошень.");
+                            sendText(chatId, hasInvites ? sb.toString() : "Поки що немає запрошень.");
 
                         } catch (SQLException e) {
                             e.printStackTrace();
-                            sendText(chatId, "Сталася помилка при отриманні запрошень.");
+                            sendText(chatId, "Помилка бази даних.");
                         }
 
-                        sendMessage(chatId, "Натисніть Назад, щоб повернутися.", backKeyboard);
+                        sendMessage(chatId, "Оберіть дію або натисніть Назад", backKeyboard);
                     }
 
+                    // якщо натиснули щось інше — просто нагадуємо
                     default -> {
                         sendText(chatId, "Некоректна команда. Спробуйте ще раз.");
-                        sendMessage(chatId, "Натисніть Назад, щоб повернутися.", backKeyboard);
+                        sendMessage(chatId, "Оберіть дію або натисніть Назад", backKeyboard);
                     }
                 }
             }
