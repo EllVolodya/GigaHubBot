@@ -585,14 +585,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "➡ Далі" -> showNextProduct(userId);
                 case "⬅ Назад" -> showPreviousProduct(userId);
-                case "⬅ Назад в розроботчика меню" -> {
-                    // Очищаємо стани, щоб не заважали поверненню
+                case "Назад" -> {
                     userStates.remove(userId);
                     adminEditingProduct.remove(userId);
                     adminSelectedProductsRange.remove(userId);
                     adminEditingField.remove(userId);
 
-                    // Повернення в меню розробника
                     sendMessage(createDeveloperMenu(chatId));
                 }
                 case "🛒 Додати в кошик" -> addToCart(userId);
@@ -2675,7 +2673,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 backKeyboard.setOneTimeKeyboard(false);
 
                 KeyboardRow row = new KeyboardRow();
-                row.add("⬅ Назад в розроботчика меню");
+                row.add("Назад");
                 backKeyboard.setKeyboard(List.of(row));
 
                 switch (text) {
