@@ -541,6 +541,17 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
+            if (text.startsWith("⬅") || text.contains("Назад")) {
+
+                userStates.remove(userId);
+                adminEditingProduct.remove(userId);
+                adminSelectedProductsRange.remove(userId);
+                adminEditingField.remove(userId);
+
+                sendMessage(createDeveloperMenu(chatId));
+                return;
+            }
+
             // 🔹 Основні команди (кнопки)
             if (text == null) return;
 
