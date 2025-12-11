@@ -3823,7 +3823,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row3 = new KeyboardRow();
         row3.add("💬 Відгуки користувачів");
-        row3.add("Назад");
+        row3.add(new KeyboardButton(BACK_BUTTON));
+        keyboard.add(row3);
 
         markup.setKeyboard(keyboard);
 
@@ -4055,7 +4056,7 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row2);
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add(new KeyboardButton(BACK_BUTTON));
+        row3.add("Назад");
         keyboard.add(row3);
 
         markup.setKeyboard(keyboard);
