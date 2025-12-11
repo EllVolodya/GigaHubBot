@@ -1666,8 +1666,8 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 4. Повернення з кошика
-        if (userCart.containsKey(userId)) {
+        // 4. Повернення з перегляду кошика
+        if ("cart_view".equals(state)) {
             sendMessage(createUserMenu(chatId, userId));
             return;
         }
@@ -1698,7 +1698,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 8. Головне меню
+        // 8. Головне меню (fallback)
         sendMessage(createUserMenu(chatId, userId));
     }
 
