@@ -574,6 +574,16 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "➡ Далі" -> showNextProduct(userId);
                 case "⬅ Назад" -> showPreviousProduct(userId);
+                case "⬅ Назад в розроботчика меню" -> {
+                    // Очищаємо стани, щоб не заважали поверненню
+                    userStates.remove(userId);
+                    adminEditingProduct.remove(userId);
+                    adminSelectedProductsRange.remove(userId);
+                    adminEditingField.remove(userId);
+
+                    // Повернення в меню розробника
+                    sendMessage(createDeveloperMenu(chatId));
+                }
                 case "🛒 Додати в кошик" -> addToCart(userId);
                 case "📍 Адреси та Контакти" -> {
                     SendMessage message = new SendMessage();
@@ -2647,42 +2657,45 @@ public class StoreBot extends TelegramLongPollingBot {
                         "Митрофан тримає термінал… а ну, що вибираєш? \uD83D\uDE04");
             }
             case "invites_menu" -> {
-                // Одна клавіатура «Назад» на всі випадки
+
+                // Окрема клавіатура з кнопкою Назад
                 ReplyKeyboardMarkup backKeyboard = new ReplyKeyboardMarkup();
-                KeyboardRow row = new KeyboardRow();
-                row.add(BACK_BUTTON);
-                backKeyboard.setKeyboard(List.of(row));
                 backKeyboard.setResizeKeyboard(true);
-                backKeyboard.setOneTimeKeyboard(true);
+                backKeyboard.setOneTimeKeyboard(false);
+
+                KeyboardRow row = new KeyboardRow();
+                row.add("⬅ Назад в розроботчика меню");
+                backKeyboard.setKeyboard(List.of(row));
 
                 switch (text) {
 
                     case "➕ Додати запрошення" -> {
                         userStates.put(userId, "add_invite");
                         sendText(chatId, "Введіть дані нового запрошення у форматі:\nName;Kasa;City");
-                        sendMessage(chatId, "‎⠀", backKeyboard); // ВИПРАВЛЕНО
+                        sendMessage(chatId, "Ок, чекаю на дані…", backKeyboard);
                     }
 
                     case "🗑️ Видалити запрошення" -> {
                         userStates.put(userId, "delete_invite");
                         sendText(chatId, "Введіть ID запрошення для видалення:");
-                        sendMessage(chatId, "‎⠀", backKeyboard); // ВИПРАВЛЕНО
+                        sendMessage(chatId, "Ок, чекаю ID…", backKeyboard);
                     }
 
                     case "✏️ Редагувати запрошення" -> {
                         userStates.put(userId, "edit_invite");
                         sendText(chatId, "Введіть дані для редагування у форматі:\nID;Name;Kasa;City");
-                        sendMessage(chatId, "‎⠀", backKeyboard); // ВИПРАВЛЕНО
+                        sendMessage(chatId, "Ок, чекаю нові дані…", backKeyboard);
                     }
 
                     case "📄 Показати всі запрошення" -> {
+
                         String sql = "SELECT * FROM invites ORDER BY id ASC";
 
                         try (Connection conn = DatabaseManager.getConnection();
                              PreparedStatement stmt = conn.prepareStatement(sql);
                              ResultSet rs = stmt.executeQuery()) {
 
-                            StringBuilder sb = new StringBuilder("Статистика запрошень:\n\n");
+                            StringBuilder sb = new StringBuilder("📊 Статистика запрошень:\n\n");
                             boolean hasInvites = false;
 
                             while (rs.next()) {
@@ -2695,24 +2708,22 @@ public class StoreBot extends TelegramLongPollingBot {
                                         .append("-----------------------------\n");
                             }
 
-                            if (hasInvites) {
+                            if (hasInvites)
                                 sendText(chatId, sb.toString());
-                            } else {
+                            else
                                 sendText(chatId, "Поки що немає запрошень.");
-                            }
-
-                            sendMessage(chatId, "‎⠀", backKeyboard); // ВИПРАВЛЕНО
 
                         } catch (SQLException e) {
                             e.printStackTrace();
                             sendText(chatId, "Сталася помилка при отриманні запрошень.");
-                            sendMessage(chatId, "‎⠀", backKeyboard); // ВИПРАВЛЕНО
                         }
+
+                        sendMessage(chatId, "Натисніть Назад, щоб повернутися.", backKeyboard);
                     }
 
                     default -> {
-                        sendText(chatId, "Некоректна команда.");
-                        sendMessage(chatId, "‎⠀", backKeyboard); // ВИПРАВЛЕНО
+                        sendText(chatId, "Некоректна команда. Спробуйте ще раз.");
+                        sendMessage(chatId, "Натисніть Назад, щоб повернутися.", backKeyboard);
                     }
                 }
             }
