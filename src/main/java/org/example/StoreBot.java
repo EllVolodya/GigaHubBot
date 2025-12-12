@@ -1041,7 +1041,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         sendText(chatId, "⛔ У вас немає доступу.");
                         break;
                     }
-                    userStates.put(userId, "awaiting_hit_type"); // <-- тут треба так
+                    userStates.put(userId, "awaiting_hit_type");
                     sendText(chatId, "Ви хочете додати креатив з описом чи тільки медіа?\nНапишіть 'З описом' або 'Тільки медіа':");
                 }
 
