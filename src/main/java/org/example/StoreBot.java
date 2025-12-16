@@ -4011,7 +4011,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow r4 = new KeyboardRow();
         r4.add(new KeyboardButton("🏭 Виробник"));
-        r4.add(new KeyboardButton("⬅️ Назад"));
+        r4.add(new KeyboardButton(BACK_BUTTON));
 
         kb.setKeyboard(List.of(r1, r2, r3, r4));
         msg.setReplyMarkup(kb);
