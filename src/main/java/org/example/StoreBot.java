@@ -3992,32 +3992,43 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔹 Створюємо клавіатуру меню редагування
     private SendMessage createEditMenu(String chatId, Long userId) {
-        SendMessage msg = new SendMessage(chatId, "Виберіть дію:");
 
-        ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
-        kb.setResizeKeyboard(true);
+        SendMessage msg = new SendMessage();
+        msg.setChatId(chatId);
+        msg.setText("Виберіть дію:");
 
-        KeyboardRow r1 = new KeyboardRow();
-        r1.add(new KeyboardButton("✏️ Назву"));
-        r1.add(new KeyboardButton("💰 Ціну"));
+        ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
+        keyboard.setResizeKeyboard(true);
+        keyboard.setOneTimeKeyboard(false);
 
-        KeyboardRow r2 = new KeyboardRow();
-        r2.add(new KeyboardButton("📖 Опис"));
-        r2.add(new KeyboardButton("🗂️ Додати в підкатегорію"));
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add(new KeyboardButton("✏️ Назву"));
+        row1.add(new KeyboardButton("💰 Ціну"));
 
-        KeyboardRow r3 = new KeyboardRow();
-        r3.add(new KeyboardButton("🖼️ Додати фотографію"));
-        r3.add(new KeyboardButton("📏 Одиниця виміру"));
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add(new KeyboardButton("📖 Опис"));
+        row2.add(new KeyboardButton("🗂️ Додати в підкатегорію"));
 
-        KeyboardRow r4 = new KeyboardRow();
-        r4.add(new KeyboardButton("🏭 Виробник"));
-        r4.add(new KeyboardButton("⬅️ Назад"));
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add(new KeyboardButton("🖼️ Додати фотографію"));
+        row3.add(new KeyboardButton("📏 Одиниця виміру"));
 
-        kb.setKeyboard(List.of(r1, r2, r3, r4));
-        msg.setReplyMarkup(kb);
+        KeyboardRow row4 = new KeyboardRow();
+        row4.add(new KeyboardButton("🏭 Виробник"));
+        row4.add(new KeyboardButton(BACK_BUTTON)); // 🔥 ВАЖЛИВО
+
+        List<KeyboardRow> rows = new ArrayList<>();
+        rows.add(row1);
+        rows.add(row2);
+        rows.add(row3);
+        rows.add(row4);
+
+        keyboard.setKeyboard(rows);
+        msg.setReplyMarkup(keyboard);
 
         return msg;
     }
+
 
     private SendMessage createCategoryAdminMenu(String chatId) {
         SendMessage msg = new SendMessage(chatId, "🔧 Редагування категорій:");
