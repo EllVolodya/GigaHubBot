@@ -8,24 +8,40 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * ПРАЦЮЄ ТАК:
+ * 1) Пошук товарів в Excel по назві
+ * 2) Повертає список
+ * 3) Додає / оновлює ТІЛЬКИ ОБРАНИЙ товар
+ *
+ * Excel структура:
+ * A - Група товарів
+ * B - Код
+ * C - Название
+ * D - Ед.
+ * E - Производитель
+ * F - Код поставщика
+ * G - Штрих код
+ * H - Розничная цена
+ * I - Количество
+ */
 public class ExcelToMySqlImporter {
 
-    /**
-     * Excel структура:
-     * A - Група товарів
-     * B - Код
-     * C - Название
-     * D - Ед.
-     * E - Производитель
-     * F - Код поставщика
-     * G - Штрих код
-     * H - Розничная цена
-     * I - Количество
-     */
+    // ======================= MODEL =======================
 
-    public static List<Long> importProducts() throws Exception {
+    public static class ExcelProduct {
+        public String name;
+        public Double price;
+        public String unit;
+        public String manufacturer;
+    }
 
-        List<Long> importedIds = new ArrayList<>();
+    // ======================= SEARCH IN EXCEL =======================
+
+    public static List<ExcelProduct> searchInExcel(String keyword) throws Exception {
+
+        List<ExcelProduct> results = new ArrayList<>();
+        String search = keyword.toLowerCase();
 
         InputStream is = ExcelToMySqlImporter.class
                 .getClassLoader()
@@ -45,53 +61,48 @@ public class ExcelToMySqlImporter {
                 Row row = sheet.getRow(rowIndex);
                 if (row == null) continue;
 
-                String name = getString(row, 2);          // C Название
-                if (name == null || name.isBlank()) continue;
+                String name = getString(row, 2); // C Название
+                if (name == null) continue;
 
-                Double price = getDouble(row, 7);         // H Розничная цена
-                String unit = getString(row, 3);          // D Ед.
-                String manufacturer = getString(row, 4); // E Производитель
+                if (name.toLowerCase().contains(search)) {
 
-                long productId = insertOrUpdateProduct(
-                        name,
-                        price,
-                        unit,
-                        manufacturer
-                );
+                    ExcelProduct p = new ExcelProduct();
+                    p.name = name;
+                    p.price = getDouble(row, 7);         // H Розничная цена
+                    p.unit = getString(row, 3);          // D Ед.
+                    p.manufacturer = getString(row, 4); // E Производитель
 
-                importedIds.add(productId);
+                    results.add(p);
+                }
             }
         }
 
-        return importedIds;
+        return results;
     }
 
-    // ======================= DATABASE =======================
+    // ======================= IMPORT ONE PRODUCT =======================
 
-    private static long insertOrUpdateProduct(
-            String name,
-            Double price,
-            String unit,
-            String manufacturer
-    ) throws SQLException {
+    public static long importSingleProduct(ExcelProduct p) throws SQLException {
 
         String checkSql = "SELECT id FROM products WHERE name = ? LIMIT 1";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement check = conn.prepareStatement(checkSql)) {
 
-            check.setString(1, name);
+            check.setString(1, p.name);
             ResultSet rs = check.executeQuery();
 
             if (rs.next()) {
                 long id = rs.getLong("id");
-                updateProduct(conn, id, price, unit, manufacturer);
+                updateProduct(conn, id, p.price, p.unit, p.manufacturer);
                 return id;
             }
 
-            return insertProduct(conn, name, price, unit, manufacturer);
+            return insertProduct(conn, p.name, p.price, p.unit, p.manufacturer);
         }
     }
+
+    // ======================= DATABASE =======================
 
     private static long insertProduct(
             Connection conn,
@@ -117,9 +128,7 @@ public class ExcelToMySqlImporter {
             ps.executeUpdate();
 
             ResultSet rs = ps.getGeneratedKeys();
-            if (rs.next()) {
-                return rs.getLong(1);
-            }
+            if (rs.next()) return rs.getLong(1);
         }
 
         throw new SQLException("❌ Не вдалося вставити товар: " + name);

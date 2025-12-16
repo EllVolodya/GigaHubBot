@@ -4639,7 +4639,7 @@ public class StoreBot extends TelegramLongPollingBot {
         row2.add("🔍 Пошук у YAML");
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add("📥 Імпорт з Excel");
+        row3.add("🔍 Пошук з EXCEL");
 
         markup.setKeyboard(List.of(row1, row2, row3));
         message.setReplyMarkup(markup);
@@ -4690,7 +4690,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        if ("📥 Імпорт з Excel".equals(text)) {
+        if ("🔍 Пошук з EXCEL".equals(text)) {
             handleExcelImport(userId, chatId);
             return;
         }
@@ -4739,27 +4739,13 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleExcelImport(Long userId, String chatId)
             throws TelegramApiException {
 
-        try {
-            List<Long> ids = ExcelToMySqlImporter.importProducts();
+        // фіксуємо джерело пошуку
+        adminSearchSource.put(userId, "excel");
 
-            if (ids.isEmpty()) {
-                sendText(chatId, "❌ Excel порожній або товари не знайдені");
-                return;
-            }
+        // переводимо у стан очікування тексту
+        userStates.put(userId, "awaiting_excel_search");
 
-            sendText(chatId, "✅ Імпортовано товарів: " + ids.size());
-
-            // 🔥 відкриваємо меню редагування першого товару
-            Long productId = ids.get(0);
-            adminEditingProduct.put(userId, String.valueOf(productId));
-            execute(createEditMenu(chatId, userId));
-
-            execute(createEditMenu(chatId, userId));
-
-        } catch (Exception e) {
-            sendText(chatId, "❌ Помилка імпорту: " + e.getMessage());
-            e.printStackTrace();
-        }
+        sendText(chatId, "🔍 Введіть назву товару для пошуку в Excel:");
     }
 
     // Головний метод створення меню відгуку
