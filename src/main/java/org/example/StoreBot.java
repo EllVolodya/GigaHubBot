@@ -4025,7 +4025,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow r4 = new KeyboardRow();
         r4.add(new KeyboardButton("🏭 Виробник"));
-        r4.add(new KeyboardButton(BACK_BUTTON));
+        r4.add(new KeyboardButton("⬅️ Назад"));
 
         kb.setKeyboard(List.of(r1, r2, r3, r4));
         msg.setReplyMarkup(kb);
@@ -4767,46 +4767,69 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleAdminSearchSource(Long userId, String chatId, String text)
             throws TelegramApiException {
 
-        if ("🔍 Пошук у MySQL".equals(text)) {
+        switch (text) {
 
-            adminSearchSource.put(userId, "mysql");
-            userStates.put(userId, "awaiting_search");
+            case "🔍 Пошук у MySQL" -> {
+                adminSearchSource.put(userId, "mysql");
+                userStates.put(userId, "awaiting_search");
+                sendText(chatId, "🔍 Введіть ключові слова для пошуку у MySQL:");
+            }
 
-            sendText(chatId, "Введіть ключові слова для пошуку у MySQL:");
-            return;
+            case "🔍 Пошук у YAML" -> {
+                adminSearchSource.put(userId, "yaml");
+                userStates.put(userId, "awaiting_search");
+                sendText(chatId, "🔍 Введіть ключові слова для пошуку у YAML:");
+            }
+
+            case "🔍 Пошук з EXCEL" -> {
+                adminSearchSource.put(userId, "excel");
+                userStates.put(userId, "awaiting_search");
+                sendText(chatId, "🔍 Введіть назву товару для пошуку в Excel:");
+            }
+
+            default -> sendText(chatId, "❌ Невідома опція. Оберіть із меню.");
         }
-
-        if ("🔍 Пошук у YAML".equals(text)) {
-
-            adminSearchSource.put(userId, "yaml");
-            userStates.put(userId, "awaiting_search");
-
-            sendText(chatId, "Введіть ключові слова для пошуку у YAML:");
-            return;
-        }
-
-        if ("🔍 Пошук з EXCEL".equals(text)) {
-            handleExcelImport(userId, chatId);
-            return;
-        }
-
-        sendText(chatId, "❌ Невідома опція. Оберіть із меню.");
     }
 
-    private void handleAdminSearchInput(Long userId, String chatId, String text) throws TelegramApiException {
-        List<Map<String, Object>> results = new ArrayList<>();
-        CatalogSearcher searcher = new CatalogSearcher();
-        String source = adminSearchSource.getOrDefault(userId, "mysql"); // обране джерело
+    private void handleAdminSearchInput(Long userId, String chatId, String text)
+            throws TelegramApiException {
 
-        if ("mysql".equals(source)) {
-            // пошук у MySQL
-            results = searcher.searchByKeywordsAdmin(text);
-        } else if ("yaml".equals(source)) {
-            try {
-                results = CatalogUpdater.searchProductsSimple(text); // пошук у YAML
-            } catch (Exception e) {
-                sendText(chatId, "❌ Помилка при пошуку у YAML: " + e.getMessage());
-                return;
+        String source = adminSearchSource.getOrDefault(userId, "mysql");
+        List<Map<String, Object>> results = new ArrayList<>();
+
+        switch (source) {
+
+            case "mysql" -> {
+                CatalogSearcher searcher = new CatalogSearcher();
+                results = searcher.searchByKeywordsAdmin(text);
+            }
+
+            case "yaml" -> {
+                try {
+                    results = CatalogUpdater.searchProductsSimple(text);
+                } catch (Exception e) {
+                    sendText(chatId, "❌ Помилка при пошуку у YAML: " + e.getMessage());
+                    return;
+                }
+            }
+
+            case "excel" -> {
+                try {
+                    List<ExcelToMySqlImporter.ExcelProduct> excelResults =
+                            ExcelToMySqlImporter.searchInExcel(text);
+
+                    for (ExcelToMySqlImporter.ExcelProduct p : excelResults) {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("name", p.name);
+                        map.put("price", p.price);
+                        map.put("_excel", p); // 🔥 зберігаємо оригінал
+                        results.add(map);
+                    }
+
+                } catch (Exception e) {
+                    sendText(chatId, "❌ Помилка при пошуку у Excel: " + e.getMessage());
+                    return;
+                }
             }
         }
 
@@ -4815,28 +4838,28 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // --- Зберігаємо результати для вибору ---
+        // 🔥 Зберігаємо ВСІ результати в одному місці
         adminMatchList.put(userId, results);
 
-        // --- Формуємо список для відправки адміну ---
-        StringBuilder sb = new StringBuilder("🔎 Знайдено товари. Введіть номер для редагування:\n\n");
+        StringBuilder sb = new StringBuilder(
+                "🔎 Знайдено товари. Введіть номер для редагування:\n\n"
+        );
+
         for (int i = 0; i < results.size(); i++) {
             Map<String, Object> prod = results.get(i);
-            sb.append(i + 1).append(". ").append(prod.get("name"));
-            if (prod.get("price") != null) sb.append(" | Ціна: ").append(prod.get("price"));
+            sb.append(i + 1)
+                    .append(". ")
+                    .append(prod.get("name"));
+
+            if (prod.get("price") != null) {
+                sb.append(" | Ціна: ").append(prod.get("price"));
+            }
             sb.append("\n");
         }
 
         sendText(chatId, sb.toString());
-        userStates.put(userId, "choose_product"); // стан очікування введення номера
-    }
 
-    private void handleExcelImport(Long userId, String chatId)
-            throws TelegramApiException {
-
-        adminSearchSource.put(userId, "excel");
-        userStates.put(userId, "awaiting_excel_keyword");
-        sendText(chatId, "🔍 Введіть назву товару для пошуку в Excel:");
+        userStates.put(userId, "choose_product");
     }
 
     // Головний метод створення меню відгуку
