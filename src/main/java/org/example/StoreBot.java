@@ -1994,13 +1994,18 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "awaiting_excel_keyword" -> {
 
-                // 🔙 BACK BUTTON — ЯК У ПРИКЛАДІ
+                // 🔙 BACK BUTTON
                 if (BACK_BUTTON.equals(text)) {
 
                     userStates.remove(userId);
                     adminSearchSource.remove(userId);
 
-                    execute(showAdminSearchSourceMenu(userId, Long.parseLong(chatId)));
+                    try {
+                        execute(showAdminSearchSourceMenu(userId, Long.parseLong(chatId)));
+                    } catch (TelegramApiException e) {
+                        sendText(chatId, "❌ Помилка повернення назад");
+                        e.printStackTrace();
+                    }
                     return;
                 }
 
