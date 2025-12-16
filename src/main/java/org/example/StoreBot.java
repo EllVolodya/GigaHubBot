@@ -1994,6 +1994,16 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "awaiting_excel_keyword" -> {
 
+                // 🔙 BACK BUTTON — ЯК У ПРИКЛАДІ
+                if (BACK_BUTTON.equals(text)) {
+
+                    userStates.remove(userId);
+                    adminSearchSource.remove(userId);
+
+                    execute(showAdminSearchSourceMenu(userId, Long.parseLong(chatId)));
+                    return;
+                }
+
                 String keyword = text.trim();
 
                 List<ExcelToMySqlImporter.ExcelProduct> results;
@@ -2001,48 +2011,38 @@ public class StoreBot extends TelegramLongPollingBot {
                     results = ExcelToMySqlImporter.searchInExcel(keyword);
                 } catch (Exception e) {
                     sendText(chatId, "❌ Помилка при пошуку у Excel: " + e.getMessage());
-                    break;
+                    return;
                 }
 
                 if (results.isEmpty()) {
                     sendText(chatId, "❌ Товар не знайдено у Excel: " + keyword);
-                } else {
-
-                    StringBuilder sb = new StringBuilder("🔎 Знайдено товари. Введіть номер для редагування:\n\n");
-
-                    for (int i = 0; i < results.size(); i++) {
-                        var p = results.get(i);
-
-                        sb.append(i + 1)
-                                .append(". ")
-                                .append(p.name);
-
-                        if (p.price != null) {
-                            sb.append(" | Ціна: ").append(p.price);
-                        }
-
-                        sb.append("\n");
-                    }
-
-                    sendText(chatId, sb.toString());
-
-                    // 🔥 зберігаємо результати як у YAML
-                    adminExcelResults.put(userId, results);
-
-                    // 🔥 чекаємо номер
-                    userStates.put(userId, "choose_excel_product");
+                    return;
                 }
+
+                adminExcelResults.put(userId, results);
+
+                StringBuilder sb =
+                        new StringBuilder("🔎 Знайдено товари. Введіть номер для редагування:\n\n");
+
+                for (int i = 0; i < results.size(); i++) {
+                    var p = results.get(i);
+                    sb.append(i + 1).append(". ").append(p.name);
+                    if (p.price != null) sb.append(" | Ціна: ").append(p.price);
+                    sb.append("\n");
+                }
+
+                sendText(chatId, sb.toString());
+                userStates.put(userId, "choose_excel_product");
             }
 
             case "choose_excel_product" -> {
 
-                // 🔙 BACK BUTTON
                 if (BACK_BUTTON.equals(text)) {
 
-                    userStates.remove(userId);
                     adminExcelResults.remove(userId);
+                    userStates.put(userId, "awaiting_excel_keyword");
 
-                    sendText(chatId, "↩️ Повернення назад");
+                    sendText(chatId, "↩️ Введіть назву товару для пошуку в Excel:");
                     return;
                 }
 
@@ -2054,7 +2054,8 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                List<ExcelToMySqlImporter.ExcelProduct> list = adminExcelResults.get(userId);
+                List<ExcelToMySqlImporter.ExcelProduct> list =
+                        adminExcelResults.get(userId);
 
                 if (list == null || index < 0 || index >= list.size()) {
                     sendText(chatId, "❌ Невірний номер");
@@ -2064,17 +2065,16 @@ public class StoreBot extends TelegramLongPollingBot {
                 ExcelToMySqlImporter.ExcelProduct product = list.get(index);
 
                 try {
-                    long productId = ExcelToMySqlImporter.importSingleProduct(product);
+                    long productId =
+                            ExcelToMySqlImporter.importSingleProduct(product);
 
                     adminEditingProduct.put(userId, String.valueOf(productId));
-
                     userStates.put(userId, "editing_product");
 
                     execute(createEditMenu(chatId, userId));
 
                 } catch (Exception e) {
                     sendText(chatId, "❌ Помилка додавання товару: " + e.getMessage());
-                    e.printStackTrace();
                 }
             }
 
