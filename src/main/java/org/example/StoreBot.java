@@ -1624,7 +1624,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // ❗ 0.2 Повернення назад з КАЛЬКУЛЯТОРА МАТЕРІАЛІВ
+        // ❗ 0.2 КАЛЬКУЛЯТОР МАТЕРІАЛІВ (як було)
         Set<String> MATERIAL_STATES = Set.of(
                 "material_calc_menu",
                 "paint_length", "paint_width",
@@ -1637,21 +1637,31 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (state != null && MATERIAL_STATES.contains(state)) {
 
-            // очищаємо тимчасові дані калькулятора
             tempLength.remove(userId);
             tempWidth.remove(userId);
             paintTemp.remove(userId);
             paintLayers.remove(userId);
 
-            // ставимо стан null
             userStates.remove(userId);
-
-            // повернення в ГОЛОВНЕ МЕНЮ
             sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
-        // 1. Очищаємо стани
+        // 🔥🔥🔥 7. ПОВЕРНЕННЯ З РЕДАГУВАННЯ ТОВАРУ — ПЕРШИМ
+        if (adminEditingProduct.containsKey(userId) ||
+                adminSelectedProductsRange.containsKey(userId)) {
+
+            adminEditingProduct.remove(userId);
+            adminSelectedProductsRange.remove(userId);
+            adminEditingField.remove(userId);
+            userStates.remove(userId);
+
+            sendText(chatId, "↩️ Ви повернулися до меню розробника.");
+            sendMessage(createDeveloperMenu(chatId));
+            return;
+        }
+
+        // 1. Очищаємо загальні стани (ТЕПЕР МОЖНА)
         userStates.remove(userId);
         lastShownProduct.remove(userId);
         adminMatchList.remove(userId);
@@ -1691,19 +1701,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // 6. Повернення з меню розробника
         if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
-            sendMessage(createDeveloperMenu(chatId));
-            return;
-        }
-
-        // 7. Повернення після редагування товару
-        if (adminEditingProduct.containsKey(userId) || adminSelectedProductsRange.containsKey(userId)) {
-
-            adminEditingProduct.remove(userId);
-            adminSelectedProductsRange.remove(userId);
-            adminEditingField.remove(userId);
-            userStates.remove(userId);
-
-            sendText(chatId, "↩️ Ви повернулися до меню розробника.");
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
