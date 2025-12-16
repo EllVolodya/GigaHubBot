@@ -8,26 +8,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * ПРАЦЮЄ ТАК:
- * 1) Пошук товарів в Excel по назві
- * 2) Повертає список
- * 3) Додає / оновлює ТІЛЬКИ ОБРАНИЙ товар
- *
- * Excel структура:
- * A - Група товарів
- * B - Код
- * C - Название
- * D - Ед.
- * E - Производитель
- * F - Код поставщика
- * G - Штрих код
- * H - Розничная цена
- * I - Количество
- */
 public class ExcelToMySqlImporter {
-
-    // ======================= MODEL =======================
 
     public static class ExcelProduct {
         public String name;
@@ -35,8 +16,6 @@ public class ExcelToMySqlImporter {
         public String unit;
         public String manufacturer;
     }
-
-    // ======================= SEARCH IN EXCEL =======================
 
     public static List<ExcelProduct> searchInExcel(String keyword) throws Exception {
 
@@ -80,8 +59,6 @@ public class ExcelToMySqlImporter {
         return results;
     }
 
-    // ======================= IMPORT ONE PRODUCT =======================
-
     public static long importSingleProduct(ExcelProduct p) throws SQLException {
 
         String checkSql = "SELECT id FROM products WHERE name = ? LIMIT 1";
@@ -101,8 +78,6 @@ public class ExcelToMySqlImporter {
             return insertProduct(conn, p.name, p.price, p.unit, p.manufacturer);
         }
     }
-
-    // ======================= DATABASE =======================
 
     private static long insertProduct(
             Connection conn,
@@ -158,8 +133,6 @@ public class ExcelToMySqlImporter {
             ps.executeUpdate();
         }
     }
-
-    // ======================= EXCEL HELPERS =======================
 
     private static String getString(Row row, int index) {
 
