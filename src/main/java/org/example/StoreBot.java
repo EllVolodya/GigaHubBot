@@ -88,6 +88,7 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Адмінські стани
     private final Map<Long, Long> adminReplyTarget = new HashMap<>();
 
+    private final Map<Long, List<ExcelToMySqlImporter.ExcelProduct>> adminExcelResults = new HashMap<>();
     private final Map<Long, String> adminEditingProduct = new HashMap<>();
     private final Map<Long, List<String>> adminSelectedProductsRange = new HashMap<>();
     private final Map<Long, String> adminEditingField = new HashMap<>();
@@ -1988,6 +1989,80 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     // Перемикаємо користувача у стан вибору товару
                     userStates.put(userId, "choose_yaml_product");
+                }
+            }
+
+            case "awaiting_excel_keyword" -> {
+
+                String keyword = text.trim();
+
+                List<ExcelToMySqlImporter.ExcelProduct> results;
+                try {
+                    results = ExcelToMySqlImporter.searchInExcel(keyword);
+                } catch (Exception e) {
+                    sendText(chatId, "❌ Помилка при пошуку у Excel: " + e.getMessage());
+                    break;
+                }
+
+                if (results.isEmpty()) {
+                    sendText(chatId, "❌ Товар не знайдено у Excel: " + keyword);
+                } else {
+
+                    StringBuilder sb = new StringBuilder("🔎 Знайдено товари. Введіть номер для редагування:\n\n");
+
+                    for (int i = 0; i < results.size(); i++) {
+                        var p = results.get(i);
+
+                        sb.append(i + 1)
+                                .append(". ")
+                                .append(p.name);
+
+                        if (p.price != null) {
+                            sb.append(" | Ціна: ").append(p.price);
+                        }
+
+                        sb.append("\n");
+                    }
+
+                    sendText(chatId, sb.toString());
+
+                    // 🔥 зберігаємо результати як у YAML
+                    adminExcelResults.put(userId, results);
+
+                    // 🔥 чекаємо номер
+                    userStates.put(userId, "choose_excel_product");
+                }
+            }
+
+            case "choose_excel_product" -> {
+
+                int index;
+                try {
+                    index = Integer.parseInt(text.trim()) - 1;
+                } catch (NumberFormatException e) {
+                    sendText(chatId, "❌ Введіть номер зі списку");
+                    break;
+                }
+
+                List<ExcelToMySqlImporter.ExcelProduct> list = adminExcelResults.get(userId);
+
+                if (list == null || index < 0 || index >= list.size()) {
+                    sendText(chatId, "❌ Невірний номер");
+                    break;
+                }
+
+                ExcelToMySqlImporter.ExcelProduct product = list.get(index);
+
+                try {
+                    long productId = ExcelToMySqlImporter.importSingleProduct(product);
+
+                    adminEditingProduct.put(userId, String.valueOf(productId));
+
+                    execute(createEditMenu(chatId, userId));
+
+                } catch (Exception e) {
+                    sendText(chatId, "❌ Помилка додавання товару: " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
 
@@ -4739,12 +4814,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleExcelImport(Long userId, String chatId)
             throws TelegramApiException {
 
-        // фіксуємо джерело пошуку
         adminSearchSource.put(userId, "excel");
-
-        // переводимо у стан очікування тексту
-        userStates.put(userId, "awaiting_excel_search");
-
+        userStates.put(userId, "awaiting_excel_keyword");
         sendText(chatId, "🔍 Введіть назву товару для пошуку в Excel:");
     }
 
