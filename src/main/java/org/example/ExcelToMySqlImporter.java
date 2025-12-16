@@ -10,37 +10,53 @@ import java.util.List;
 
 public class ExcelToMySqlImporter {
 
+    /**
+     * Excel структура:
+     * A - Група товарів
+     * B - Код
+     * C - Название
+     * D - Ед.
+     * E - Производитель
+     * F - Код поставщика
+     * G - Штрих код
+     * H - Розничная цена
+     * I - Количество
+     */
+
     public static List<Long> importProducts() throws Exception {
 
         List<Long> importedIds = new ArrayList<>();
 
-        // 🔥 правильне читання з resources
-        try (InputStream is = ExcelToMySqlImporter.class
+        InputStream is = ExcelToMySqlImporter.class
                 .getClassLoader()
                 .getResourceAsStream("products.xlsx");
-             Workbook workbook = new XSSFWorkbook(is)) {
 
-            if (is == null) {
-                throw new RuntimeException("❌ products.xlsx not found in resources");
-            }
+        if (is == null) {
+            throw new RuntimeException("❌ products.xlsx не знайдено в resources");
+        }
+
+        try (Workbook workbook = new XSSFWorkbook(is)) {
 
             Sheet sheet = workbook.getSheetAt(0);
 
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            // 🔥 Дані починаються з 3-го рядка (index = 2)
+            for (int rowIndex = 2; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
 
-                Row row = sheet.getRow(i);
+                Row row = sheet.getRow(rowIndex);
                 if (row == null) continue;
 
-                String name = getString(row, 0);
+                String name = getString(row, 2);          // C Название
                 if (name == null || name.isBlank()) continue;
 
-                Double price = getDouble(row, 1);
-                String description = getString(row, 2);
-                String unit = getString(row, 3);
-                String manufacturer = getString(row, 4);
+                Double price = getDouble(row, 7);         // H Розничная цена
+                String unit = getString(row, 3);          // D Ед.
+                String manufacturer = getString(row, 4); // E Производитель
 
-                long productId = insertOrUpdate(
-                        name, price, description, unit, manufacturer
+                long productId = insertOrUpdateProduct(
+                        name,
+                        price,
+                        unit,
+                        manufacturer
                 );
 
                 importedIds.add(productId);
@@ -50,11 +66,14 @@ public class ExcelToMySqlImporter {
         return importedIds;
     }
 
-    // ================= DB =================
+    // ======================= DATABASE =======================
 
-    private static long insertOrUpdate(String name, Double price,
-                                       String description, String unit,
-                                       String manufacturer) throws SQLException {
+    private static long insertOrUpdateProduct(
+            String name,
+            Double price,
+            String unit,
+            String manufacturer
+    ) throws SQLException {
 
         String checkSql = "SELECT id FROM products WHERE name = ? LIMIT 1";
 
@@ -66,21 +85,25 @@ public class ExcelToMySqlImporter {
 
             if (rs.next()) {
                 long id = rs.getLong("id");
-                update(conn, id, price, description, unit, manufacturer);
+                updateProduct(conn, id, price, unit, manufacturer);
                 return id;
             }
 
-            return insert(conn, name, price, description, unit, manufacturer);
+            return insertProduct(conn, name, price, unit, manufacturer);
         }
     }
 
-    private static long insert(Connection conn, String name, Double price,
-                               String description, String unit,
-                               String manufacturer) throws SQLException {
+    private static long insertProduct(
+            Connection conn,
+            String name,
+            Double price,
+            String unit,
+            String manufacturer
+    ) throws SQLException {
 
         String sql = """
-            INSERT INTO products (name, price, description, unit, manufacturer)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO products (name, price, unit, manufacturer)
+            VALUES (?, ?, ?, ?)
         """;
 
         try (PreparedStatement ps =
@@ -88,48 +111,83 @@ public class ExcelToMySqlImporter {
 
             ps.setString(1, name);
             ps.setObject(2, price);
-            ps.setString(3, description);
-            ps.setString(4, unit);
-            ps.setString(5, manufacturer);
+            ps.setString(3, unit);
+            ps.setString(4, manufacturer);
 
             ps.executeUpdate();
 
             ResultSet rs = ps.getGeneratedKeys();
-            if (rs.next()) return rs.getLong(1);
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
         }
 
-        throw new SQLException("Insert failed");
+        throw new SQLException("❌ Не вдалося вставити товар: " + name);
     }
 
-    private static void update(Connection conn, long id, Double price,
-                               String description, String unit,
-                               String manufacturer) throws SQLException {
+    private static void updateProduct(
+            Connection conn,
+            long id,
+            Double price,
+            String unit,
+            String manufacturer
+    ) throws SQLException {
 
         String sql = """
             UPDATE products
-            SET price=?, description=?, unit=?, manufacturer=?
-            WHERE id=?
+            SET price = ?, unit = ?, manufacturer = ?
+            WHERE id = ?
         """;
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
+
             ps.setObject(1, price);
-            ps.setString(2, description);
-            ps.setString(3, unit);
-            ps.setString(4, manufacturer);
-            ps.setLong(5, id);
+            ps.setString(2, unit);
+            ps.setString(3, manufacturer);
+            ps.setLong(4, id);
+
             ps.executeUpdate();
         }
     }
 
-    // ================= HELPERS =================
+    // ======================= EXCEL HELPERS =======================
 
-    private static String getString(Row row, int i) {
-        Cell c = row.getCell(i);
-        return c == null ? null : c.toString().trim();
+    private static String getString(Row row, int index) {
+
+        Cell cell = row.getCell(index);
+        if (cell == null) return null;
+
+        return switch (cell.getCellType()) {
+            case STRING -> cell.getStringCellValue().trim();
+            case NUMERIC -> String.valueOf(cell.getNumericCellValue());
+            default -> null;
+        };
     }
 
-    private static Double getDouble(Row row, int i) {
-        Cell c = row.getCell(i);
-        return c == null ? null : c.getNumericCellValue();
+    private static Double getDouble(Row row, int index) {
+
+        Cell cell = row.getCell(index);
+        if (cell == null) return null;
+
+        try {
+            return switch (cell.getCellType()) {
+
+                case NUMERIC -> cell.getNumericCellValue();
+
+                case STRING -> {
+                    String text = cell.getStringCellValue()
+                            .replace(",", ".")
+                            .replaceAll("[^0-9.]", "")
+                            .trim();
+
+                    if (text.isEmpty()) yield null;
+                    yield Double.parseDouble(text);
+                }
+
+                default -> null;
+            };
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
