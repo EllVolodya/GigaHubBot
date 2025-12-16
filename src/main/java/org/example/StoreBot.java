@@ -16,6 +16,7 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
+import org.example.ExcelToMySqlImporter;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -4637,7 +4638,10 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow row2 = new KeyboardRow();
         row2.add("🔍 Пошук у YAML");
 
-        markup.setKeyboard(List.of(row1, row2));
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add("📥 Імпорт з Excel");
+
+        markup.setKeyboard(List.of(row1, row2, row3));
         message.setReplyMarkup(markup);
 
         return message;
@@ -4686,6 +4690,11 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if ("📥 Імпорт з Excel".equals(text)) {
+            handleExcelImport(userId, chatId);
+            return;
+        }
+
         sendText(chatId, "❌ Невідома опція. Оберіть із меню.");
     }
 
@@ -4725,6 +4734,32 @@ public class StoreBot extends TelegramLongPollingBot {
 
         sendText(chatId, sb.toString());
         userStates.put(userId, "choose_product"); // стан очікування введення номера
+    }
+
+    private void handleExcelImport(Long userId, String chatId)
+            throws TelegramApiException {
+
+        try {
+            List<Long> ids = ExcelToMySqlImporter.importProducts();
+
+            if (ids.isEmpty()) {
+                sendText(chatId, "❌ Excel порожній або товари не знайдені");
+                return;
+            }
+
+            sendText(chatId, "✅ Імпортовано товарів: " + ids.size());
+
+            // 🔥 відкриваємо меню редагування першого товару
+            Long productId = ids.get(0);
+            adminEditingProduct.put(userId, String.valueOf(productId));
+            execute(createEditMenu(chatId, userId));
+
+            execute(createEditMenu(chatId, userId));
+
+        } catch (Exception e) {
+            sendText(chatId, "❌ Помилка імпорту: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     // Головний метод створення меню відгуку
