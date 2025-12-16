@@ -1624,7 +1624,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // ❗ 0.2 КАЛЬКУЛЯТОР МАТЕРІАЛІВ (як було)
+        // ❗ 0.2 Повернення назад з КАЛЬКУЛЯТОРА МАТЕРІАЛІВ
         Set<String> MATERIAL_STATES = Set.of(
                 "material_calc_menu",
                 "paint_length", "paint_width",
@@ -1637,31 +1637,21 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (state != null && MATERIAL_STATES.contains(state)) {
 
+            // очищаємо тимчасові дані калькулятора
             tempLength.remove(userId);
             tempWidth.remove(userId);
             paintTemp.remove(userId);
             paintLayers.remove(userId);
 
+            // ставимо стан null
             userStates.remove(userId);
+
+            // повернення в ГОЛОВНЕ МЕНЮ
             sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
-        // 🔥🔥🔥 7. ПОВЕРНЕННЯ З РЕДАГУВАННЯ ТОВАРУ — ПЕРШИМ
-        if (adminEditingProduct.containsKey(userId) ||
-                adminSelectedProductsRange.containsKey(userId)) {
-
-            adminEditingProduct.remove(userId);
-            adminSelectedProductsRange.remove(userId);
-            adminEditingField.remove(userId);
-            userStates.remove(userId);
-
-            sendText(chatId, "↩️ Ви повернулися до меню розробника.");
-            sendMessage(createDeveloperMenu(chatId));
-            return;
-        }
-
-        // 1. Очищаємо загальні стани (ТЕПЕР МОЖНА)
+        // 1. Очищаємо стани
         userStates.remove(userId);
         lastShownProduct.remove(userId);
         adminMatchList.remove(userId);
@@ -1701,6 +1691,33 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // 6. Повернення з меню розробника
         if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
+            sendMessage(createDeveloperMenu(chatId));
+            return;
+        }
+
+        // 7. Повернення після редагування товару
+        if (adminEditingProduct.containsKey(userId) || adminSelectedProductsRange.containsKey(userId)) {
+
+            adminEditingProduct.remove(userId);
+            adminSelectedProductsRange.remove(userId);
+            adminEditingField.remove(userId);
+            userStates.remove(userId);
+
+            sendText(chatId, "↩️ Ви повернулися до меню розробника.");
+            sendMessage(createDeveloperMenu(chatId));
+            return;
+        }
+
+        if ("editing_product".equals(userStates.get(userId))) {
+
+            adminEditingProduct.remove(userId);
+            adminEditingField.remove(userId);
+            adminSelectedProductsRange.remove(userId);
+            adminExcelResults.remove(userId);
+            adminSearchSource.remove(userId);
+            userStates.remove(userId);
+
+            sendText(chatId, "↩️ Ви повернулися до меню розробника.");
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
@@ -3989,43 +4006,32 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔹 Створюємо клавіатуру меню редагування
     private SendMessage createEditMenu(String chatId, Long userId) {
+        SendMessage msg = new SendMessage(chatId, "Виберіть дію:");
 
-        SendMessage msg = new SendMessage();
-        msg.setChatId(chatId);
-        msg.setText("Виберіть дію:");
+        ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
+        kb.setResizeKeyboard(true);
 
-        ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
-        keyboard.setResizeKeyboard(true);
-        keyboard.setOneTimeKeyboard(false);
+        KeyboardRow r1 = new KeyboardRow();
+        r1.add(new KeyboardButton("✏️ Назву"));
+        r1.add(new KeyboardButton("💰 Ціну"));
 
-        KeyboardRow row1 = new KeyboardRow();
-        row1.add(new KeyboardButton("✏️ Назву"));
-        row1.add(new KeyboardButton("💰 Ціну"));
+        KeyboardRow r2 = new KeyboardRow();
+        r2.add(new KeyboardButton("📖 Опис"));
+        r2.add(new KeyboardButton("🗂️ Додати в підкатегорію"));
 
-        KeyboardRow row2 = new KeyboardRow();
-        row2.add(new KeyboardButton("📖 Опис"));
-        row2.add(new KeyboardButton("🗂️ Додати в підкатегорію"));
+        KeyboardRow r3 = new KeyboardRow();
+        r3.add(new KeyboardButton("🖼️ Додати фотографію"));
+        r3.add(new KeyboardButton("📏 Одиниця виміру"));
 
-        KeyboardRow row3 = new KeyboardRow();
-        row3.add(new KeyboardButton("🖼️ Додати фотографію"));
-        row3.add(new KeyboardButton("📏 Одиниця виміру"));
+        KeyboardRow r4 = new KeyboardRow();
+        r4.add(new KeyboardButton("🏭 Виробник"));
+        r4.add(new KeyboardButton("⬅️ Назад"));
 
-        KeyboardRow row4 = new KeyboardRow();
-        row4.add(new KeyboardButton("🏭 Виробник"));
-        row4.add(new KeyboardButton(BACK_BUTTON)); // 🔥 ВАЖЛИВО
-
-        List<KeyboardRow> rows = new ArrayList<>();
-        rows.add(row1);
-        rows.add(row2);
-        rows.add(row3);
-        rows.add(row4);
-
-        keyboard.setKeyboard(rows);
-        msg.setReplyMarkup(keyboard);
+        kb.setKeyboard(List.of(r1, r2, r3, r4));
+        msg.setReplyMarkup(kb);
 
         return msg;
     }
-
 
     private SendMessage createCategoryAdminMenu(String chatId) {
         SendMessage msg = new SendMessage(chatId, "🔧 Редагування категорій:");
