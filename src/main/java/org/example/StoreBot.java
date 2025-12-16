@@ -2036,19 +2036,29 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "choose_excel_product" -> {
 
+                // 🔙 BACK BUTTON
+                if (BACK_BUTTON.equals(text)) {
+
+                    userStates.remove(userId);
+                    adminExcelResults.remove(userId);
+
+                    sendText(chatId, "↩️ Повернення назад");
+                    return;
+                }
+
                 int index;
                 try {
                     index = Integer.parseInt(text.trim()) - 1;
                 } catch (NumberFormatException e) {
                     sendText(chatId, "❌ Введіть номер зі списку");
-                    break;
+                    return;
                 }
 
                 List<ExcelToMySqlImporter.ExcelProduct> list = adminExcelResults.get(userId);
 
                 if (list == null || index < 0 || index >= list.size()) {
                     sendText(chatId, "❌ Невірний номер");
-                    break;
+                    return;
                 }
 
                 ExcelToMySqlImporter.ExcelProduct product = list.get(index);
@@ -2057,6 +2067,8 @@ public class StoreBot extends TelegramLongPollingBot {
                     long productId = ExcelToMySqlImporter.importSingleProduct(product);
 
                     adminEditingProduct.put(userId, String.valueOf(productId));
+
+                    userStates.put(userId, "editing_product");
 
                     execute(createEditMenu(chatId, userId));
 
