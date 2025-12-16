@@ -1994,21 +1994,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "awaiting_excel_keyword" -> {
 
-                // 🔙 BACK BUTTON
-                if (BACK_BUTTON.equals(text)) {
-
-                    userStates.remove(userId);
-                    adminSearchSource.remove(userId);
-
-                    try {
-                        execute(showAdminSearchSourceMenu(userId, Long.parseLong(chatId)));
-                    } catch (TelegramApiException e) {
-                        sendText(chatId, "❌ Помилка повернення назад");
-                        e.printStackTrace();
-                    }
-                    return;
-                }
-
                 String keyword = text.trim();
 
                 List<ExcelToMySqlImporter.ExcelProduct> results;
@@ -2024,32 +2009,33 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
+                // зберігаємо результати
                 adminExcelResults.put(userId, results);
 
-                StringBuilder sb =
-                        new StringBuilder("🔎 Знайдено товари. Введіть номер для редагування:\n\n");
+                StringBuilder sb = new StringBuilder(
+                        "🔎 Знайдено товари. Введіть номер для редагування:\n\n"
+                );
 
                 for (int i = 0; i < results.size(); i++) {
                     var p = results.get(i);
-                    sb.append(i + 1).append(". ").append(p.name);
-                    if (p.price != null) sb.append(" | Ціна: ").append(p.price);
+                    sb.append(i + 1)
+                            .append(". ")
+                            .append(p.name);
+
+                    if (p.price != null) {
+                        sb.append(" | Ціна: ").append(p.price);
+                    }
+
                     sb.append("\n");
                 }
 
                 sendText(chatId, sb.toString());
+
+                // переходимо до вибору номера
                 userStates.put(userId, "choose_excel_product");
             }
 
             case "choose_excel_product" -> {
-
-                if (BACK_BUTTON.equals(text)) {
-
-                    adminExcelResults.remove(userId);
-                    userStates.put(userId, "awaiting_excel_keyword");
-
-                    sendText(chatId, "↩️ Введіть назву товару для пошуку в Excel:");
-                    return;
-                }
 
                 int index;
                 try {
@@ -2074,12 +2060,15 @@ public class StoreBot extends TelegramLongPollingBot {
                             ExcelToMySqlImporter.importSingleProduct(product);
 
                     adminEditingProduct.put(userId, String.valueOf(productId));
+
+                    // переходимо в режим редагування товару
                     userStates.put(userId, "editing_product");
 
                     execute(createEditMenu(chatId, userId));
 
                 } catch (Exception e) {
                     sendText(chatId, "❌ Помилка додавання товару: " + e.getMessage());
+                    e.printStackTrace();
                 }
             }
 
