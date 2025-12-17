@@ -553,7 +553,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             switch (text) {
                 case "🧱 Каталог товарів" -> sendCategories(userId);
-                case "📋 Кошик" -> {
+                case "\uD83D\uDED2 Кошик" -> {
                     try {
                         showCart(userId);
                     } catch (TelegramApiException e) {
@@ -3862,7 +3862,7 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow row1 = new KeyboardRow();
         row1.add("🧱 Каталог товарів");
         row1.add("🔍 Пошук товару");
-        row1.add("📋 Кошик");
+        row1.add("\uD83D\uDED2 Кошик");
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
