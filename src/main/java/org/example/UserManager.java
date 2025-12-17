@@ -234,26 +234,51 @@ public class UserManager {
         }
     }
 
-    public void decreaseProductsFromText(
-            Connection conn,
-            String itemsText
-    ) throws SQLException {
+    public void decreaseProductsFromText(Connection conn, String itemsText) throws SQLException {
 
         if (itemsText == null || itemsText.isBlank()) return;
 
-        // формат: productId:price:qty;
-        String[] items = itemsText.split(";");
+    /*
+     Очікуємо блоки типу:
 
-        for (String item : items) {
-            if (item.isBlank()) continue;
+     1. Цемент 500 25кг Ольшанский
+        Кількість: 9
+        Ціна: 185.0 грн
+    */
 
-            String[] parts = item.split(":");
-            if (parts.length < 3) continue;
+        String[] lines = itemsText.split("\n");
 
-            long productId = Long.parseLong(parts[0].trim());
-            int qty = Integer.parseInt(parts[2].trim());
+        String currentProductName = null;
+        Integer currentQty = null;
 
-            decreaseProductQuantity(conn, productId, qty);
+        for (String line : lines) {
+
+            line = line.trim();
+
+            // 🔹 Рядок з назвою товару
+            if (line.matches("^\\d+\\.\\s+.+")) {
+                currentProductName = line.replaceFirst("^\\d+\\.\\s+", "").trim();
+            }
+
+            // 🔹 Рядок з кількістю
+            if (line.startsWith("Кількість:")) {
+                String num = line.replace("Кількість:", "").trim();
+                currentQty = Integer.parseInt(num);
+            }
+
+            // 🔻 Коли маємо і назву, і кількість — мінусуємо
+            if (currentProductName != null && currentQty != null) {
+
+                Long productId = findProductIdByName(currentProductName);
+
+                if (productId != null) {
+                    decreaseProductQuantity(conn, productId, currentQty);
+                }
+
+                // очищаємо для наступного товару
+                currentProductName = null;
+                currentQty = null;
+            }
         }
     }
 
