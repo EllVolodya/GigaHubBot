@@ -179,48 +179,16 @@ public class UserManager {
         return max;
     }
 
-    public void decreaseProductQuantity(String productName, int minus) {
-
-        String selectSql = "SELECT quantity FROM products WHERE name = ? LIMIT 1";
-        String updateSql = "UPDATE products SET quantity = ? WHERE name = ?";
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement select = conn.prepareStatement(selectSql)) {
-
-            select.setString(1, productName);
-            ResultSet rs = select.executeQuery();
-
-            if (!rs.next()) return;
-
-            String quantityText = rs.getString("quantity");
-            if (quantityText == null) return;
-
-            int current = extractMaxQuantity(quantityText);
-            if (current < 0) return; // не число → не мінусуємо
-
-            int newQty = Math.max(0, current - minus);
-
-            // замінюємо число в тексті
-            String newText = quantityText.replaceFirst("\\d+", String.valueOf(newQty));
-
-            try (PreparedStatement update = conn.prepareStatement(updateSql)) {
-                update.setString(1, newText);
-                update.setString(2, productName);
-                update.executeUpdate();
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void decreaseProductQuantity(long productId, int orderedQty) {
+    public void decreaseProductQuantity(
+            Connection conn,
+            long productId,
+            int orderedQty
+    ) throws SQLException {
 
         String selectSql = "SELECT quantity FROM products WHERE id = ?";
         String updateSql = "UPDATE products SET quantity = ? WHERE id = ?";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement select = conn.prepareStatement(selectSql)) {
+        try (PreparedStatement select = conn.prepareStatement(selectSql)) {
 
             select.setLong(1, productId);
             ResultSet rs = select.executeQuery();
@@ -229,7 +197,6 @@ public class UserManager {
 
             String quantityText = rs.getString("quantity");
             int currentQty = extractMaxQuantity(quantityText);
-
             int newQty = Math.max(0, currentQty - orderedQty);
 
             try (PreparedStatement update = conn.prepareStatement(updateSql)) {
@@ -237,13 +204,13 @@ public class UserManager {
                 update.setLong(2, productId);
                 update.executeUpdate();
             }
-
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
-    public void decreaseProductsFromOrderItems(String itemsJson) {
+    public void decreaseProductsFromOrderItems(
+            Connection conn,
+            String itemsJson
+    ) throws SQLException {
 
         if (itemsJson == null || itemsJson.isBlank()) return;
 
@@ -258,59 +225,37 @@ public class UserManager {
                 long productId = ((Number) item.get("id")).longValue();
                 int qty = ((Number) item.get("qty")).intValue();
 
-                // 🔻 ВИКЛИК ТВОГО МЕТОДУ
-                decreaseProductQuantity(productId, qty);
+                // 🔻 мінус складу
+                decreaseProductQuantity(conn, productId, qty);
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new SQLException("Failed to parse order items JSON", e);
         }
     }
 
-    public void decreaseProductsFromText(String itemsText) {
-
-        System.out.println("DEBUG itemsText = [" + itemsText + "]");
+    public void decreaseProductsFromText(
+            Connection conn,
+            String itemsText
+    ) throws SQLException {
 
         if (itemsText == null || itemsText.isBlank()) return;
 
-        // розбиваємо по ;
+        // формат: productId:price:qty;
         String[] items = itemsText.split(";");
 
         for (String item : items) {
-            try {
-                if (item.isBlank()) continue;
+            if (item.isBlank()) continue;
 
-                System.out.println("DEBUG item = [" + item + "]");
+            String[] parts = item.split(":");
+            if (parts.length < 3) continue;
 
-                // формат: name:price:qty
-                String[] parts = item.split(":");
+            long productId = Long.parseLong(parts[0].trim());
+            int qty = Integer.parseInt(parts[2].trim());
 
-                if (parts.length < 3) {
-                    System.out.println("DEBUG invalid format, skip");
-                    continue;
-                }
-
-                String name = parts[0].trim();
-                int qty = Integer.parseInt(parts[parts.length - 1].trim());
-
-                System.out.println("DEBUG parsed name = [" + name + "]");
-                System.out.println("DEBUG parsed qty = " + qty);
-
-                Long productId = findProductIdByName(name);
-
-                System.out.println("DEBUG found productId = " + productId);
-
-                if (productId == null) continue;
-
-                // 🔻 МІНУСУЄМО СКЛАД
-                decreaseProductQuantity(productId, qty);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            decreaseProductQuantity(conn, productId, qty);
         }
     }
-
 
     private Long findProductIdByName(String name) {
 
