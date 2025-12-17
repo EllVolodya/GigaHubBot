@@ -251,39 +251,52 @@ public class StoreBot extends TelegramLongPollingBot {
         if (waitingForQuantity.getOrDefault(realChatId, false)) {
 
             try {
-                int quantity = Integer.parseInt(text);
+                int requestedQty = Integer.parseInt(text);
 
-                if (quantity <= 0) {
-                    sendText(realChatId, "❌ Кількість має бути більше 0. Введіть ще раз:");
+                if (requestedQty <= 0) {
+                    sendText(realChatId, "❌ Кількість має бути більше 0.");
                     return;
                 }
 
                 Map<String, Object> product = lastShownProduct.get(realChatId);
-
                 if (product == null) {
-                    sendText(realChatId, "❌ Помилка: товар не знайдено.");
+                    sendText(realChatId, "❌ Товар не знайдено.");
                     waitingForQuantity.put(realChatId, false);
                     return;
                 }
 
+                String productName = String.valueOf(product.get("name"));
+                String quantityText = String.valueOf(product.getOrDefault("quantity", ""));
+
+                int maxAvailable = userManager.extractMaxQuantity(quantityText);
+
+                // 🔥 перевірка
+                if (maxAvailable > 0 && requestedQty > maxAvailable) {
+                    sendText(realChatId,
+                            "⚠️ На складі доступно: *" + quantityText + "*\n" +
+                                    "Введіть меншу кількість 👇");
+                    return;
+                }
+
+                // ✅ додаємо в кошик
                 Map<String, Object> cartItem = new HashMap<>(product);
-                cartItem.put("quantity", quantity);
+                cartItem.put("quantity", requestedQty);
 
                 userCart.computeIfAbsent(realChatId, k -> new ArrayList<>()).add(cartItem);
 
+                // 🔻 МІНУС У БД
+                userManager.decreaseProductQuantity(productName, requestedQty);
+
                 sendText(realChatId,
                         "🧺 Товар додано у кошик!\n\n" +
-                                "📦 " + product.get("name") + "\n" +
-                                "🔢 Кількість: " + quantity + "\n\n" +
-                                "Митрофан радісно поклав товар у твій кошик 😊\n" +
-                                "Можеш продовжувати покупки — я поруч!");
+                                "📦 " + productName + "\n" +
+                                "🔢 Замовлено: " + requestedQty + "\n" +
+                                "📊 Залишок: " + quantityText);
 
                 waitingForQuantity.put(realChatId, false);
-                return;
 
             } catch (NumberFormatException e) {
-                sendText(realChatId, "❌ Це не число. Введіть кількість ще раз:");
-                return;
+                sendText(realChatId, "❌ Введіть кількість числом (наприклад 5):");
             }
         }
 
@@ -1855,6 +1868,7 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void addToCart(Long chatId) throws TelegramApiException {
+
         Map<String, Object> product = lastShownProduct.get(chatId);
 
         if (product == null) {
@@ -1862,37 +1876,63 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        String productName = product.getOrDefault("name", "Без назви").toString();
-        String unit = product.getOrDefault("unit", "").toString().toLowerCase();
+        String productName = String.valueOf(
+                product.getOrDefault("name", "Без назви")
+        );
 
+        String unit = String.valueOf(
+                product.getOrDefault("unit", "")
+        ).toLowerCase();
+
+        String quantityText = String.valueOf(
+                product.getOrDefault("quantity", "")
+        );
+
+        // 🔥 якщо під замовлення — без кількості
         if (unit.equals("під замовлення")) {
 
             sendText(chatId,
                     "📦 *Товар під замовлення!*\n\n" +
                             "🔎 \"" + productName + "\" наразі недоступний для швидкого замовлення.\n" +
-                            "Я вже передав інформацію нашому консультанту — він відповість тобі найближчим часом! 🧱🤝");
+                            "Наш консультант зв’яжеться з тобою найближчим часом 🧱🤝");
 
             String adminMsg =
                     "📢 *Новий запит під замовлення!*\n\n" +
-                            "👤 Покупець хоче дізнатися про товар:\n" +
+                            "👤 Покупець цікавиться товаром:\n" +
                             "📦 " + productName + "\n\n" +
-                            "🆔 User ID: " + chatId + "\n" +
-                            "💬 Чат ID: " + chatId + "\n\n" +
-                            "Натисніть кнопку нижче, щоб відповісти 👇";
+                            "🆔 Chat ID: " + chatId;
 
             sendReplyButtonToConsultant(chatId);
-
             sendText(String.valueOf(CONSULTANT_CHAT_ID), adminMsg);
 
             return;
         }
 
+        // 🔎 пробуємо дістати число зі складу
+        int maxAvailable = userManager.extractMaxQuantity(quantityText);
+
         waitingForQuantity.put(chatId, true);
 
-        sendText(chatId,
-                "📥 Добре, друже! Скільки тобі потрібно?\n" +
-                        "👉 *" + productName + "*\n\n" +
-                        "Введи кількість числом (наприклад: 3)");
+        // 🧠 формуємо текст
+        StringBuilder msg = new StringBuilder();
+        msg.append("📥 Добре, друже! Скільки тобі потрібно?\n")
+                .append("👉 *").append(productName).append("*\n\n");
+
+        if (quantityText != null && !quantityText.isBlank()) {
+            msg.append("📊 Наявність на складі: *")
+                    .append(quantityText)
+                    .append("*\n");
+        }
+
+        if (maxAvailable > 0) {
+            msg.append("ℹ️ Максимально доступно: *")
+                    .append(maxAvailable)
+                    .append("*\n");
+        }
+
+        msg.append("\nВведи кількість числом (наприклад: 3)");
+
+        sendText(chatId, msg.toString());
     }
     public void addToCartTool(Long userId) {
         Map<String, Object> product = lastShownProduct.get(userId);

@@ -8,6 +8,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
 public class UserManager {
@@ -160,5 +163,53 @@ public class UserManager {
     // отримуємо chatId
     public Long getChatId(long userId) {
         return userChatMap.get(userId);
+    }
+
+    public int extractMaxQuantity(String quantityText) {
+        if (quantityText == null) return -1;
+
+        Matcher m = Pattern.compile("(\\d+)").matcher(quantityText);
+        int max = -1;
+
+        while (m.find()) {
+            int val = Integer.parseInt(m.group(1));
+            max = Math.max(max, val);
+        }
+        return max;
+    }
+
+    public void decreaseProductQuantity(String productName, int minus) {
+
+        String selectSql = "SELECT quantity FROM products WHERE name = ? LIMIT 1";
+        String updateSql = "UPDATE products SET quantity = ? WHERE name = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement select = conn.prepareStatement(selectSql)) {
+
+            select.setString(1, productName);
+            ResultSet rs = select.executeQuery();
+
+            if (!rs.next()) return;
+
+            String quantityText = rs.getString("quantity");
+            if (quantityText == null) return;
+
+            int current = extractMaxQuantity(quantityText);
+            if (current < 0) return; // не число → не мінусуємо
+
+            int newQty = Math.max(0, current - minus);
+
+            // замінюємо число в тексті
+            String newText = quantityText.replaceFirst("\\d+", String.valueOf(newQty));
+
+            try (PreparedStatement update = conn.prepareStatement(updateSql)) {
+                update.setString(1, newText);
+                update.setString(2, productName);
+                update.executeUpdate();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
