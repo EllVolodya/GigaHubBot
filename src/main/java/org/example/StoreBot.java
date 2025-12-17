@@ -2485,59 +2485,85 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case "awaiting_hit_media" -> {
-                String title = String.valueOf(tempStorage.getOrDefault(userId + "_hit_title", "немає"));
-                String description = String.valueOf(tempStorage.getOrDefault(userId + "_hit_description", "немає"));
 
+                // 🔹 1. Дістаємо дані
+                String title = String.valueOf(
+                        tempStorage.getOrDefault(userId + "_hit_title", "немає")
+                );
+
+                String description = String.valueOf(
+                        tempStorage.getOrDefault(userId + "_hit_description", "немає")
+                );
+
+                // 🔹 2. Обробка медіа
                 String mediaUrl = "немає";
                 if (text == null || !text.equalsIgnoreCase("немає")) {
                     mediaUrl = HitsManager.uploadFromTelegram(this, update.getMessage());
                     if (mediaUrl == null) mediaUrl = "немає";
                 }
 
+                // 🔹 3. Зберігаємо хіт
                 HitsManager.saveHit(title, description, mediaUrl);
 
-                // Очищення
+                // 🔹 4. Очищення станів
                 userStates.remove(userId);
                 tempStorage.remove(userId + "_hit_title");
                 tempStorage.remove(userId + "_hit_description");
 
+                // 🔹 5. Повідомлення адміну
                 sendText(chatId, "✅ Товар успішно додано у Хіт продажу!");
 
-                // Розсилка всім користувачам
+                // 🔔 6. РОЗСИЛКА ВСІМ КОРИСТУВАЧАМ
                 for (String uidStr : userManager.getRegisteredUsers()) {
                     try {
                         long uid = Long.parseLong(uidStr);
                         if (ADMINS.contains(uid)) continue;
 
-                        sendText(uidStr, "🌟 Новий Хіт продажу з’явився в магазині!\nПерегляньте його у розділі «Хіти продажів»!");
-                    } catch (Exception e) {
-                        // щоб не падало на кривих значеннях
-                    }
+                        Long targetChatId = userManager.getChatId(uid);
+                        if (targetChatId == null) continue;
+
+                        sendText(
+                                String.valueOf(targetChatId),
+                                "🌟 Новий Хіт продажу з’явився в магазині!\n" +
+                                        "👉 Перегляньте його у розділі «Хіти продажів»!"
+                        );
+                    } catch (Exception ignored) {}
                 }
             }
 
             case "awaiting_hit_media_only" -> {
+
+                // 🔹 1. Обробка медіа
                 String mediaUrl = "немає";
                 if (text == null || !text.equalsIgnoreCase("немає")) {
                     mediaUrl = HitsManager.uploadFromTelegram(this, update.getMessage());
                     if (mediaUrl == null) mediaUrl = "немає";
                 }
 
+                // 🔹 2. Зберігаємо хіт (без назви і опису)
                 HitsManager.saveHit(null, "немає", mediaUrl);
 
+                // 🔹 3. Очищення стану
                 userStates.remove(userId);
 
+                // 🔹 4. Повідомлення адміну
                 sendText(chatId, "✅ Товар успішно додано у Хіт продажу!");
 
+                // 🔔 5. РОЗСИЛКА ВСІМ КОРИСТУВАЧАМ
                 for (String uidStr : userManager.getRegisteredUsers()) {
                     try {
                         long uid = Long.parseLong(uidStr);
                         if (ADMINS.contains(uid)) continue;
 
-                        sendText(uidStr, "🌟 Новий Хіт продажу з’явився в магазині!\nПерегляньте його у розділі «Хіти продажів»!");
-                    } catch (Exception e) {
-                        // ігноруємо помилки відправки / парсингу
-                    }
+                        Long targetChatId = userManager.getChatId(uid);
+                        if (targetChatId == null) continue;
+
+                        sendText(
+                                String.valueOf(targetChatId),
+                                "🌟 Новий Хіт продажу з’явився в магазині!\n" +
+                                        "👉 Перегляньте його у розділі «Хіти продажів»!"
+                        );
+                    } catch (Exception ignored) {}
                 }
             }
 

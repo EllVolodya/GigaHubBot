@@ -3,11 +3,16 @@ package org.example;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
 public class UserManager {
 
+    private final Map<Long, Long> userChatMap = new HashMap<>();
     private final Connection connection;
 
     public UserManager() {
@@ -104,5 +109,14 @@ public class UserManager {
                 "\n" +
                 "Обирай у меню, що саме хочеш зробити,  \n" +
                 "і давай разом збудуємо щось круте \uD83E\uDDE9\uD83D\uDC9B";
+    }
+
+    public void saveChatId(long userId, long chatId) {
+        userChatMap.put(userId, chatId);
+    }
+
+    // отримуємо chatId
+    public Long getChatId(long userId) {
+        return userChatMap.get(userId);
     }
 }
