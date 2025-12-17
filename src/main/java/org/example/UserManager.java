@@ -271,25 +271,27 @@ public class UserManager {
 
         System.out.println("DEBUG itemsText = [" + itemsText + "]");
 
-        if (itemsText == null || itemsText.isBlank()) {
-            System.out.println("DEBUG itemsText is empty");
-            return;
-        }
+        if (itemsText == null || itemsText.isBlank()) return;
 
-        String[] lines = itemsText.split("\n");
+        // розбиваємо по ;
+        String[] items = itemsText.split(";");
 
-        for (String line : lines) {
+        for (String item : items) {
             try {
-                System.out.println("DEBUG line = [" + line + "]");
+                if (item.isBlank()) continue;
 
-                String[] parts = line.split("x");
-                if (parts.length != 2) {
-                    System.out.println("DEBUG split by x failed");
+                System.out.println("DEBUG item = [" + item + "]");
+
+                // формат: name:price:qty
+                String[] parts = item.split(":");
+
+                if (parts.length < 3) {
+                    System.out.println("DEBUG invalid format, skip");
                     continue;
                 }
 
                 String name = parts[0].trim();
-                int qty = Integer.parseInt(parts[1].trim());
+                int qty = Integer.parseInt(parts[parts.length - 1].trim());
 
                 System.out.println("DEBUG parsed name = [" + name + "]");
                 System.out.println("DEBUG parsed qty = " + qty);
@@ -298,11 +300,9 @@ public class UserManager {
 
                 System.out.println("DEBUG found productId = " + productId);
 
-                if (productId == null) {
-                    System.out.println("DEBUG productId is null, SKIP");
-                    continue;
-                }
+                if (productId == null) continue;
 
+                // 🔻 МІНУСУЄМО СКЛАД
                 decreaseProductQuantity(productId, qty);
 
             } catch (Exception e) {
@@ -310,6 +310,7 @@ public class UserManager {
             }
         }
     }
+
 
     private Long findProductIdByName(String name) {
 
