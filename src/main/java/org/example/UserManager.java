@@ -182,7 +182,7 @@ public class UserManager {
     public void decreaseProductQuantity(
             Connection conn,
             long productId,
-            int minus
+            int orderedQty
     ) throws SQLException {
 
         String selectSql = "SELECT quantity FROM products WHERE id = ?";
@@ -193,29 +193,16 @@ public class UserManager {
             select.setLong(1, productId);
             ResultSet rs = select.executeQuery();
 
-            if (!rs.next()) {
-                System.out.println("DEBUG: product not found id=" + productId);
-                return;
-            }
+            if (!rs.next()) return;
 
             String quantityText = rs.getString("quantity");
-            System.out.println("DEBUG quantityText = [" + quantityText + "]");
-
             int currentQty = extractMaxQuantity(quantityText);
-            if (currentQty < 0) {
-                System.out.println("DEBUG no number in quantity");
-                return;
-            }
-
-            int newQty = Math.max(0, currentQty - minus);
-            System.out.println("DEBUG newQty = " + newQty);
+            int newQty = Math.max(0, currentQty - orderedQty);
 
             try (PreparedStatement update = conn.prepareStatement(updateSql)) {
-                update.setString(1, String.valueOf(newQty)); // 🔥 ТІЛЬКИ ЧИСЛО
+                update.setString(1, String.valueOf(newQty));
                 update.setLong(2, productId);
-                int updated = update.executeUpdate();
-
-                System.out.println("DEBUG updated rows = " + updated);
+                update.executeUpdate();
             }
         }
     }
@@ -247,51 +234,26 @@ public class UserManager {
         }
     }
 
-    public void decreaseProductsFromText(Connection conn, String itemsText) throws SQLException {
+    public void decreaseProductsFromText(
+            Connection conn,
+            String itemsText
+    ) throws SQLException {
 
         if (itemsText == null || itemsText.isBlank()) return;
 
-    /*
-     Очікуємо блоки типу:
+        // формат: productId:price:qty;
+        String[] items = itemsText.split(";");
 
-     1. Цемент 500 25кг Ольшанский
-        Кількість: 9
-        Ціна: 185.0 грн
-    */
+        for (String item : items) {
+            if (item.isBlank()) continue;
 
-        String[] lines = itemsText.split("\n");
+            String[] parts = item.split(":");
+            if (parts.length < 3) continue;
 
-        String currentProductName = null;
-        Integer currentQty = null;
+            long productId = Long.parseLong(parts[0].trim());
+            int qty = Integer.parseInt(parts[2].trim());
 
-        for (String line : lines) {
-
-            line = line.trim();
-
-            // 🔹 Рядок з назвою товару
-            if (line.matches("^\\d+\\.\\s+.+")) {
-                currentProductName = line.replaceFirst("^\\d+\\.\\s+", "").trim();
-            }
-
-            // 🔹 Рядок з кількістю
-            if (line.startsWith("Кількість:")) {
-                String num = line.replace("Кількість:", "").trim();
-                currentQty = Integer.parseInt(num);
-            }
-
-            // 🔻 Коли маємо і назву, і кількість — мінусуємо
-            if (currentProductName != null && currentQty != null) {
-
-                Long productId = findProductIdByName(currentProductName);
-
-                if (productId != null) {
-                    decreaseProductQuantity(conn, productId, currentQty);
-                }
-
-                // очищаємо для наступного товару
-                currentProductName = null;
-                currentQty = null;
-            }
+            decreaseProductQuantity(conn, productId, qty);
         }
     }
 
