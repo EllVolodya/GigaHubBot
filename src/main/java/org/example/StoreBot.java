@@ -28,6 +28,8 @@ import java.util.*;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -254,51 +256,53 @@ public class StoreBot extends TelegramLongPollingBot {
                 int requestedQty = Integer.parseInt(text);
 
                 if (requestedQty <= 0) {
-                    sendText(realChatId, "❌ Кількість має бути більше 0.");
+                    sendText(realChatId, "❌ Кількість має бути більше 0. Введіть ще раз:");
                     return;
                 }
 
                 Map<String, Object> product = lastShownProduct.get(realChatId);
                 if (product == null) {
-                    sendText(realChatId, "❌ Товар не знайдено.");
+                    sendText(realChatId, "❌ Помилка: товар не знайдено.");
                     waitingForQuantity.put(realChatId, false);
                     return;
                 }
 
-                String productName = String.valueOf(product.get("name"));
+                // 🔑 ОСНОВНА ПЕРЕВІРКА
                 String quantityText = String.valueOf(product.getOrDefault("quantity", ""));
+                int maxAvailable = extractMaxQuantity(quantityText);
 
-                int maxAvailable = userManager.extractMaxQuantity(quantityText);
-
-                // 🔥 перевірка
                 if (maxAvailable > 0 && requestedQty > maxAvailable) {
-                    sendText(realChatId,
+                    sendText(
+                            realChatId,
                             "⚠️ На складі доступно: *" + quantityText + "*\n" +
-                                    "Введіть меншу кількість 👇");
+                                    "Введіть меншу кількість 👇"
+                    );
                     return;
                 }
 
-                // ✅ додаємо в кошик
+                // ✅ ВСЕ ОК — додаємо в кошик
                 Map<String, Object> cartItem = new HashMap<>(product);
                 cartItem.put("quantity", requestedQty);
 
                 userCart.computeIfAbsent(realChatId, k -> new ArrayList<>()).add(cartItem);
 
-                // 🔻 МІНУС У БД
-                userManager.decreaseProductQuantity(productName, requestedQty);
-
-                sendText(realChatId,
+                sendText(
+                        realChatId,
                         "🧺 Товар додано у кошик!\n\n" +
-                                "📦 " + productName + "\n" +
+                                "📦 " + product.get("name") + "\n" +
                                 "🔢 Замовлено: " + requestedQty + "\n" +
-                                "📊 Залишок: " + quantityText);
+                                "📊 Залишок: " + quantityText
+                );
 
                 waitingForQuantity.put(realChatId, false);
+                return;
 
             } catch (NumberFormatException e) {
-                sendText(realChatId, "❌ Введіть кількість числом (наприклад 5):");
+                sendText(realChatId, "❌ Це не число. Введіть кількість ще раз:");
+                return;
             }
         }
+
 
         if (waitingForCatalogSearch.getOrDefault(realChatId, false)) {
 
@@ -5628,5 +5632,18 @@ public class StoreBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
+    }
+
+    private int extractMaxQuantity(String quantityText) {
+        if (quantityText == null) return -1;
+
+        int max = -1;
+        Matcher matcher = Pattern.compile("(\\d+)").matcher(quantityText);
+
+        while (matcher.find()) {
+            int value = Integer.parseInt(matcher.group(1));
+            if (value > max) max = value;
+        }
+        return max;
     }
 }
