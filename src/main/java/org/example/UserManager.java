@@ -282,4 +282,40 @@ public class UserManager {
         }
         return null;
     }
+
+    public void decreaseProductsFromAnyOrderItemFormat(
+            Connection conn,
+            String itemsText
+    ) throws SQLException {
+
+        if (itemsText == null || itemsText.isBlank()) return;
+
+        System.out.println("DEBUG itemsText = [" + itemsText + "]");
+
+        String[] items = itemsText.split(";");
+
+        for (String item : items) {
+            if (item.isBlank()) continue;
+
+            try {
+                // формат: name:price:qty
+                String[] parts = item.split(":");
+                if (parts.length < 3) continue;
+
+                String name = parts[0].trim();
+                int qty = Integer.parseInt(parts[parts.length - 1].trim());
+
+                System.out.println("DEBUG parsed name = [" + name + "]");
+                System.out.println("DEBUG parsed qty = " + qty);
+
+                Long productId = findProductIdByName(name);
+                if (productId == null) continue;
+
+                decreaseProductQuantity(conn, productId, qty);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
 }

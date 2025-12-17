@@ -5670,4 +5670,184 @@ public class StoreBot extends TelegramLongPollingBot {
         }
         return max;
     }
+
+    private void confirmFirstNewOrder(Long chatId, long adminUserId) {
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            conn.setAutoCommit(false);
+
+            String selectSql =
+                    "SELECT id, userId, item FROM orders " +
+                            "WHERE status='Нове' ORDER BY id ASC LIMIT 1";
+
+            try (PreparedStatement stmt = conn.prepareStatement(selectSql);
+                 ResultSet rs = stmt.executeQuery()) {
+
+                if (!rs.next()) {
+                    sendText(chatId, "Замовлень немає.");
+                    conn.rollback();
+                    return;
+                }
+
+                long orderId = rs.getLong("id");
+                long orderUserId = rs.getLong("userId");
+                String itemsText = rs.getString("item");
+
+                System.out.println("DEBUG confirm orderId=" + orderId + " userId=" + orderUserId);
+                System.out.println("DEBUG itemsText=[" + itemsText + "]");
+
+                // 🔻 мінус складу
+                userManager.decreaseProductsFromAnyOrderItemFormat(conn, itemsText);
+
+                // 🔄 статус
+                try (PreparedStatement upd = conn.prepareStatement(
+                        "UPDATE orders SET status='Підтверджено' WHERE id=?")) {
+                    upd.setLong(1, orderId);
+                    int updRows = upd.executeUpdate();
+                    System.out.println("DEBUG orders status updatedRows=" + updRows);
+                }
+
+                conn.commit();
+
+                // 👤 користувачу
+                sendText(String.valueOf(orderUserId),
+                        "🧱 Ваше замовлення прийнято!\n\n" +
+                                "Митрофан вже складає його на піддон 😄\n" +
+                                "Дякуємо, що обираєте GigaHub ❤️");
+
+                sendText(chatId, "Замовлення підтверджено ✅");
+                showAdminOrder(Long.valueOf(adminUserId), String.valueOf(chatId));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            try { sendText(chatId, "❌ Помилка при підтвердженні замовлення."); } catch (Exception ignored) {}
+        }
+    }
+
+    public void decreaseProductsFromAnyOrderItemFormat(Connection conn, String item) throws SQLException {
+        if (item == null || item.isBlank()) return;
+
+        int totalDecreased = 0;
+
+        // ✅ Формат A: name:price:qty; name2:price:qty;
+        // Приклад: "Цемент ...:185.0:9;"
+        String[] chunks = item.split(";");
+        for (String chunk : chunks) {
+            chunk = chunk.trim();
+            if (chunk.isEmpty()) continue;
+
+            String[] parts = chunk.split(":");
+            if (parts.length >= 3) {
+                String name = parts[0].trim();
+                String qtyStr = parts[parts.length - 1].trim();
+
+                Integer qty = safeParseInt(qtyStr);
+                if (qty == null) continue;
+
+                Long productId = findProductIdByName(conn, name);
+                System.out.println("DEBUG parseA name=[" + name + "] qty=" + qty + " productId=" + productId);
+
+                if (productId != null) {
+                    int changed = decreaseProductQuantity(conn, productId, qty);
+                    totalDecreased += changed;
+                }
+            }
+        }
+
+        // ✅ Формат B: адмінський “людський” текст:
+        // "1. Назва\n   Кількість: 9\n ..."
+        // Якщо формат A не спрацював — пробуємо B
+        if (totalDecreased == 0 && item.contains("Кількість")) {
+            String[] lines = item.split("\n");
+            String currentName = null;
+            Integer currentQty = null;
+
+            for (String line : lines) {
+                String t = line.trim();
+
+                if (t.matches("^\\d+\\.\\s+.+")) {
+                    currentName = t.replaceFirst("^\\d+\\.\\s+", "").trim();
+                } else if (t.startsWith("Кількість:")) {
+                    currentQty = safeParseInt(t.replace("Кількість:", "").trim());
+                }
+
+                if (currentName != null && currentQty != null) {
+                    Long productId = findProductIdByName(conn, currentName);
+                    System.out.println("DEBUG parseB name=[" + currentName + "] qty=" + currentQty + " productId=" + productId);
+
+                    if (productId != null) {
+                        int changed = decreaseProductQuantity(conn, productId, currentQty);
+                        totalDecreased += changed;
+                    }
+                    currentName = null;
+                    currentQty = null;
+                }
+            }
+        }
+
+        System.out.println("DEBUG totalDecreasedRows=" + totalDecreased);
+    }
+
+    private Long findProductIdByName(Connection conn, String name) throws SQLException {
+        if (name == null || name.isBlank()) return null;
+
+        // нормалізація (щоб менше ламалось на пробілах)
+        String norm = name.toLowerCase().replace('\u00A0', ' ').replaceAll("\\s+", " ").trim();
+
+        String sql = "SELECT id, name FROM products WHERE LOWER(name) LIKE ? LIMIT 1";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, "%" + norm + "%");
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    long id = rs.getLong("id");
+                    String dbName = rs.getString("name");
+                    System.out.println("DEBUG DB MATCH [" + dbName + "] id=" + id);
+                    return id;
+                }
+            }
+        }
+
+        System.out.println("DEBUG NO DB MATCH for [" + norm + "]");
+        return null;
+    }
+    public int decreaseProductQuantity(Connection conn, long productId, int minus) throws SQLException {
+        String selectSql = "SELECT quantity FROM products WHERE id = ?";
+        String updateSql = "UPDATE products SET quantity = ? WHERE id = ?";
+
+        String quantityText;
+        try (PreparedStatement select = conn.prepareStatement(selectSql)) {
+            select.setLong(1, productId);
+            try (ResultSet rs = select.executeQuery()) {
+                if (!rs.next()) {
+                    System.out.println("DEBUG product not found id=" + productId);
+                    return 0;
+                }
+                quantityText = rs.getString("quantity");
+            }
+        }
+
+        int current = extractMaxQuantity(quantityText);
+        if (current < 0) {
+            System.out.println("DEBUG quantity has no number id=" + productId + " text=[" + quantityText + "]");
+            return 0;
+        }
+
+        int newQty = Math.max(0, current - minus);
+
+        int updatedRows;
+        try (PreparedStatement update = conn.prepareStatement(updateSql)) {
+            update.setString(1, String.valueOf(newQty)); // пишемо просто число
+            update.setLong(2, productId);
+            updatedRows = update.executeUpdate();
+        }
+
+        System.out.println("DEBUG decrease id=" + productId + " was=" + current + " minus=" + minus + " now=" + newQty + " updatedRows=" + updatedRows);
+        return updatedRows;
+    }
+
+    private Integer safeParseInt(String s) {
+        try { return Integer.parseInt(s.replaceAll("[^0-9]", "")); }
+        catch (Exception e) { return null; }
+    }
 }
