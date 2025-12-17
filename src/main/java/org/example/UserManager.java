@@ -182,7 +182,7 @@ public class UserManager {
     public void decreaseProductQuantity(
             Connection conn,
             long productId,
-            int orderedQty
+            int minus
     ) throws SQLException {
 
         String selectSql = "SELECT quantity FROM products WHERE id = ?";
@@ -193,16 +193,29 @@ public class UserManager {
             select.setLong(1, productId);
             ResultSet rs = select.executeQuery();
 
-            if (!rs.next()) return;
+            if (!rs.next()) {
+                System.out.println("DEBUG: product not found id=" + productId);
+                return;
+            }
 
             String quantityText = rs.getString("quantity");
+            System.out.println("DEBUG quantityText = [" + quantityText + "]");
+
             int currentQty = extractMaxQuantity(quantityText);
-            int newQty = Math.max(0, currentQty - orderedQty);
+            if (currentQty < 0) {
+                System.out.println("DEBUG no number in quantity");
+                return;
+            }
+
+            int newQty = Math.max(0, currentQty - minus);
+            System.out.println("DEBUG newQty = " + newQty);
 
             try (PreparedStatement update = conn.prepareStatement(updateSql)) {
-                update.setString(1, String.valueOf(newQty));
+                update.setString(1, String.valueOf(newQty)); // 🔥 ТІЛЬКИ ЧИСЛО
                 update.setLong(2, productId);
-                update.executeUpdate();
+                int updated = update.executeUpdate();
+
+                System.out.println("DEBUG updated rows = " + updated);
             }
         }
     }
