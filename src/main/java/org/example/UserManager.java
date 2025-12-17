@@ -269,31 +269,51 @@ public class UserManager {
 
     public void decreaseProductsFromText(String itemsText) {
 
-        if (itemsText == null || itemsText.isBlank()) return;
+        System.out.println("DEBUG itemsText = [" + itemsText + "]");
+
+        if (itemsText == null || itemsText.isBlank()) {
+            System.out.println("DEBUG itemsText is empty");
+            return;
+        }
 
         String[] lines = itemsText.split("\n");
 
         for (String line : lines) {
             try {
+                System.out.println("DEBUG line = [" + line + "]");
+
                 String[] parts = line.split("x");
-                if (parts.length != 2) continue;
+                if (parts.length != 2) {
+                    System.out.println("DEBUG split by x failed");
+                    continue;
+                }
 
                 String name = parts[0].trim();
                 int qty = Integer.parseInt(parts[1].trim());
 
-                // 🔎 знаходимо productId по назві
+                System.out.println("DEBUG parsed name = [" + name + "]");
+                System.out.println("DEBUG parsed qty = " + qty);
+
                 Long productId = findProductIdByName(name);
-                if (productId == null) continue;
+
+                System.out.println("DEBUG found productId = " + productId);
+
+                if (productId == null) {
+                    System.out.println("DEBUG productId is null, SKIP");
+                    continue;
+                }
 
                 decreaseProductQuantity(productId, qty);
 
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
     private Long findProductIdByName(String name) {
 
-        String sql = "SELECT id FROM products WHERE name LIKE ? LIMIT 1";
+        String sql = "SELECT id, name FROM products WHERE name LIKE ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -301,7 +321,15 @@ public class UserManager {
             ps.setString(1, "%" + name + "%");
             ResultSet rs = ps.executeQuery();
 
-            if (rs.next()) return rs.getLong("id");
+            if (rs.next()) {
+                long id = rs.getLong("id");
+                String dbName = rs.getString("name");
+
+                System.out.println("DEBUG DB MATCH: [" + dbName + "] id=" + id);
+                return id;
+            }
+
+            System.out.println("DEBUG NO DB MATCH for [" + name + "]");
 
         } catch (Exception e) {
             e.printStackTrace();
