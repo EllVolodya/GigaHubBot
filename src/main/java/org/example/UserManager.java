@@ -212,4 +212,33 @@ public class UserManager {
             e.printStackTrace();
         }
     }
+
+    public void decreaseProductQuantity(long productId, int orderedQty) {
+
+        String selectSql = "SELECT quantity FROM products WHERE id = ?";
+        String updateSql = "UPDATE products SET quantity = ? WHERE id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement select = conn.prepareStatement(selectSql)) {
+
+            select.setLong(1, productId);
+            ResultSet rs = select.executeQuery();
+
+            if (!rs.next()) return;
+
+            String quantityText = rs.getString("quantity");
+            int currentQty = extractMaxQuantity(quantityText);
+
+            int newQty = Math.max(0, currentQty - orderedQty);
+
+            try (PreparedStatement update = conn.prepareStatement(updateSql)) {
+                update.setString(1, String.valueOf(newQty));
+                update.setLong(2, productId);
+                update.executeUpdate();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }

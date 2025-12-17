@@ -267,11 +267,21 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // 🔑 ОСНОВНА ПЕРЕВІРКА
                 String quantityText = String.valueOf(product.getOrDefault("quantity", ""));
                 int maxAvailable = extractMaxQuantity(quantityText);
 
-                if (maxAvailable > 0 && requestedQty > maxAvailable) {
+                // ❌ ВЗАГАЛІ НЕМАЄ НА СКЛАДІ
+                if (maxAvailable <= 0) {
+                    sendText(
+                            realChatId,
+                            "⛔ Цього товару зараз немає на складі.\n" +
+                                    "Будь ласка, уточніть наявність у консультанта 🙏"
+                    );
+                    return;
+                }
+
+                // ❌ ЗАБАГАТО ХОЧЕ
+                if (requestedQty > maxAvailable) {
                     sendText(
                             realChatId,
                             "⚠️ На складі доступно: *" + quantityText + "*\n" +
@@ -965,10 +975,14 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "✅ Підтвердити" -> {
+
                     try (Connection conn = DatabaseManager.getConnection()) {
 
-                        String selectSql = "SELECT * FROM orders WHERE status = 'Нове' ORDER BY id ASC LIMIT 1";
-                        try (PreparedStatement stmt = conn.prepareStatement(selectSql);
+                        // 1️⃣ Беремо перше нове замовлення
+                        String selectOrderSql =
+                                "SELECT * FROM orders WHERE status = 'Нове' ORDER BY id ASC LIMIT 1";
+
+                        try (PreparedStatement stmt = conn.prepareStatement(selectOrderSql);
                              ResultSet rs = stmt.executeQuery()) {
 
                             if (!rs.next()) {
@@ -979,23 +993,50 @@ public class StoreBot extends TelegramLongPollingBot {
                             long orderId = rs.getLong("id");
                             long orderUserId = rs.getLong("userId");
 
-                            sendText("" + orderUserId, "\uD83E\uDDF1 Ваше замовлення прийнято!\n" +
-                                    "\n" +
-                                    "Митрофан вже складає його на піддон \uD83D\uDE09  \n" +
-                                    "Дякуємо, що обираєте GigaHub ❤\uFE0F");
+                            // 2️⃣ Беремо товари цього замовлення
+                            String itemsSql =
+                                    "SELECT product_id, quantity FROM order_items WHERE order_id = ?";
 
-                            String updateSql = "UPDATE orders SET status = 'Підтверджено' WHERE id = ?";
+                            try (PreparedStatement itemsStmt = conn.prepareStatement(itemsSql)) {
+                                itemsStmt.setLong(1, orderId);
+
+                                try (ResultSet itemsRs = itemsStmt.executeQuery()) {
+
+                                    while (itemsRs.next()) {
+
+                                        long productId = itemsRs.getLong("product_id");
+                                        int orderedQty = itemsRs.getInt("quantity");
+
+                                        // 🔻 МІНУСУЄМО СКЛАД
+                                        userManager.decreaseProductQuantity(productId, orderedQty);
+                                    }
+                                }
+                            }
+
+                            // 3️⃣ Оновлюємо статус замовлення
+                            String updateSql =
+                                    "UPDATE orders SET status = 'Підтверджено' WHERE id = ?";
+
                             try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
                                 updateStmt.setLong(1, orderId);
                                 updateStmt.executeUpdate();
                             }
 
+                            // 4️⃣ Повідомлення користувачу
+                            sendText(
+                                    String.valueOf(orderUserId),
+                                    "🧱 Ваше замовлення прийнято!\n\n" +
+                                            "Митрофан вже складає його на піддон 😄\n" +
+                                            "Дякуємо, що обираєте GigaHub ❤️"
+                            );
+
+                            // 5️⃣ Повідомлення адміну
                             sendText(chatId, "Замовлення підтверджено ✅");
                             showAdminOrder(userId, chatId);
                         }
 
                     } catch (SQLException e) {
-                        LOGGER.severe("[Admin Error] Failed to confirm order for user " + userId + ": " + e.getMessage());
+                        LOGGER.severe("[Admin Error] Failed to confirm order: " + e.getMessage());
                         sendText(chatId, "❌ Помилка при підтвердженні замовлення.");
                     }
                 }
