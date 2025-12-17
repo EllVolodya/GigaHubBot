@@ -991,10 +991,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
                             long orderId = rs.getLong("id");
                             long orderUserId = rs.getLong("userId");
-                            String itemsJson = rs.getString("item"); // 👈 ВАЖЛИВО
+                            String itemsText = rs.getString("item");
 
-                            // 🔻 МІНУСУЄМО ТОВАР
-                            userManager.decreaseProductsFromText(conn, itemsJson);
+                            // 🔻 МІНУСУЄМО СКЛАД (ПРОСТО, БЕЗ conn)
+                            userManager.decreaseProductsFromTextSimple(itemsText);
 
                             // 👤 Повідомлення користувачу
                             sendText(
@@ -5755,9 +5755,6 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        // ✅ Формат B: адмінський “людський” текст:
-        // "1. Назва\n   Кількість: 9\n ..."
-        // Якщо формат A не спрацював — пробуємо B
         if (totalDecreased == 0 && item.contains("Кількість")) {
             String[] lines = item.split("\n");
             String currentName = null;

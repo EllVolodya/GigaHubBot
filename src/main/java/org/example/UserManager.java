@@ -318,4 +318,73 @@ public class UserManager {
             }
         }
     }
+
+    public void decreaseProductsFromTextSimple(String itemsText) {
+
+        if (itemsText == null || itemsText.isBlank()) return;
+
+        System.out.println("DEBUG itemsText = [" + itemsText + "]");
+
+        String[] items = itemsText.split(";");
+
+        for (String item : items) {
+            try {
+                if (item.isBlank()) continue;
+
+                // формат: name:price:qty
+                String[] parts = item.split(":");
+                if (parts.length < 3) continue;
+
+                String name = parts[0].trim();
+                int qty = Integer.parseInt(parts[parts.length - 1].trim());
+
+                System.out.println("DEBUG name=[" + name + "] qty=" + qty);
+
+                decreaseProductQuantityByName(name, qty);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void decreaseProductQuantityByName(String productName, int minus) {
+
+        String selectSql = "SELECT quantity FROM products WHERE name LIKE ? LIMIT 1";
+        String updateSql = "UPDATE products SET quantity = ? WHERE id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement select = conn.prepareStatement(selectSql)) {
+
+            select.setString(1, "%" + productName + "%");
+            ResultSet rs = select.executeQuery();
+
+            if (!rs.next()) {
+                System.out.println("DEBUG product not found for [" + productName + "]");
+                return;
+            }
+
+            long productId = rs.getLong("id");
+            String quantityText = rs.getString("quantity");
+
+            int current = extractMaxQuantity(quantityText);
+            if (current < 0) return;
+
+            int newQty = Math.max(0, current - minus);
+
+            try (PreparedStatement update = conn.prepareStatement(updateSql)) {
+                update.setString(1, String.valueOf(newQty));
+                update.setLong(2, productId);
+                update.executeUpdate();
+            }
+
+            System.out.println(
+                    "DEBUG updated [" + productName + "] " +
+                            "was=" + current + " minus=" + minus + " now=" + newQty
+            );
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
