@@ -192,6 +192,14 @@ public class StoreBot extends TelegramLongPollingBot {
                 .replaceAll("[\\p{Cf}\\p{Zs}]+", " ")
                 .trim();
 
+        if (update.hasMessage()) {
+
+            long telegramId = update.getMessage().getFrom().getId();
+            String currentChatId = update.getMessage().getChatId().toString();
+
+            userManager.updateChatId(telegramId, currentChatId);
+        }
+
         if ("choose_yaml_product".equals(state)) {
             handleChooseYamlProduct(userId, chatId, normalizedText);
             return;
@@ -2486,7 +2494,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "awaiting_hit_media" -> {
 
-                // 🔹 1. Дістаємо дані
+                // 1️⃣ Дані
                 String title = String.valueOf(
                         tempStorage.getOrDefault(userId + "_hit_title", "немає")
                 );
@@ -2495,35 +2503,29 @@ public class StoreBot extends TelegramLongPollingBot {
                         tempStorage.getOrDefault(userId + "_hit_description", "немає")
                 );
 
-                // 🔹 2. Обробка медіа
+                // 2️⃣ Медіа
                 String mediaUrl = "немає";
                 if (text == null || !text.equalsIgnoreCase("немає")) {
                     mediaUrl = HitsManager.uploadFromTelegram(this, update.getMessage());
                     if (mediaUrl == null) mediaUrl = "немає";
                 }
 
-                // 🔹 3. Зберігаємо хіт
+                // 3️⃣ Зберігаємо
                 HitsManager.saveHit(title, description, mediaUrl);
 
-                // 🔹 4. Очищення станів
+                // 4️⃣ Очищення
                 userStates.remove(userId);
                 tempStorage.remove(userId + "_hit_title");
                 tempStorage.remove(userId + "_hit_description");
 
-                // 🔹 5. Повідомлення адміну
+                // 5️⃣ Адміну
                 sendText(chatId, "✅ Товар успішно додано у Хіт продажу!");
 
-                // 🔔 6. РОЗСИЛКА ВСІМ КОРИСТУВАЧАМ
-                for (String uidStr : userManager.getRegisteredUsers()) {
+                // 🔔 6️⃣ РОЗСИЛКА ВСІМ (ПО CHAT_ID З БД)
+                for (String targetChatId : userManager.getAllChatIds()) {
                     try {
-                        long uid = Long.parseLong(uidStr);
-                        if (ADMINS.contains(uid)) continue;
-
-                        Long targetChatId = userManager.getChatId(uid);
-                        if (targetChatId == null) continue;
-
                         sendText(
-                                String.valueOf(targetChatId),
+                                targetChatId,
                                 "🌟 Новий Хіт продажу з’явився в магазині!\n" +
                                         "👉 Перегляньте його у розділі «Хіти продажів»!"
                         );
@@ -2533,33 +2535,27 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "awaiting_hit_media_only" -> {
 
-                // 🔹 1. Обробка медіа
+                // 1️⃣ Медіа
                 String mediaUrl = "немає";
                 if (text == null || !text.equalsIgnoreCase("немає")) {
                     mediaUrl = HitsManager.uploadFromTelegram(this, update.getMessage());
                     if (mediaUrl == null) mediaUrl = "немає";
                 }
 
-                // 🔹 2. Зберігаємо хіт (без назви і опису)
+                // 2️⃣ Зберігаємо
                 HitsManager.saveHit(null, "немає", mediaUrl);
 
-                // 🔹 3. Очищення стану
+                // 3️⃣ Очищення
                 userStates.remove(userId);
 
-                // 🔹 4. Повідомлення адміну
+                // 4️⃣ Адміну
                 sendText(chatId, "✅ Товар успішно додано у Хіт продажу!");
 
-                // 🔔 5. РОЗСИЛКА ВСІМ КОРИСТУВАЧАМ
-                for (String uidStr : userManager.getRegisteredUsers()) {
+                // 🔔 5️⃣ РОЗСИЛКА ВСІМ (ПО CHAT_ID З БД)
+                for (String targetChatId : userManager.getAllChatIds()) {
                     try {
-                        long uid = Long.parseLong(uidStr);
-                        if (ADMINS.contains(uid)) continue;
-
-                        Long targetChatId = userManager.getChatId(uid);
-                        if (targetChatId == null) continue;
-
                         sendText(
-                                String.valueOf(targetChatId),
+                                targetChatId,
                                 "🌟 Новий Хіт продажу з’явився в магазині!\n" +
                                         "👉 Перегляньте його у розділі «Хіти продажів»!"
                         );

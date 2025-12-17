@@ -65,18 +65,45 @@ public class UserManager {
     public List<String> getRegisteredUsers() {
         List<String> users = new ArrayList<>();
         String sql = "SELECT telegramid FROM accounts";
-        try (PreparedStatement stmt = connection.prepareStatement(sql);
+
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
+
             while (rs.next()) {
                 String idStr = rs.getString("telegramid");
                 if (idStr != null && !idStr.isBlank()) {
                     users.add(idStr);
                 }
             }
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
+
         return users;
+    }
+
+    public List<String> getAllChatIds() {
+        List<String> chatIds = new ArrayList<>();
+        String sql = "SELECT chat_id FROM accounts WHERE chat_id IS NOT NULL";
+
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                String chatId = rs.getString("chat_id");
+                if (chatId != null && !chatId.isBlank()) {
+                    chatIds.add(chatId);
+                }
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return chatIds;
     }
 
     // Інкремент кількості замовлень
@@ -85,6 +112,21 @@ public class UserManager {
         try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, telegramId);
             stmt.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void updateChatId(long telegramId, String chatId) {
+        String sql = "UPDATE accounts SET chat_id = ? WHERE telegramid = ?";
+
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
+
+            stmt.setString(1, chatId);
+            stmt.setString(2, String.valueOf(telegramId));
+            stmt.executeUpdate();
+
         } catch (SQLException e) {
             e.printStackTrace();
         }
