@@ -10,6 +10,7 @@ import java.util.Set;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 
@@ -235,6 +236,30 @@ public class UserManager {
                 update.setString(1, String.valueOf(newQty));
                 update.setLong(2, productId);
                 update.executeUpdate();
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void decreaseProductsFromOrderItems(String itemsJson) {
+
+        if (itemsJson == null || itemsJson.isBlank()) return;
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+
+            List<Map<String, Object>> items =
+                    mapper.readValue(itemsJson, List.class);
+
+            for (Map<String, Object> item : items) {
+
+                long productId = ((Number) item.get("id")).longValue();
+                int qty = ((Number) item.get("qty")).intValue();
+
+                // 🔻 ВИКЛИК ТВОГО МЕТОДУ
+                decreaseProductQuantity(productId, qty);
             }
 
         } catch (Exception e) {
