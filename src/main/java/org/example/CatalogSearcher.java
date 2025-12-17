@@ -232,8 +232,8 @@ public class CatalogSearcher {
         List<Map<String, Object>> products = new ArrayList<>();
 
         String sql = """
-        SELECT p.id, p.name, p.price, p.unit, p.description, p.photo, p.manufacturer,
-               s.name AS subcategory, c.name AS category
+        SELECT p.id, p.name, p.price, p.unit, p.quantity, p.description, p.photo, p.manufacturer,
+            s.name AS subcategory, c.name AS category
         FROM products p
         JOIN subcategories s ON p.subcategory_id = s.id
         JOIN categories c ON s.category_id = c.id
@@ -254,6 +254,7 @@ public class CatalogSearcher {
                     product.put("name", rs.getString("name"));
                     product.put("price", rs.getObject("price"));
                     product.put("unit", rs.getString("unit"));
+                    product.put("quantity", rs.getString("quantity"));
                     product.put("description", rs.getString("description"));
                     product.put("photo", rs.getString("photo"));
                     product.put("subcategory", rs.getString("subcategory"));
@@ -352,6 +353,10 @@ public class CatalogSearcher {
         product.put("name", rs.getString("name"));
         product.put("price", rs.getDouble("price"));
         product.put("unit", rs.getString("unit"));
+
+        // 🔥 ТУТ ТЕЖ
+        product.put("quantity", rs.getString("quantity"));
+
         product.put("description", rs.getString("description"));
         product.put("photo", rs.getString("photo"));
         product.put("subcategory", rs.getString("subcategory"));
