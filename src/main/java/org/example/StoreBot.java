@@ -237,7 +237,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(update.getMessage().getChatId().toString(),
                         "❌ Помилка надсилання меню.");
             }
-            return; // важливо!
+            return;
         }
 
         if (waitingForQuantity.getOrDefault(realChatId, false)) {
