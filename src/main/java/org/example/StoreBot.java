@@ -2485,12 +2485,14 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case "awaiting_hit_media" -> {
-                String title = tempStorage.getOrDefault(userId + "_hit_title", "немає").toString();
-                String description = tempStorage.getOrDefault(userId + "_hit_description", "немає").toString();
+                String title = String.valueOf(tempStorage.getOrDefault(userId + "_hit_title", "немає"));
+                String description = String.valueOf(tempStorage.getOrDefault(userId + "_hit_description", "немає"));
 
-                // Завантаження медіа з Telegram на Cloudinary
-                String mediaUrl = HitsManager.uploadFromTelegram(this, update.getMessage());
-                if (mediaUrl == null) mediaUrl = "немає";
+                String mediaUrl = "немає";
+                if (text == null || !text.equalsIgnoreCase("немає")) {
+                    mediaUrl = HitsManager.uploadFromTelegram(this, update.getMessage());
+                    if (mediaUrl == null) mediaUrl = "немає";
+                }
 
                 HitsManager.saveHit(title, description, mediaUrl);
 
@@ -2503,31 +2505,38 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 // Розсилка всім користувачам
                 for (String uidStr : userManager.getRegisteredUsers()) {
-                    if (!ADMINS.contains(Long.parseLong(uidStr))) {
-                        try {
-                            sendText(uidStr, "🌟 Новий Хіт продажу з’явився в магазині!\nПерегляньте його у розділі «Хіти продажів»!");
-                        } catch (Exception ignored) {}
+                    try {
+                        long uid = Long.parseLong(uidStr);
+                        if (ADMINS.contains(uid)) continue;
+
+                        sendText(uidStr, "🌟 Новий Хіт продажу з’явився в магазині!\nПерегляньте його у розділі «Хіти продажів»!");
+                    } catch (Exception e) {
+                        // щоб не падало на кривих значеннях
                     }
                 }
             }
 
             case "awaiting_hit_media_only" -> {
-                // Завантаження медіа з Telegram на Cloudinary
-                String mediaUrl = HitsManager.uploadFromTelegram(this, update.getMessage());
-                if (mediaUrl == null) mediaUrl = "немає";
+                String mediaUrl = "немає";
+                if (text == null || !text.equalsIgnoreCase("немає")) {
+                    mediaUrl = HitsManager.uploadFromTelegram(this, update.getMessage());
+                    if (mediaUrl == null) mediaUrl = "немає";
+                }
 
-                HitsManager.saveHit(null, "немає", mediaUrl); // title=null, description="немає"
+                HitsManager.saveHit(null, "немає", mediaUrl);
 
                 userStates.remove(userId);
-                tempStorage.remove(userId + "_hit_media");
 
                 sendText(chatId, "✅ Товар успішно додано у Хіт продажу!");
 
                 for (String uidStr : userManager.getRegisteredUsers()) {
-                    if (!ADMINS.contains(Long.parseLong(uidStr))) {
-                        try {
-                            sendText(uidStr, "🌟 Новий Хіт продажу з’явився в магазині!\nПерегляньте його у розділі «Хіти продажів»!");
-                        } catch (Exception ignored) {}
+                    try {
+                        long uid = Long.parseLong(uidStr);
+                        if (ADMINS.contains(uid)) continue;
+
+                        sendText(uidStr, "🌟 Новий Хіт продажу з’явився в магазині!\nПерегляньте його у розділі «Хіти продажів»!");
+                    } catch (Exception e) {
+                        // ігноруємо помилки відправки / парсингу
                     }
                 }
             }
