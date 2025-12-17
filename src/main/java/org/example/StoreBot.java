@@ -994,7 +994,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             String itemsJson = rs.getString("item"); // 👈 ВАЖЛИВО
 
                             // 🔻 МІНУСУЄМО ТОВАР
-                            userManager.decreaseProductsFromOrderItems(itemsJson);
+                            userManager.decreaseProductsFromText(itemsJson);
 
                             // 👤 Повідомлення користувачу
                             sendText(

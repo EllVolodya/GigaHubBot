@@ -266,4 +266,46 @@ public class UserManager {
             e.printStackTrace();
         }
     }
+
+    public void decreaseProductsFromText(String itemsText) {
+
+        if (itemsText == null || itemsText.isBlank()) return;
+
+        String[] lines = itemsText.split("\n");
+
+        for (String line : lines) {
+            try {
+                String[] parts = line.split("x");
+                if (parts.length != 2) continue;
+
+                String name = parts[0].trim();
+                int qty = Integer.parseInt(parts[1].trim());
+
+                // 🔎 знаходимо productId по назві
+                Long productId = findProductIdByName(name);
+                if (productId == null) continue;
+
+                decreaseProductQuantity(productId, qty);
+
+            } catch (Exception ignored) {}
+        }
+    }
+
+    private Long findProductIdByName(String name) {
+
+        String sql = "SELECT id FROM products WHERE name LIKE ? LIMIT 1";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, "%" + name + "%");
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) return rs.getLong("id");
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 }
