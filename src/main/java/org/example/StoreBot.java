@@ -994,7 +994,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             String itemsText = rs.getString("item");
 
                             // 🔻 МІНУСУЄМО СКЛАД (ПРОСТО, БЕЗ conn)
-                            userManager.decreaseProductsFromTextSimple(itemsText);
+                            userManager.decreaseProductsFromText(itemsText);
 
                             // 👤 Повідомлення користувачу
                             sendText(

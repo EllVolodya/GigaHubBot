@@ -221,56 +221,6 @@ public class UserManager {
         }
     }
 
-    public void decreaseProductsFromOrderItems(
-            Connection conn,
-            String itemsJson
-    ) throws SQLException {
-
-        if (itemsJson == null || itemsJson.isBlank()) return;
-
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-
-            List<Map<String, Object>> items =
-                    mapper.readValue(itemsJson, List.class);
-
-            for (Map<String, Object> item : items) {
-
-                long productId = ((Number) item.get("id")).longValue();
-                int qty = ((Number) item.get("qty")).intValue();
-
-                // 🔻 мінус складу
-                decreaseProductQuantity(conn, productId, qty);
-            }
-
-        } catch (Exception e) {
-            throw new SQLException("Failed to parse order items JSON", e);
-        }
-    }
-
-    public void decreaseProductsFromText(
-            Connection conn,
-            String itemsText
-    ) throws SQLException {
-
-        if (itemsText == null || itemsText.isBlank()) return;
-
-        // формат: productId:price:qty;
-        String[] items = itemsText.split(";");
-
-        for (String item : items) {
-            if (item.isBlank()) continue;
-
-            String[] parts = item.split(":");
-            if (parts.length < 3) continue;
-
-            long productId = Long.parseLong(parts[0].trim());
-            int qty = Integer.parseInt(parts[2].trim());
-
-            decreaseProductQuantity(conn, productId, qty);
-        }
-    }
-
     private Long findProductIdByName(String name) {
 
         String sql = "SELECT id, name FROM products WHERE name LIKE ?";
@@ -325,7 +275,7 @@ public class UserManager {
                 Long productId = findProductIdByName(name);
                 if (productId == null) continue;
 
-                decreaseProductQuantity(conn, productId, qty);
+                decreaseProductQuantity(name, qty);
 
             } catch (Exception e) {
                 e.printStackTrace();
@@ -397,6 +347,37 @@ public class UserManager {
 
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public void decreaseProductsFromText(String itemsText) {
+
+        if (itemsText == null || itemsText.isBlank()) return;
+
+        // формат: name:price:qty;
+        String[] items = itemsText.split(";");
+
+        for (String item : items) {
+            try {
+                if (item.isBlank()) continue;
+
+                String[] parts = item.split(":");
+                if (parts.length < 3) continue;
+
+                String name = parts[0].trim();                     // ✅ ОСЬ ВІН
+                int qty = Integer.parseInt(
+                        parts[parts.length - 1].trim()            // qty
+                );
+
+                System.out.println("DEBUG minus: [" + name + "] qty=" + qty);
+
+                // 🔻 мінус складу
+                decreaseProductQuantity(name, qty);
+
+            } catch (Exception e) {
+                System.err.println("❌ Failed to minus item: " + item);
+                e.printStackTrace();
+            }
         }
     }
 }
