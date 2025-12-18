@@ -975,52 +975,57 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "✅ Підтвердити" -> {
+
                     try (Connection conn = DatabaseManager.getConnection()) {
+
+                        conn.setAutoCommit(false);
 
                         String selectSql =
                                 "SELECT id, userId, item FROM orders " +
-                                        "WHERE status = 'Нове' ORDER BY id ASC LIMIT 1";
+                                        "WHERE status='Нове' ORDER BY id ASC LIMIT 1";
+
+                        long orderId;
+                        long orderUserId;
+                        String itemsText;
 
                         try (PreparedStatement stmt = conn.prepareStatement(selectSql);
                              ResultSet rs = stmt.executeQuery()) {
 
                             if (!rs.next()) {
                                 sendText(chatId, "Замовлень немає.");
+                                conn.rollback();
                                 break;
                             }
 
-                            long orderId = rs.getLong("id");
-                            long orderUserId = rs.getLong("userId");
-                            String itemsText = rs.getString("item");
-
-                            // 🔻 МІНУСУЄМО СКЛАД (ПРОСТО, БЕЗ conn)
-                            userManager.decreaseProductsFromText(itemsText);
-
-                            // 👤 Повідомлення користувачу
-                            sendText(
-                                    String.valueOf(orderUserId),
-                                    "🧱 Ваше замовлення прийнято!\n\n" +
-                                            "Митрофан вже складає його на піддон 😄\n" +
-                                            "Дякуємо, що обираєте GigaHub ❤️"
-                            );
-
-                            // 🔄 Оновлюємо статус
-                            String updateSql =
-                                    "UPDATE orders SET status = 'Підтверджено' WHERE id = ?";
-
-                            try (PreparedStatement updateStmt =
-                                         conn.prepareStatement(updateSql)) {
-                                updateStmt.setLong(1, orderId);
-                                updateStmt.executeUpdate();
-                            }
-
-                            sendText(chatId, "Замовлення підтверджено ✅");
-                            showAdminOrder(userId, chatId);
+                            orderId = rs.getLong("id");
+                            orderUserId = rs.getLong("userId");
+                            itemsText = rs.getString("item");
                         }
+
+                        // ✅ 1) Мінус складу (через ТОЙ САМИЙ conn)
+                        userManager.decreaseProductsFromText(conn, itemsText);
+
+                        // ✅ 2) Статус (через ТОЙ САМИЙ conn)
+                        try (PreparedStatement upd = conn.prepareStatement(
+                                "UPDATE orders SET status='Підтверджено' WHERE id=?")) {
+                            upd.setLong(1, orderId);
+                            upd.executeUpdate();
+                        }
+
+                        conn.commit();
+
+                        // ✅ 3) ПІСЛЯ commit — повідомлення
+                        sendText(String.valueOf(orderUserId),
+                                "🧱 Ваше замовлення прийнято!\n\n" +
+                                        "Митрофан вже складає його на піддон 😄\n" +
+                                        "Дякуємо, що обираєте GigaHub ❤️");
+
+                        sendText(chatId, "Замовлення підтверджено ✅");
+                        showAdminOrder(Long.valueOf(userId), String.valueOf(chatId));
 
                     } catch (Exception e) {
                         LOGGER.severe("[Admin Error] Failed to confirm order: " + e.getMessage());
-                        sendText(chatId, "❌ Помилка при підтвердженні замовлення.");
+                        try { sendText(chatId, "❌ Помилка при підтвердженні замовлення."); } catch (Exception ignored) {}
                     }
                 }
 

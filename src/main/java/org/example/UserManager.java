@@ -136,27 +136,6 @@ public class UserManager {
         }
     }
 
-    // Стартове повідомлення для нових пользователей
-    private String getStartMessageText() {
-        return "\uD83D\uDC4B Вітаю, друже!\n" +
-                "\n" +
-                "Я — Митрофан \uD83E\uDD16, офіційний цифровий помічник будівельної мережі GigaHub.  \n" +
-                "Моя робота — зробити твої покупки швидкими, зручними та зрозумілими, без зайвої метушні.\n" +
-                "\n" +
-                "Тут ти можеш:\n" +
-                "\uD83E\uDDF1 Переглядати будівельні матеріали  \n" +
-                "\uD83D\uDD0E Шукати товари за назвою  \n" +
-                "\uD83E\uDDFA Додавати їх у свій кошик  \n" +
-                "\uD83D\uDE9A Оформлювати замовлення за хвилини  \n" +
-                "\uD83D\uDCAC Задати питання консультанту  \n" +
-                "\uD83D\uDCF8 Надсилати фото товару, щоб ми підказали, чи є він у наявності\n" +
-                "\n" +
-                "Я завжди поруч, готовий допомогти з вибором цементу, фарби, інструментів, сантехніки, господарських товарів та всього, що може знадобитися на будові або в ремонті.\n" +
-                "\n" +
-                "Обирай у меню, що саме хочеш зробити,  \n" +
-                "і давай разом збудуємо щось круте \uD83E\uDDE9\uD83D\uDC9B";
-    }
-
     public void saveChatId(long userId, long chatId) {
         userChatMap.put(userId, chatId);
     }
@@ -179,43 +158,43 @@ public class UserManager {
         return max;
     }
 
-    public void decreaseProductQuantity(String productName, int minus) {
+    private void decreaseProductQuantity(
+            Connection conn,
+            String productName,
+            int minus
+    ) throws SQLException {
 
         String selectSql = "SELECT quantity FROM products WHERE name LIKE ? LIMIT 1";
         String updateSql = "UPDATE products SET quantity = ? WHERE name LIKE ?";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement select = conn.prepareStatement(selectSql)) {
+        String quantityText;
 
+        try (PreparedStatement select = conn.prepareStatement(selectSql)) {
             select.setString(1, "%" + productName + "%");
-            ResultSet rs = select.executeQuery();
-
-            if (!rs.next()) {
-                System.out.println("DEBUG product not found: " + productName);
-                return;
+            try (ResultSet rs = select.executeQuery()) {
+                if (!rs.next()) return;
+                quantityText = rs.getString("quantity");
             }
-
-            String quantityText = rs.getString("quantity");
-            if (quantityText == null) return;
-
-            int current = extractMaxQuantity(quantityText);
-            if (current < 0) return;
-
-            int newQty = Math.max(0, current - minus);
-            String newText = quantityText.replaceFirst("\\d+", String.valueOf(newQty));
-
-            try (PreparedStatement update = conn.prepareStatement(updateSql)) {
-                update.setString(1, newText);
-                update.setString(2, "%" + productName + "%");
-                update.executeUpdate();
-            }
-
-            System.out.println("✅ Stock updated: " + productName +
-                    " " + current + " → " + newQty);
-
-        } catch (Exception e) {
-            e.printStackTrace();
         }
+
+        if (quantityText == null) return;
+
+        int current = extractMaxQuantity(quantityText);
+        if (current < 0) return;
+
+        int newQty = Math.max(0, current - minus);
+        String newText = quantityText.replaceFirst("\\d+", String.valueOf(newQty));
+
+        try (PreparedStatement update = conn.prepareStatement(updateSql)) {
+            update.setString(1, newText);
+            update.setString(2, "%" + productName + "%");
+            update.executeUpdate();
+        }
+
+        System.out.println(
+                "✅ STOCK UPDATED [" + productName + "] " +
+                        current + " → " + newQty
+        );
     }
 
     private Long findProductIdByName(String name) {
@@ -258,25 +237,15 @@ public class UserManager {
         for (String item : items) {
             if (item.isBlank()) continue;
 
-            try {
-                // формат: name:price:qty
-                String[] parts = item.split(":");
-                if (parts.length < 3) continue;
+            String[] parts = item.split(":");
+            if (parts.length < 3) continue;
 
-                String name = parts[0].trim();
-                int qty = Integer.parseInt(parts[parts.length - 1].trim());
+            String name = parts[0].trim();
+            int qty = Integer.parseInt(parts[parts.length - 1].trim());
 
-                System.out.println("DEBUG parsed name = [" + name + "]");
-                System.out.println("DEBUG parsed qty = " + qty);
+            System.out.println("DEBUG minus [" + name + "] qty=" + qty);
 
-                Long productId = findProductIdByName(name);
-                if (productId == null) continue;
-
-                decreaseProductQuantity(name, qty);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            decreaseProductQuantity(conn, name, qty);
         }
     }
 
@@ -284,10 +253,11 @@ public class UserManager {
 
         if (itemsText == null || itemsText.isBlank()) return;
 
-        String[] items = itemsText.split(";");
+        try (Connection conn = DatabaseManager.getConnection()) {
 
-        for (String item : items) {
-            try {
+            String[] items = itemsText.split(";");
+
+            for (String item : items) {
                 if (item.isBlank()) continue;
 
                 String[] parts = item.split(":");
@@ -298,12 +268,11 @@ public class UserManager {
 
                 System.out.println("DEBUG minus: [" + name + "] qty=" + qty);
 
-                decreaseProductQuantity(name, qty); // ✅ тепер метод існує
-
-            } catch (Exception e) {
-                System.err.println("❌ Failed to minus item: " + item);
-                e.printStackTrace();
+                decreaseProductQuantity(conn, name, qty);
             }
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -347,34 +316,43 @@ public class UserManager {
         }
     }
 
-    public void decreaseProductsFromText(String itemsText) {
+    public void decreaseProductsFromText(Connection conn, String itemsText) throws SQLException {
 
         if (itemsText == null || itemsText.isBlank()) return;
 
-        // формат: name:price:qty;
         String[] items = itemsText.split(";");
 
         for (String item : items) {
-            try {
-                if (item.isBlank()) continue;
+            if (item == null || item.isBlank()) continue;
 
-                String[] parts = item.split(":");
-                if (parts.length < 3) continue;
+            String[] parts = item.split(":");
+            if (parts.length < 3) continue;
 
-                String name = parts[0].trim();                     // ✅ ОСЬ ВІН
-                int qty = Integer.parseInt(
-                        parts[parts.length - 1].trim()            // qty
-                );
+            String name = parts[0].trim();
+            int qty = Integer.parseInt(parts[parts.length - 1].trim());
 
-                System.out.println("DEBUG minus: [" + name + "] qty=" + qty);
-
-                // 🔻 мінус складу
-                decreaseProductQuantity(name, qty);
-
-            } catch (Exception e) {
-                System.err.println("❌ Failed to minus item: " + item);
-                e.printStackTrace();
-            }
+            decreaseProductQuantity(conn, name, qty);
         }
+    }
+
+    // Стартове повідомлення для нових пользователей
+    private String getStartMessageText() {
+        return "\uD83D\uDC4B Вітаю, друже!\n" +
+                "\n" +
+                "Я — Митрофан \uD83E\uDD16, офіційний цифровий помічник будівельної мережі GigaHub.  \n" +
+                "Моя робота — зробити твої покупки швидкими, зручними та зрозумілими, без зайвої метушні.\n" +
+                "\n" +
+                "Тут ти можеш:\n" +
+                "\uD83E\uDDF1 Переглядати будівельні матеріали  \n" +
+                "\uD83D\uDD0E Шукати товари за назвою  \n" +
+                "\uD83E\uDDFA Додавати їх у свій кошик  \n" +
+                "\uD83D\uDE9A Оформлювати замовлення за хвилини  \n" +
+                "\uD83D\uDCAC Задати питання консультанту  \n" +
+                "\uD83D\uDCF8 Надсилати фото товару, щоб ми підказали, чи є він у наявності\n" +
+                "\n" +
+                "Я завжди поруч, готовий допомогти з вибором цементу, фарби, інструментів, сантехніки, господарських товарів та всього, що може знадобитися на будові або в ремонті.\n" +
+                "\n" +
+                "Обирай у меню, що саме хочеш зробити,  \n" +
+                "і давай разом збудуємо щось круте \uD83E\uDDE9\uD83D\uDC9B";
     }
 }
