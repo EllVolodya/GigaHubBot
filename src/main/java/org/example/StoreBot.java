@@ -1002,10 +1002,8 @@ public class StoreBot extends TelegramLongPollingBot {
                             itemsText = rs.getString("item");
                         }
 
-                        // ✅ 1) Мінус складу (через ТОЙ САМИЙ conn)
                         userManager.decreaseProductsFromText(conn, itemsText);
 
-                        // ✅ 2) Статус (через ТОЙ САМИЙ conn)
                         try (PreparedStatement upd = conn.prepareStatement(
                                 "UPDATE orders SET status='Підтверджено' WHERE id=?")) {
                             upd.setLong(1, orderId);
@@ -1014,7 +1012,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                         conn.commit();
 
-                        // ✅ 3) ПІСЛЯ commit — повідомлення
                         sendText(String.valueOf(orderUserId),
                                 "🧱 Ваше замовлення прийнято!\n\n" +
                                         "Митрофан вже складає його на піддон 😄\n" +
