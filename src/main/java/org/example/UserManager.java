@@ -182,7 +182,7 @@ public class UserManager {
     public void decreaseProductQuantity(String productName, int minus) {
 
         String selectSql = "SELECT quantity FROM products WHERE name LIKE ? LIMIT 1";
-        String updateSql = "UPDATE products SET quantity = ? WHERE id = ?";
+        String updateSql = "UPDATE products SET quantity = ? WHERE name LIKE ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement select = conn.prepareStatement(selectSql)) {
@@ -191,25 +191,22 @@ public class UserManager {
             ResultSet rs = select.executeQuery();
 
             if (!rs.next()) {
-                System.out.println("DEBUG no product found for name=" + productName);
+                System.out.println("DEBUG product not found: " + productName);
                 return;
             }
 
-            long productId = rs.getLong("id");
             String quantityText = rs.getString("quantity");
-
             if (quantityText == null) return;
 
             int current = extractMaxQuantity(quantityText);
             if (current < 0) return;
 
             int newQty = Math.max(0, current - minus);
-
             String newText = quantityText.replaceFirst("\\d+", String.valueOf(newQty));
 
             try (PreparedStatement update = conn.prepareStatement(updateSql)) {
                 update.setString(1, newText);
-                update.setLong(2, productId);
+                update.setString(2, "%" + productName + "%");
                 update.executeUpdate();
             }
 
