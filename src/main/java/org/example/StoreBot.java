@@ -175,6 +175,35 @@ public class StoreBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (update == null || update.getMessage() == null) return;
 
+        if (update.hasMessage() && update.getMessage().hasVideo()) {
+
+            Message message = update.getMessage();
+            String chatId = message.getChatId().toString();
+
+            String fileId = message.getVideo().getFileId();
+            Integer duration = message.getVideo().getDuration();
+            Integer width = message.getVideo().getWidth();
+            Integer height = message.getVideo().getHeight();
+
+            System.out.println("========== VIDEO RECEIVED ==========");
+            System.out.println("FILE_ID: " + fileId);
+            System.out.println("DURATION: " + duration);
+            System.out.println("RESOLUTION: " + width + "x" + height);
+            System.out.println("====================================");
+
+            SendMessage reply = new SendMessage();
+            reply.setChatId(chatId);
+            reply.setText("🎥 VIDEO FILE_ID:\n\n" + fileId);
+
+            try {
+                execute(reply);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+
+            return; // ⛔ обовʼязково
+        }
+
         Long userId = update.getMessage().getFrom().getId();
 
         String chatId = update.getMessage().getChatId().toString();
