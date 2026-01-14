@@ -126,6 +126,9 @@ public class StoreBot extends TelegramLongPollingBot {
     private static final String ADD_TO_CART_BUTTON = "🛠 Додати в кошик";
     private static final String VIEW_CART_BUTTON = "🛍️ Перейти в кошик";
 
+    private static final String VIDEO_HELP_FILE_ID =
+            "BAACAgIAAyEFAATOLPSsAAMCaWdUVJPb_3IkmZP6ydnb7_KbVd4AAqefAAKeUkFLURTvQ-M9SPE4BA";
+
     private static StoreBot instance;
 
     public StoreBot(String botToken) {
@@ -1123,9 +1126,19 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendText(chatId, "Ви хочете додати креатив з описом чи тільки медіа?\nНапишіть 'З описом' або 'Тільки медіа':");
                 }
 
-                case "💬 Залишити відгук" -> {
-                    userStates.put(userId, "waiting_for_feedback");
-                    sendText(chatId, "📝 Напишіть свій відгук, ми обов’язково його переглянемо:");
+                case "🎥 Відеоінструкція" -> {
+                    SendVideo video = new SendVideo();
+                    video.setChatId(chatId);
+                    video.setVideo(new InputFile(VIDEO_HELP_FILE_ID));
+                    video.setCaption("🎥 Відеоінструкція користування ботом\n\n" +
+                            "Тут показано, як оформити замовлення, оплатити та звернутися в підтримку.");
+
+                    try {
+                        execute(video);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                        sendText(chatId, "❌ Не вдалося відкрити відеоінструкцію.");
+                    }
                 }
 
                 case "💬 Відгуки користувачів" -> {
@@ -3970,7 +3983,7 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row2);
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add("💬 Залишити відгук");
+        row3.add("🎥 Відеоінструкція");
         row3.add("💬 Допомога");
         keyboard.add(row3);
 
