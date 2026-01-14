@@ -689,6 +689,12 @@ public class StoreBot extends TelegramLongPollingBot {
                         """);
                     break;
                 }
+                case "💬 Залишити відгук" -> {
+                    userStates.put(userId, "waiting_for_feedback");
+                    sendText(chatId,
+                            "📝 Напишіть свій відгук.\n" +
+                                    "Ми уважно його прочитаємо та врахуємо 🙏");
+                }
                 case "💌 Відповіді" -> {
                     List<String> answers = supportAnswers.get(userId);
                     String reply = (answers == null || answers.isEmpty())
@@ -4205,6 +4211,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row2 = new KeyboardRow();
         row2.add("🧮 Будівельний калькулятор");
+        row2.add("💬 Залишити відгук");
         keyboard.add(row2);
 
         KeyboardRow row3 = new KeyboardRow();
@@ -4226,7 +4233,10 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "Тут знаходяться всі відповіді консультанта. Нічого не загубиться!\n\n" +
 
                                 "🧮 *Будівельний калькулятор*\n" +
-                                "Допоможу порахувати: скільки потрібно фарби, плитки, ламінату, вагонки або плінтуса."
+                                "Допоможу порахувати: скільки потрібно фарби, плитки, ламінату, вагонки або плінтуса." +
+
+                                "\n\n💬 *Залишити відгук*\n" +
+                                "Поділись своєю думкою про наш сервіс — нам важливо знати, що можна покращити 💙"
                 )
                 .parseMode("Markdown")
                 .replyMarkup(markup)
