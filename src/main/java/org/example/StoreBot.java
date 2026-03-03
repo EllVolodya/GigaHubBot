@@ -504,6 +504,16 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
         photoHandler.handleUpdate(userId, chatId, update);
 
+        // 🔎 Якщо користувач у режимі пошуку і ввів число
+        if ("waiting_for_search".equals(state) && text.matches("\\d+")) {
+
+            ProductSearchManager searchHandler =
+                    new ProductSearchManager(this);
+
+            searchHandler.handleSearchNumber(userId, chatId, text);
+            return;
+        }
+
         // ===== Optional: handle feedback / other states =====
         if (update.getMessage().hasText()) {
             text = update.getMessage().getText().trim();
@@ -516,16 +526,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 e.printStackTrace();
             }
             return; // ❗ ОБОВʼЯЗКОВО
-        }
-
-        // 🔎 Якщо користувач у режимі пошуку і ввів число
-        if ("waiting_for_search".equals(state) && text.matches("\\d+")) {
-
-            ProductSearchManager searchHandler =
-                    new ProductSearchManager(this);
-
-            searchHandler.handleSearchNumber(userId, chatId, text);
-            return;
         }
 
         if (text.isBlank()) return;
