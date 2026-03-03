@@ -518,6 +518,16 @@ public class StoreBot extends TelegramLongPollingBot {
             return; // ❗ ОБОВʼЯЗКОВО
         }
 
+        // 🔎 Якщо користувач у режимі пошуку і ввів число
+        if ("waiting_for_search".equals(state) && text.matches("\\d+")) {
+
+            ProductSearchManager searchHandler =
+                    new ProductSearchManager(this);
+
+            searchHandler.handleSearchNumber(userId, chatId, text);
+            return;
+        }
+
         if (text.isBlank()) return;
 
         try {
