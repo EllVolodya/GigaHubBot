@@ -289,62 +289,70 @@ public class StoreBot extends TelegramLongPollingBot {
                 int requestedQty = Integer.parseInt(text);
 
                 if (requestedQty <= 0) {
-                    sendText(realChatId, "❌ Кількість має бути більше 0. Введіть ще раз:");
+                    sendText(realChatId,
+                            "❌ Кількість має бути більше 0. Введіть ще раз:");
                     return;
                 }
 
-                Map<String, Object> product = lastShownProduct.get(realChatId);
+                Map<String, Object> product =
+                        lastShownProduct.get(realChatId);
+
                 if (product == null) {
-                    sendText(realChatId, "❌ Помилка: товар не знайдено.");
+                    sendText(realChatId,
+                            "❌ Помилка: товар не знайдено.");
                     waitingForQuantity.put(realChatId, false);
                     return;
                 }
 
-                String quantityText = String.valueOf(product.getOrDefault("quantity", ""));
+                String quantityText =
+                        String.valueOf(product.getOrDefault("quantity", ""));
+
                 int maxAvailable = extractMaxQuantity(quantityText);
 
-                // ❌ ВЗАГАЛІ НЕМАЄ НА СКЛАДІ
                 if (maxAvailable <= 0) {
-                    sendText(
-                            realChatId,
+                    sendText(realChatId,
                             "⛔ Цього товару зараз немає на складі.\n" +
-                                    "Будь ласка, уточніть наявність у консультанта 🙏"
-                    );
+                                    "Будь ласка, уточніть наявність у консультанта 🙏");
                     return;
                 }
 
-                // ❌ ЗАБАГАТО ХОЧЕ
                 if (requestedQty > maxAvailable) {
-                    sendText(
-                            realChatId,
-                            "⚠️ На складі доступно: *" + quantityText + "*\n" +
-                                    "Введіть меншу кількість 👇"
-                    );
+                    sendText(realChatId,
+                            "⚠️ На складі доступно: " + quantityText +
+                                    "\nВведіть меншу кількість 👇");
                     return;
                 }
 
-                // ✅ ВСЕ ОК — додаємо в кошик
-                Map<String, Object> cartItem = new HashMap<>(product);
+                // ✅ Додаємо в кошик
+                Map<String, Object> cartItem =
+                        new HashMap<>(product);
                 cartItem.put("quantity", requestedQty);
 
-                userCart.computeIfAbsent(realChatId, k -> new ArrayList<>()).add(cartItem);
+                userCart.computeIfAbsent(realChatId,
+                        k -> new ArrayList<>()).add(cartItem);
 
-                sendText(
-                        realChatId,
+                // 🔥 ВИМИКАЄМО режим ПЕРЕД новими повідомленнями
+                waitingForQuantity.put(realChatId, false);
+
+                sendText(realChatId,
                         "🧺 Товар додано у кошик!\n\n" +
                                 "📦 " + product.get("name") + "\n" +
-                                "🔢 Замовлено: " + requestedQty
-                );
+                                "🔢 Замовлено: " + requestedQty);
 
-                waitingForQuantity.put(realChatId, false);
+                try {
+                    showRemainingProductList(realChatId);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+
                 return;
 
             } catch (NumberFormatException e) {
-                sendText(realChatId, "❌ Це не число. Введіть кількість ще раз:");
+                sendText(realChatId,
+                        "❌ Це не число. Введіть кількість ще раз:");
                 return;
             }
         }
-
 
         if (waitingForCatalogSearch.getOrDefault(realChatId, false)) {
 
@@ -4721,6 +4729,31 @@ public class StoreBot extends TelegramLongPollingBot {
         userProductLists.put(chatId, new ArrayList<>(products));
 
         StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
+
+        for (int i = 0; i < products.size(); i++) {
+            sb.append(i + 1)
+                    .append(". ")
+                    .append(products.get(i).get("name"))
+                    .append("\n");
+        }
+
+        sendText(chatId, sb.toString());
+    }
+
+    private void showRemainingProductList(Long chatId)
+            throws TelegramApiException {
+
+        List<Map<String, Object>> products =
+                userProductLists.get(chatId);
+
+        if (products == null || products.isEmpty()) {
+            sendText(chatId,
+                    "✅ Це був останній товар у підкатегорії.");
+            return;
+        }
+
+        StringBuilder sb =
+                new StringBuilder("\n📦 Інші товари:\n\n");
 
         for (int i = 0; i < products.size(); i++) {
             sb.append(i + 1)
