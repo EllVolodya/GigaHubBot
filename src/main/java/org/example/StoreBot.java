@@ -1837,43 +1837,20 @@ public class StoreBot extends TelegramLongPollingBot {
         List<Map<String, Object>> products = userProductLists.get(chatId);
 
         if (products == null || products.isEmpty()) {
-            sendText(chatId, "Список товарів пустий.");
+            sendText(chatId, "❌ Список товарів пустий.");
             return;
         }
 
         if (choice < 1 || choice > products.size()) {
-            sendText(chatId, "Невірний номер.");
+            sendText(chatId, "❌ Невірний номер.");
             return;
         }
 
-        // Отримуємо товар
         Map<String, Object> product = products.get(choice - 1);
 
-        // видаляємо зі списку
         products.remove(choice - 1);
 
-        // зберігаємо як останній показаний
-        lastShownProduct.put(chatId, product);
-
-        // показуємо
-        showProductDetails(chatId);
-
-        // Якщо залишились товари — показуємо оновлений список
-        if (!products.isEmpty()) {
-
-            StringBuilder sb = new StringBuilder("\n📦 Інші товари:\n\n");
-
-            for (int i = 0; i < products.size(); i++) {
-                sb.append(i + 1)
-                        .append(". ")
-                        .append(products.get(i).get("name"))
-                        .append("\n");
-            }
-
-            sendText(chatId, sb.toString());
-        } else {
-            sendText(chatId, "✅ Це був останній товар у цій підкатегорії.");
-        }
+        sendProductFromMap(chatId, product);
     }
 
     private void showNextProduct(Long chatId) throws TelegramApiException {
@@ -4747,6 +4724,57 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             sendText(chatId, sb.toString());
+        }
+    }
+
+    private void sendProductFromMap(Long chatId, Map<String, Object> product) throws TelegramApiException {
+
+        String name = safeToString(product.get("name"), "Без назви");
+        String price = safeToString(product.get("price"), "0");
+        String unit = safeToString(product.get("unit"), "шт").toLowerCase();
+        String description = safeToString(product.get("description"), "");
+        String photo = safeToString(product.get("photo"), "");
+
+        boolean isCustomOrder = unit.equals("під замовлення");
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("📦 ").append(name).append("\n");
+
+        if (isCustomOrder) {
+            sb.append("💬 Цей товар доступний лише під замовлення.\n")
+                    .append("📞 Для уточнення ціни — натисни кнопку консультанта.");
+        } else {
+            sb.append("💰 Ціна: ").append(price).append(" грн за ").append(unit);
+        }
+
+        if (!description.isEmpty() && !"null".equalsIgnoreCase(description.trim()))
+            sb.append("\n📖 ").append(description);
+
+        // Кнопки (копіюємо з sendProduct)
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("⬅ Назад");
+        row1.add("🔍 Пошук");
+        row1.add("➡ Далі");
+
+        KeyboardRow row2 = new KeyboardRow();
+        if (isCustomOrder) {
+            row2.add("Написати консультанту");
+        } else {
+            row2.add("🛒 Додати в кошик");
+        }
+        row2.add("🛍️ Перейти в кошик");
+
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add(BACK_BUTTON);
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(List.of(row1, row2, row3));
+        markup.setResizeKeyboard(true);
+
+        // 🔥 ОЦЕ ГОЛОВНЕ
+        if (!photo.isEmpty() && !"null".equalsIgnoreCase(photo.trim())) {
+            sendPhotoFromResources(chatId.toString(), photo, sb.toString(), markup);
+        } else {
+            sendTextWithMarkup(chatId, sb.toString(), markup);
         }
     }
 
