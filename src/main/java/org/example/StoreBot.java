@@ -4698,27 +4698,20 @@ public class StoreBot extends TelegramLongPollingBot {
 
         products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
 
+        // 🔥 Зберігаємо список
         userProductLists.put(chatId, new ArrayList<>(products));
 
-        // 🔥 Використовуємо правильний метод
-        Map<String, Object> firstProduct = products.get(0);
-        sendProductFromMap(chatId, firstProduct);
+        // 🔥 ТІЛЬКИ список
+        StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
 
-        products.remove(0);
-
-        if (!products.isEmpty()) {
-
-            StringBuilder sb = new StringBuilder("\n📦 Інші товари:\n\n");
-
-            for (int i = 0; i < products.size(); i++) {
-                sb.append(i + 1)
-                        .append(". ")
-                        .append(products.get(i).get("name"))
-                        .append("\n");
-            }
-
-            sendText(chatId, sb.toString());
+        for (int i = 0; i < products.size(); i++) {
+            sb.append(i + 1)
+                    .append(". ")
+                    .append(products.get(i).get("name"))
+                    .append("\n");
         }
+
+        sendText(chatId, sb.toString());
     }
 
     private void sendProductFromMap(Long chatId, Map<String, Object> product) throws TelegramApiException {
