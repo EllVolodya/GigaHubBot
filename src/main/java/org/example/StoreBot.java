@@ -580,7 +580,19 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     //Пошук товара
                     case "waiting_for_search" -> {
-                        handleWaitingForSearch(userId, chatId, text);
+
+                        if (text.equals("🛒 Додати в кошик") ||
+                                text.equals("🛍️ Перейти в кошик") ||
+                                text.equals("⬅️ Назад")) {
+
+                            handleText(userId, text);
+                            return;
+                        }
+
+                        ProductSearchManager searchHandler =
+                                new ProductSearchManager(this);
+
+                        searchHandler.performSearch(userId, chatId, text);
                     }
 
                     case "selecting_product" -> {
