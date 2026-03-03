@@ -1848,13 +1848,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
         Map<String, Object> product = products.get(choice - 1);
 
-        // Видаляємо вибраний товар
+        // 🔥 ОБОВʼЯЗКОВО зберігаємо
+        lastShownProduct.put(chatId, product);
+
         products.remove(choice - 1);
 
-        // Показуємо товар
         sendProductFromMap(chatId, product);
 
-        // Показуємо оновлений список
         if (!products.isEmpty()) {
 
             StringBuilder sb = new StringBuilder("\n📦 Інші товари:\n\n");
@@ -1867,9 +1867,6 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             sendText(chatId, sb.toString());
-
-        } else {
-            sendText(chatId, "✅ Це був останній товар у цій підкатегорії.");
         }
     }
 
@@ -1996,6 +1993,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
+    //Добавление в кошик
     private void addToCart(Long chatId) throws TelegramApiException {
 
         Map<String, Object> product = lastShownProduct.get(chatId);
