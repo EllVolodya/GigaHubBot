@@ -4520,7 +4520,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 System.out.println("[handleText] Subcategory selected: " + text);
                 currentSubcategory.put(chatId, text);
                 productIndex.put(chatId, 0);
-                sendProduct(chatId);
+
+                sendProductList(chatId);
+
                 return;
             }
         }
