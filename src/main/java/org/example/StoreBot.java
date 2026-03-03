@@ -304,21 +304,40 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                String quantityText =
-                        String.valueOf(product.getOrDefault("quantity", ""));
+                // 🔥 Отримуємо кількість зі складу безпечним способом
+                Object qtyObj = product.get("quantity");
 
-                int maxAvailable = extractMaxQuantity(quantityText);
+                int maxAvailable = 9999; // за замовчуванням дозволяємо
+
+                if (qtyObj instanceof Number) {
+                    maxAvailable = ((Number) qtyObj).intValue();
+                } else if (qtyObj instanceof String) {
+                    try {
+                        String cleaned = ((String) qtyObj).replaceAll("\\D+", "");
+                        if (!cleaned.isEmpty()) {
+                            maxAvailable = Integer.parseInt(cleaned);
+                        }
+                    } catch (Exception ignored) {
+                        maxAvailable = 9999;
+                    }
+                }
+
+                // Якщо quantity взагалі немає — вважаємо, що товар доступний
+                if (qtyObj == null) {
+                    maxAvailable = 9999;
+                }
 
                 if (maxAvailable <= 0) {
                     sendText(realChatId,
                             "⛔ Цього товару зараз немає на складі.\n" +
                                     "Будь ласка, уточніть наявність у консультанта 🙏");
+                    waitingForQuantity.put(realChatId, false);
                     return;
                 }
 
                 if (requestedQty > maxAvailable) {
                     sendText(realChatId,
-                            "⚠️ На складі доступно: " + quantityText +
+                            "⚠️ На складі доступно: " + maxAvailable +
                                     "\nВведіть меншу кількість 👇");
                     return;
                 }
@@ -331,7 +350,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 userCart.computeIfAbsent(realChatId,
                         k -> new ArrayList<>()).add(cartItem);
 
-                // 🔥 ВИМИКАЄМО режим ПЕРЕД новими повідомленнями
                 waitingForQuantity.put(realChatId, false);
 
                 sendText(realChatId,
