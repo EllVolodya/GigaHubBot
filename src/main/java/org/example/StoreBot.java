@@ -2002,73 +2002,77 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     //Добавление в кошик
-    private void addToCart(Long chatId) throws TelegramApiException {
+    private void addToCart(Long chatId) {
 
         Map<String, Object> product = lastShownProduct.get(chatId);
 
         if (product == null) {
-            sendText(chatId, "❌ Не вдалося визначити товар. Спробуй ще раз 🙏");
-            return;
-        }
-
-        String productName = String.valueOf(
-                product.getOrDefault("name", "Без назви")
-        );
-
-        String unit = String.valueOf(
-                product.getOrDefault("unit", "")
-        ).toLowerCase();
-
-        String quantityText = String.valueOf(
-                product.getOrDefault("quantity", "")
-        );
-
-        // 🔥 якщо під замовлення — без кількості
-        if (unit.equals("під замовлення")) {
-
             sendText(chatId,
-                    "📦 *Товар під замовлення!*\n\n" +
-                            "🔎 \"" + productName + "\" наразі недоступний для швидкого замовлення.\n" +
-                            "Наш консультант зв’яжеться з тобою найближчим часом 🧱🤝");
-
-            String adminMsg =
-                    "📢 *Новий запит під замовлення!*\n\n" +
-                            "👤 Покупець цікавиться товаром:\n" +
-                            "📦 " + productName + "\n\n" +
-                            "🆔 Chat ID: " + chatId;
-
-            sendReplyButtonToConsultant(chatId);
-            sendText(String.valueOf(CONSULTANT_CHAT_ID), adminMsg);
-
+                    "❌ Не вдалося визначити товар. Спробуй ще раз 🙏");
             return;
         }
 
-        // 🔎 пробуємо дістати число зі складу
-        int maxAvailable = userManager.extractMaxQuantity(quantityText);
+        try {
 
-        waitingForQuantity.put(chatId, true);
+            String productName = String.valueOf(
+                    product.getOrDefault("name", "Без назви"));
 
-        // 🧠 формуємо текст
-        StringBuilder msg = new StringBuilder();
-        msg.append("📥 Добре, друже! Скільки тобі потрібно?\n")
-                .append("👉 *").append(productName).append("*\n\n");
+            String unit = String.valueOf(
+                            product.getOrDefault("unit", ""))
+                    .toLowerCase();
 
-        if (quantityText != null && !quantityText.isBlank()) {
-            msg.append("📊 Наявність на складі: *")
-                    .append(quantityText)
-                    .append("*\n");
+            String quantityText = String.valueOf(
+                    product.getOrDefault("quantity", ""));
+
+            if (unit.equals("під замовлення")) {
+
+                sendText(chatId,
+                        "📦 *Товар під замовлення!*\n\n" +
+                                "🔎 \"" + productName + "\" наразі недоступний для швидкого замовлення.\n" +
+                                "Наш консультант зв’яжеться з тобою найближчим часом 🧱🤝");
+
+                String adminMsg =
+                        "📢 *Новий запит під замовлення!*\n\n" +
+                                "👤 Покупець цікавиться товаром:\n" +
+                                "📦 " + productName + "\n\n" +
+                                "🆔 Chat ID: " + chatId;
+
+                sendReplyButtonToConsultant(chatId);
+                sendText(String.valueOf(CONSULTANT_CHAT_ID), adminMsg);
+
+                return;
+            }
+
+            int maxAvailable =
+                    userManager.extractMaxQuantity(quantityText);
+
+            waitingForQuantity.put(chatId, true);
+
+            StringBuilder msg = new StringBuilder();
+            msg.append("📥 Добре, друже! Скільки тобі потрібно?\n")
+                    .append("👉 *").append(productName).append("*\n\n");
+
+            if (quantityText != null && !quantityText.isBlank()) {
+                msg.append("📊 Наявність на складі: *")
+                        .append(quantityText)
+                        .append("*\n");
+            }
+
+            if (maxAvailable > 0) {
+                msg.append("ℹ️ Максимально доступно: *")
+                        .append(maxAvailable)
+                        .append("*\n");
+            }
+
+            msg.append("\nВведи кількість числом (наприклад: 3)");
+
+            sendText(chatId, msg.toString());
+
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
         }
-
-        if (maxAvailable > 0) {
-            msg.append("ℹ️ Максимально доступно: *")
-                    .append(maxAvailable)
-                    .append("*\n");
-        }
-
-        msg.append("\nВведи кількість числом (наприклад: 3)");
-
-        sendText(chatId, msg.toString());
     }
+
     public void addToCartTool(Long userId) {
         Map<String, Object> product = lastShownProduct.get(userId);
         String chatId = String.valueOf(userId);
@@ -3417,6 +3421,7 @@ public class StoreBot extends TelegramLongPollingBot {
         searchResults.remove(Long.parseLong(chatId));
     }
 
+    //Пошук товару
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
         text = text.trim();
 
@@ -3444,13 +3449,16 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        if (text.equals("🛠 Додати в кошик")) {
+        if (text.equals("🛒 Додати в кошик")) {
             Map<String, Object> product = getLastShownProduct().get(userId);
+
             if (product != null) {
-                addToCartTool(userId);
+                addToCart(userId);   // ✅ запускає режим введення кількості
             } else {
-                sendText(chatId, "❌ Товар не знайдено для додавання в кошик.");
+                sendText(chatId,
+                        "❌ Товар не знайдено для додавання в кошик.");
             }
+
             return;
         }
 
