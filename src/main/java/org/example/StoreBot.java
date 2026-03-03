@@ -505,13 +505,18 @@ public class StoreBot extends TelegramLongPollingBot {
         photoHandler.handleUpdate(userId, chatId, update);
 
         // 🔎 Якщо користувач у режимі пошуку і ввів число
-        if ("waiting_for_search".equals(state) && text.matches("\\d+")) {
+        if ("waiting_for_search".equals(state)) {
 
             ProductSearchManager searchHandler =
                     new ProductSearchManager(this);
 
-            searchHandler.handleSearchNumber(userId, chatId, text);
-            return;
+            if (text.matches("\\d+")) {
+                searchHandler.handleSearchNumber(userId, chatId, text);
+            } else {
+                searchHandler.performSearch(userId, chatId, text);
+            }
+
+            return;   // 🔥 ВАЖЛИВО
         }
 
         // ===== Optional: handle feedback / other states =====
