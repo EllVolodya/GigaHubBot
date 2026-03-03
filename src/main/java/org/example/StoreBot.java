@@ -1837,7 +1837,7 @@ public class StoreBot extends TelegramLongPollingBot {
         List<Map<String, Object>> products = userProductLists.get(chatId);
 
         if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ Список товарів пустий.");
+            sendText(chatId, "❌ Список порожній.");
             return;
         }
 
@@ -1848,9 +1848,29 @@ public class StoreBot extends TelegramLongPollingBot {
 
         Map<String, Object> product = products.get(choice - 1);
 
+        // Видаляємо вибраний товар
         products.remove(choice - 1);
 
+        // Показуємо товар
         sendProductFromMap(chatId, product);
+
+        // Показуємо оновлений список
+        if (!products.isEmpty()) {
+
+            StringBuilder sb = new StringBuilder("\n📦 Інші товари:\n\n");
+
+            for (int i = 0; i < products.size(); i++) {
+                sb.append(i + 1)
+                        .append(". ")
+                        .append(products.get(i).get("name"))
+                        .append("\n");
+            }
+
+            sendText(chatId, sb.toString());
+
+        } else {
+            sendText(chatId, "✅ Це був останній товар у цій підкатегорії.");
+        }
     }
 
     private void showNextProduct(Long chatId) throws TelegramApiException {
@@ -4689,19 +4709,19 @@ public class StoreBot extends TelegramLongPollingBot {
         String subcategory = currentSubcategory.get(chatId);
 
         CatalogSearcher searcher = new CatalogSearcher();
-        List<Map<String, Object>> products = searcher.getProducts(category, subcategory);
+        List<Map<String, Object>> products =
+                searcher.getProducts(category, subcategory);
 
         if (products == null || products.isEmpty()) {
             sendText(chatId, "❌ Товарів немає.");
             return;
         }
 
-        products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
+        products.sort(Comparator.comparingInt(
+                p -> ((Number) p.get("id")).intValue()));
 
-        // 🔥 Зберігаємо список
         userProductLists.put(chatId, new ArrayList<>(products));
 
-        // 🔥 ТІЛЬКИ список
         StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
 
         for (int i = 0; i < products.size(); i++) {
@@ -4728,36 +4748,40 @@ public class StoreBot extends TelegramLongPollingBot {
         sb.append("📦 ").append(name).append("\n");
 
         if (isCustomOrder) {
-            sb.append("💬 Цей товар доступний лише під замовлення.\n")
+            sb.append("💬 Товар доступний під замовлення.\n")
                     .append("📞 Для уточнення ціни — натисни кнопку консультанта.");
         } else {
             sb.append("💰 Ціна: ").append(price).append(" грн за ").append(unit);
         }
 
-        if (!description.isEmpty() && !"null".equalsIgnoreCase(description.trim()))
+        if (!description.isEmpty() && !"null".equalsIgnoreCase(description.trim())) {
             sb.append("\n📖 ").append(description);
+        }
 
-        // Кнопки (копіюємо з sendProduct)
+        // 🔥 НОВА КЛАВІАТУРА
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
         KeyboardRow row1 = new KeyboardRow();
-        row1.add("⬅ Назад");
-        row1.add("🔍 Пошук");
-        row1.add("➡ Далі");
+        if (!isCustomOrder) {
+            row1.add("🛒 Додати в кошик");
+        } else {
+            row1.add("Написати консультанту");
+        }
+        keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
-        if (isCustomOrder) {
-            row2.add("Написати консультанту");
-        } else {
-            row2.add("🛒 Додати в кошик");
-        }
-        row2.add("🛍️ Перейти в кошик");
+        row2.add("🛍 Перейти в кошик");
+        keyboard.add(row2);
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add(BACK_BUTTON);
+        row3.add("🔙 Назад");
+        keyboard.add(row3);
 
-        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(List.of(row1, row2, row3));
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setKeyboard(keyboard);
         markup.setResizeKeyboard(true);
 
-        // 🔥 ОЦЕ ГОЛОВНЕ
+        // 🔥 Відправка
         if (!photo.isEmpty() && !"null".equalsIgnoreCase(photo.trim())) {
             sendPhotoFromResources(chatId.toString(), photo, sb.toString(), markup);
         } else {
