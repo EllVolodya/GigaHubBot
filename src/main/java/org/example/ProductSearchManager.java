@@ -101,7 +101,8 @@ public class ProductSearchManager {
     }
 
     // 🔹 ПОКАЗ ТОВАРУ (БЕЗ ФОТО)
-    private void showTextProduct(Long userId, String chatId,
+    private void showTextProduct(Long userId,
+                                 String chatId,
                                  Map<String, Object> product) {
 
         bot.getLastShownProduct().put(userId, product);
@@ -118,17 +119,17 @@ public class ProductSearchManager {
                 .append("💰 Ціна: ").append(price)
                 .append(" грн за ").append(unit);
 
-        if (!category.isEmpty()) {
+        if (!category.isBlank()) {
             sb.append("\n📂 ").append(category);
-            if (!subcategory.isEmpty()) {
+            if (!subcategory.isBlank()) {
                 sb.append(" → ").append(subcategory);
             }
         }
 
-        if (!description.isEmpty()) {
-            sb.append("\n📖 ").append(description);
+        if (!description.isBlank()) {
+            sb.append("\n\n📖 ").append(description);
         }
 
-        bot.sendProductWithAddToCartRow(userId, chatId, sb.toString());
+        bot.sendSearchProduct(userId, chatId, sb.toString());
     }
 }

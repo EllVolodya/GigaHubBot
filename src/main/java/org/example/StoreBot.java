@@ -4901,6 +4901,22 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
+    public void sendSearchProduct(Long userId,
+                                  String chatId,
+                                  String text) {
+
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText(text);
+        message.setReplyMarkup(getSearchKeyboard());
+
+        try {
+            execute(message);
+        } catch (Exception e) {
+            System.out.println("Send error: " + e.getMessage());
+        }
+    }
+
     // 🔸 Показ замовлення користовувача Адміну
     private void createOrderAdminMenu(String chatId, Map<String, Object> order, Long userId) {
         String orderCode = String.valueOf(order.get("orderCode"));
