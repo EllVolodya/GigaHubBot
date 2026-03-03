@@ -4765,7 +4765,7 @@ public class StoreBot extends TelegramLongPollingBot {
         sendText(chatId, sb.toString());
     }
 
-    private void sendProductFromMap(Long chatId, Map<String, Object> product) throws TelegramApiException {
+    public void sendProductFromMap(Long chatId, Map<String, Object> product) throws TelegramApiException {
 
         String name = safeToString(product.get("name"), "Без назви");
         String price = safeToString(product.get("price"), "0");

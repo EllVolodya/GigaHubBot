@@ -100,43 +100,48 @@ public class ProductSearchManager {
         }
     }
 
-    // 🔹 Метод для обробки введення номера
-    public void handleSearchNumber(Long userId, String chatId, String text) throws TelegramApiException {
-        // ⬅️ Назад
-        if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
-            bot.sendUserMenu(userId);
-            System.out.println("[handleSearchNumber] User " + userId + " exited search mode.");
+    // 🔹 Метод для обробки введення номера товару зі списку
+    public void handleSearchNumber(Long userId, String chatId, String text) {
+
+        // Якщо це не число — нічого не робимо
+        if (!text.matches("\\d+")) {
             return;
         }
-
-        // ⛔ Якщо користувач не у пошуку — ігноруємо
-        String state = bot.getUserStates().get(userId);
-        if (state == null || !state.equals("waiting_for_search")) {
-            System.out.println("[handleSearchNumber] User " + userId + " not in search mode, ignoring input.");
-            return;
-        }
-
-        if (!text.matches("\\d+")) return;
 
         List<Map<String, Object>> products = bot.getSearchResults().get(userId);
-        if (products == null || products.isEmpty()) return;
 
-        int index = Integer.parseInt(text) - 1;
+        if (products == null || products.isEmpty()) {
+            bot.sendText(chatId, "❌ Список товарів порожній.");
+            return;
+        }
+
+        int index;
+        try {
+            index = Integer.parseInt(text) - 1;
+        } catch (NumberFormatException e) {
+            bot.sendText(chatId, "❌ Введіть номер товару цифрою.");
+            return;
+        }
+
         if (index < 0 || index >= products.size()) {
             bot.sendText(chatId, "⚠️ Неправильний номер товару. Спробуйте ще раз.");
             return;
         }
 
         Map<String, Object> product = products.get(index);
+
+        // 🔥 ЗБЕРІГАЄМО ОБРАНИЙ ТОВАР
         bot.getLastShownProduct().put(userId, product);
 
-        String productText = String.format(
-                "📦 %s\n💰 Ціна: %s грн за шт\n📂 %s → %s",
-                product.get("name"),
-                product.get("price"),
-                product.get("category"),
-                product.get("subcategory")
-        );
-        bot.sendProductWithAddToCartRow(userId, chatId, productText);
+        try {
+            // 🔥 Показуємо товар через chatId (для відправки)
+            bot.sendProductFromMap(Long.valueOf(chatId), product);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+            bot.sendText(chatId, "⚠️ Помилка при показі товару.");
+        }
+
+        // 🔥 Міняємо стан — тепер товар вибраний
+        bot.getUserStates().put(userId, "product_shown");
     }
 }
