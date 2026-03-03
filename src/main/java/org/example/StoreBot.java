@@ -3265,9 +3265,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔍 Пошук товару
     public void handleSearch(Long userId, String chatId, String text) {
+
         System.out.println("[handleSearch] User " + userId + " input: '" + text + "'");
 
         text = text.trim();
+
         if (text.isEmpty()) {
             sendText(chatId,
                     "🤖 Митрофан стоїть готовий шукати, але ти нічого не написав 😊\n" +
@@ -3277,8 +3279,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try {
             CatalogSearcher searcher = new CatalogSearcher();
+            List<Map<String, Object>> foundProducts =
+                    searcher.searchMixedFromYAML(text);
 
-            List<Map<String, Object>> foundProducts = searcher.searchMixedFromYAML(text);
             System.out.println("[handleSearch] Found products count: " + foundProducts.size());
 
             if (foundProducts.isEmpty()) {
@@ -3289,35 +3292,35 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
+            // 🔥 Якщо знайдено кілька товарів — показуємо список
             if (foundProducts.size() > 1) {
 
                 StringBuilder sb = new StringBuilder(
                         "🔎 Митрофан знайшов кілька варіантів:\n\n");
 
-                int idx = 1;
-                for (Map<String, Object> p : foundProducts) {
-                    sb.append("`")
-                            .append(idx++)
-                            .append("` — ")
-                            .append(p.get("name"))
+                for (int i = 0; i < foundProducts.size(); i++) {
+                    sb.append(i + 1)
+                            .append(". ")
+                            .append(foundProducts.get(i).get("name"))
                             .append("\n");
                 }
 
-                sb.append("\n📝 Введи *номер товару*, щоб показати деталі.");
+                sb.append("\n📝 Введи номер товару, щоб показати деталі.");
 
                 searchResults.put(userId, foundProducts);
-                System.out.println("[handleSearch] searchResults stored for user " + userId);
+                productIndex.put(userId, 0);
 
                 sendText(chatId, sb.toString());
                 return;
             }
 
+            // 🔥 Якщо товар один — показуємо як у каталозі
             Map<String, Object> product = foundProducts.get(0);
+
             lastShownProduct.put(userId, product);
 
-            System.out.println("[handleSearch] Showing product for userId=" + userId + ": " + product);
-
-            sendProductDetailsWithButtons(userId, product);
+            // 👉 використовуємо ЄДИНИЙ метод показу
+            sendProductFromMap(userId, product);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -5281,6 +5284,7 @@ public class StoreBot extends TelegramLongPollingBot {
         createOrderAdminMenu(chatId, order, clientId);
     }
 
+    //Пошук товара в каталозі
     private void sendSearchedProduct(Long chatId) throws TelegramApiException {
         List<Map<String, Object>> results = searchResults.get(chatId);
         int index = productIndex.getOrDefault(chatId, 0);
