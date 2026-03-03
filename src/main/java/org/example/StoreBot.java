@@ -4723,19 +4723,31 @@ public class StoreBot extends TelegramLongPollingBot {
         // Сортуємо по ID
         products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
 
-        // Зберігаємо список для користувача
+        // Зберігаємо список
         userProductLists.put(chatId, new ArrayList<>(products));
 
-        StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
+        // 🔥 Показуємо перший товар одразу (як раніше)
+        Map<String, Object> firstProduct = products.get(0);
+        lastShownProduct.put(chatId, firstProduct);
+        showProductDetails(chatId);
 
-        for (int i = 0; i < products.size(); i++) {
-            sb.append(i + 1)
-                    .append(". ")
-                    .append(products.get(i).get("name"))
-                    .append("\n");
+        // Видаляємо його зі списку, щоб не повторювався
+        products.remove(0);
+
+        // Якщо ще є товари — показуємо список
+        if (!products.isEmpty()) {
+
+            StringBuilder sb = new StringBuilder("\n📦 Інші товари:\n\n");
+
+            for (int i = 0; i < products.size(); i++) {
+                sb.append(i + 1)
+                        .append(". ")
+                        .append(products.get(i).get("name"))
+                        .append("\n");
+            }
+
+            sendText(chatId, sb.toString());
         }
-
-        sendText(chatId, sb.toString());
     }
 
     // 🔸 Допоміжний метод — безпечне перетворення в String
