@@ -4499,9 +4499,9 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // 🔹 4. Кнопка Додати в кошик
-        if (text.equals("🛠 Додати в кошик")) {
+        if (text.equals("🛒 Додати в кошик")) {
             System.out.println("[handleText] Add to cart button pressed");
-            addToCartTool(chatId);
+            addToCart(chatId);
             return;
         }
 
