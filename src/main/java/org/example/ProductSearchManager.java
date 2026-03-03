@@ -1,7 +1,6 @@
 package org.example;
 
 import java.util.*;
-import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 public class ProductSearchManager {
 
@@ -11,137 +10,127 @@ public class ProductSearchManager {
         this.bot = bot;
     }
 
-    // 🔹 Основний метод пошуку
-    public void performSearch(Long userId, String chatId, String text) throws TelegramApiException {
+    // 🔹 ОСНОВНИЙ ПОШУК
+    public void performSearch(Long userId, String chatId, String text) {
 
         text = text.trim();
-        System.out.println("[performSearch] User " + userId + " input: '" + text + "'");
+
+        // 🛒 Додати в кошик
+        if (text.equals("🛒 Додати в кошик")) {
+            bot.safeAddToCart(userId); // ⚠ викликаємо БЕЗ throws
+            return;
+        }
 
         // 🛍️ Перейти в кошик
-        if (text.equalsIgnoreCase("🛍️ Перейти в кошик") || text.equalsIgnoreCase("Перейти в кошик")) {
+        if (text.equalsIgnoreCase("🛍️ Перейти в кошик")) {
             bot.getUserStates().remove(userId);
             bot.openCartForUser(userId);
-            System.out.println("[performSearch] User " + userId + " opened the cart.");
             return;
         }
 
         // ⬅️ Назад
-        if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
+        if (text.equalsIgnoreCase("⬅️ Назад")) {
+            bot.getUserStates().remove(userId);
             bot.sendUserMenu(userId);
-            System.out.println("[performSearch] User " + userId + " exited search mode.");
             return;
         }
 
-        // Якщо користувач нічого не ввів
         if (text.isEmpty()) {
             bot.sendText(chatId, "⚠️ Введіть назву товару для пошуку.");
             return;
         }
 
         try {
-            // ✅ Використовуємо новий SmartSearch
             List<Map<String, Object>> foundProducts = SmartSearch.search(text);
 
-            System.out.println("[performSearch] Found products by SmartSearch: " + foundProducts.size());
-
-            if (foundProducts.isEmpty()) {
+            if (foundProducts == null || foundProducts.isEmpty()) {
                 bot.sendText(chatId,
-                        "❌ Товар не знайдено.\n" +
-                                "🔎 Митрофан уже шукає кращі варіанти — спробуйте інший запит!");
-
-                bot.sendUserMenu(userId);
+                        "❌ Товар не знайдено.\nСпробуйте інший запит.");
                 return;
             }
 
-            // Зберігаємо результати
             bot.getSearchResults().put(userId, foundProducts);
 
-            // Якщо знайдено декілька — показуємо список
+            // якщо кілька товарів
             if (foundProducts.size() > 1) {
 
-                StringBuilder sb = new StringBuilder("🔎 Митрофан знайшов кілька варіантів:\n\n");
-                int idx = 1;
+                StringBuilder sb = new StringBuilder();
+                sb.append("🔎 Знайдено кілька варіантів:\n\n");
 
-                for (Map<String, Object> product : foundProducts) {
-                    sb.append(idx++)
+                for (int i = 0; i < foundProducts.size(); i++) {
+                    sb.append(i + 1)
                             .append(". ")
-                            .append(product.get("name"))
+                            .append(foundProducts.get(i).get("name"))
                             .append("\n");
                 }
 
-                sb.append("\n👉 Введіть номер товару, щоб переглянути деталі.");
+                sb.append("\n👉 Введіть номер товару для перегляду.");
 
                 bot.sendText(chatId, sb.toString());
                 return;
             }
 
-            // Якщо один товар → показуємо одразу
-            Map<String, Object> product = foundProducts.get(0);
-
-            bot.getLastShownProduct().put(userId, product);
-
-            // Формуємо текст товару
-            String productText = String.format(
-                    "📦 %s\n💰 Ціна: %s грн за %s\n📂 Категорія: %s → %s",
-                    product.get("name"),
-                    product.get("price"),
-                    product.get("unit"),
-                    product.get("category"),
-                    product.get("subcategory")
-            );
-
-            // Показуємо список кнопок "Додати в кошик"
-            bot.sendProductWithAddToCartRow(userId, chatId, productText);
+            // якщо один товар
+            showTextProduct(userId, chatId, foundProducts.get(0));
 
         } catch (Exception e) {
             e.printStackTrace();
-            bot.sendText(chatId, "⚠️ Помилка під час пошуку товару 😢");
-            bot.sendUserMenu(userId);
+            bot.sendText(chatId, "⚠️ Помилка під час пошуку.");
         }
     }
 
-    // 🔹 Метод для обробки введення номера товару зі списку
+    // 🔹 ОБРОБКА НОМЕРА
     public void handleSearchNumber(Long userId, String chatId, String text) {
 
-        // Якщо це не число — нічого не робимо
-        if (!text.matches("\\d+")) {
-            return;
-        }
+        if (!text.matches("\\d+")) return;
 
-        List<Map<String, Object>> products = bot.getSearchResults().get(userId);
+        List<Map<String, Object>> results =
+                bot.getSearchResults().get(userId);
 
-        if (products == null || products.isEmpty()) {
+        if (results == null || results.isEmpty()) {
             bot.sendText(chatId, "❌ Список товарів порожній.");
             return;
         }
 
-        int index;
-        try {
-            index = Integer.parseInt(text) - 1;
-        } catch (NumberFormatException e) {
-            bot.sendText(chatId, "❌ Введіть номер товару цифрою.");
+        int index = Integer.parseInt(text) - 1;
+
+        if (index < 0 || index >= results.size()) {
+            bot.sendText(chatId, "⚠️ Невірний номер товару.");
             return;
         }
 
-        if (index < 0 || index >= products.size()) {
-            bot.sendText(chatId, "⚠️ Неправильний номер товару. Спробуйте ще раз.");
-            return;
-        }
+        showTextProduct(userId, chatId, results.get(index));
+    }
 
-        Map<String, Object> product = products.get(index);
+    // 🔹 ПОКАЗ ТОВАРУ (БЕЗ ФОТО)
+    private void showTextProduct(Long userId, String chatId,
+                                 Map<String, Object> product) {
 
-        // 🔥 ЗБЕРІГАЄМО ОБРАНИЙ ТОВАР
         bot.getLastShownProduct().put(userId, product);
 
-        try {
-            // 🔥 Показуємо товар через chatId (для відправки)
-            bot.sendProductFromMap(Long.valueOf(chatId), product);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-            bot.sendText(chatId, "⚠️ Помилка при показі товару.");
+        String name = String.valueOf(product.getOrDefault("name", "Без назви"));
+        String price = String.valueOf(product.getOrDefault("price", "0"));
+        String unit = String.valueOf(product.getOrDefault("unit", "шт"));
+        String category = String.valueOf(product.getOrDefault("category", ""));
+        String subcategory = String.valueOf(product.getOrDefault("subcategory", ""));
+        String description = String.valueOf(product.getOrDefault("description", ""));
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("📦 ").append(name).append("\n")
+                .append("💰 Ціна: ").append(price)
+                .append(" грн за ").append(unit);
+
+        if (!category.isEmpty()) {
+            sb.append("\n📂 ").append(category);
+            if (!subcategory.isEmpty()) {
+                sb.append(" → ").append(subcategory);
+            }
         }
 
-        // 🔥 Міняємо стан — тепер товар вибраний
-        bot.getUserStates().put(userId, "product_shown");
+        if (!description.isEmpty()) {
+            sb.append("\n📖 ").append(description);
+        }
+
+        bot.sendProductWithAddToCartRow(userId, chatId, sb.toString());
     }
 }

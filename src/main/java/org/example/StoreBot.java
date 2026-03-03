@@ -1396,9 +1396,19 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // Викликаємо кошик з іншого класу
-    public void openCartForUser(Long userId) throws TelegramApiException {
-        userStates.remove(userId); // вихід з пошуку
-        showCart(userId);          // приватний метод всередині класу
+    public void openCartForUser(Long userId) {
+
+        String chatId = String.valueOf(userId);
+
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("🛒 Ваш кошик:");
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 
     // Очистити кошик користувача
@@ -3415,37 +3425,48 @@ public class StoreBot extends TelegramLongPollingBot {
 
     //Пошук товару
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
+
         text = text.trim();
 
+        // ⬅️ Назад
         if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
+
             getUserStates().remove(userId);
+
             try {
                 execute(createUserMenu(chatId, userId));
             } catch (TelegramApiException e) {
                 e.printStackTrace();
-                System.out.println("[handleWaitingForSearch] Failed to send main menu to user " + userId);
             }
-            System.out.println("[handleWaitingForSearch] User " + userId + " exited search mode.");
+
+            System.out.println("[handleWaitingForSearch] User "
+                    + userId + " exited search mode.");
+
             return;
         }
 
-        if (text.equalsIgnoreCase("🛍️ Перейти в кошик") || text.equalsIgnoreCase("Перейти в кошик")) {
+        // 🛍️ Перейти в кошик
+        if (text.equalsIgnoreCase("🛍️ Перейти в кошик")
+                || text.equalsIgnoreCase("Перейти в кошик")) {
+
             getUserStates().remove(userId);
-            try {
-                openCartForUser(userId);
-                System.out.println("[handleWaitingForSearch] User " + userId + " opened the cart.");
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-                sendText(String.valueOf(userId), "⚠️ Не вдалося відкрити кошик.");
-            }
+
+            openCartForUser(userId);
+
+            System.out.println("[handleWaitingForSearch] User "
+                    + userId + " opened the cart.");
+
             return;
         }
 
+        // 🛒 Додати в кошик
         if (text.equals("🛒 Додати в кошик")) {
-            Map<String, Object> product = getLastShownProduct().get(userId);
+
+            Map<String, Object> product =
+                    getLastShownProduct().get(userId);
 
             if (product != null) {
-                addToCart(userId);   // ✅ запускає режим введення кількості
+                addToCart(userId);
             } else {
                 sendText(chatId,
                         "❌ Товар не знайдено для додавання в кошик.");
@@ -3454,22 +3475,25 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        ProductSearchManager searchManager = new ProductSearchManager(this);
+        ProductSearchManager searchManager =
+                new ProductSearchManager(this);
 
+        // Якщо користувач ввів номер
+        if (text.matches("\\d+")) {
+            searchManager.handleSearchNumber(userId, chatId, text);
+            return;
+        }
+
+        // Якщо ввів текст
+        getUserStates().put(userId, "waiting_for_search");
+        searchManager.performSearch(userId, chatId, text);
+    }
+
+    public void safeAddToCart(Long userId) {
         try {
-            // Якщо користувач ввів номер товару зі списку
-            if (text.matches("\\d+")) {
-                searchManager.handleSearchNumber(userId, chatId, text);
-                return;
-            }
-
-            // Якщо користувач ввів текст → пошук
-            getUserStates().put(userId, "waiting_for_search");
-            searchManager.performSearch(userId, chatId, text);
-
-        } catch (TelegramApiException e) {
+            addToCart(userId);
+        } catch (Exception e) {
             e.printStackTrace();
-            sendText(chatId, "⚠️ Сталася помилка при обробці пошуку товару.");
         }
     }
 
@@ -4022,9 +4046,19 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // Відправити меню користувача
-    public void sendUserMenu(Long userId) throws TelegramApiException {
-        SendMessage menu = createUserMenu(String.valueOf(userId), userId);
-        execute(menu); // приватний метод execute вже доступний тут
+    public void sendUserMenu(Long userId) {
+
+        String chatId = String.valueOf(userId);
+
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText("📋 Головне меню");
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 
     // Меню користовувача
