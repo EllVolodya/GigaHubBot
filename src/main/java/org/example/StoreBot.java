@@ -4683,7 +4683,6 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // Показ товару по номеру
     private void sendProductList(Long chatId) throws TelegramApiException {
 
         String category = currentCategory.get(chatId);
@@ -4697,21 +4696,16 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // Сортуємо по ID
         products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
 
-        // Зберігаємо список
         userProductLists.put(chatId, new ArrayList<>(products));
 
-        // 🔥 Показуємо перший товар одразу (як раніше)
+        // 🔥 Використовуємо правильний метод
         Map<String, Object> firstProduct = products.get(0);
-        lastShownProduct.put(chatId, firstProduct);
-        showProductDetails(chatId);
+        sendProductFromMap(chatId, firstProduct);
 
-        // Видаляємо його зі списку, щоб не повторювався
         products.remove(0);
 
-        // Якщо ще є товари — показуємо список
         if (!products.isEmpty()) {
 
             StringBuilder sb = new StringBuilder("\n📦 Інші товари:\n\n");
