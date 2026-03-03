@@ -578,11 +578,11 @@ public class StoreBot extends TelegramLongPollingBot {
                         sendText(chatId, "✅ Ваше замовлення на самовивіз успішно оформлено!\nКод замовлення: " + orderCode);
                     }
 
+                    //Пошук товара
                     case "waiting_for_search" -> {
-                        userStates.put(userId, "selecting_product");
-                        ProductSearchManager searchHandler = new ProductSearchManager(this);
-                        searchHandler.performSearch(userId, chatId, text);
+                        handleWaitingForSearch(userId, chatId, text);
                     }
+
                     case "selecting_product" -> {
                         ProductSearchManager searchHandler = new ProductSearchManager(this);
                         searchHandler.handleSearchNumber(userId, chatId, text);
