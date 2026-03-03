@@ -1831,6 +1831,7 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessage(createUserMenu(chatId, userId));
     }
 
+    //Показ товара новий
     private void handleProductSelection(Long chatId, int choice) throws TelegramApiException {
 
         List<Map<String, Object>> products = userProductLists.get(chatId);
