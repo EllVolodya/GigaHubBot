@@ -15,37 +15,37 @@ public class ProductSearchManager {
 
         text = text.trim();
 
-        // 🛍️ Перейти в кошик
-        if (text.equalsIgnoreCase("🛍️ Перейти в кошик")) {
-            bot.getUserStates().remove(userId);
-            bot.openCartForUser(userId);
+        // 🔥 ІГНОРУЄМО ВСІ КНОПКИ (щоб не запускати пошук)
+        if (text.equals("🛒 Додати в кошик") ||
+                text.equalsIgnoreCase("🛍️ Перейти в кошик") ||
+                text.equalsIgnoreCase("⬅️ Назад") ||
+                text.equalsIgnoreCase("Назад")) {
             return;
         }
 
-        // ⬅️ Назад
-        if (text.equalsIgnoreCase("⬅️ Назад")) {
-            bot.getUserStates().remove(userId);
-            bot.sendUserMenu(userId);
-            return;
-        }
-
+        // Порожній текст
         if (text.isEmpty()) {
             bot.sendText(chatId, "⚠️ Введіть назву товару для пошуку.");
             return;
         }
 
         try {
-            List<Map<String, Object>> foundProducts = SmartSearch.search(text);
+
+            List<Map<String, Object>> foundProducts =
+                    SmartSearch.search(text);
 
             if (foundProducts == null || foundProducts.isEmpty()) {
+
                 bot.sendText(chatId,
                         "❌ Товар не знайдено.\nСпробуйте інший запит.");
+
                 return;
             }
 
+            // Зберігаємо результати пошуку
             bot.getSearchResults().put(userId, foundProducts);
 
-            // якщо кілька товарів
+            // Якщо знайдено кілька товарів
             if (foundProducts.size() > 1) {
 
                 StringBuilder sb = new StringBuilder();
@@ -64,12 +64,16 @@ public class ProductSearchManager {
                 return;
             }
 
-            // якщо один товар
-            showTextProduct(userId, chatId, foundProducts.get(0));
+            // Якщо знайдено один товар — показуємо
+            showTextProduct(userId, chatId,
+                    foundProducts.get(0));
 
         } catch (Exception e) {
-            e.printStackTrace();
-            bot.sendText(chatId, "⚠️ Помилка під час пошуку.");
+
+            System.out.println("Search error: " + e.getMessage());
+
+            bot.sendText(chatId,
+                    "⚠️ Помилка під час пошуку.");
         }
     }
 
