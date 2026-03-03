@@ -15,12 +15,6 @@ public class ProductSearchManager {
 
         text = text.trim();
 
-        // 🛒 Додати в кошик
-        if (text.equals("🛒 Додати в кошик")) {
-            bot.safeAddToCart(userId); // ⚠ викликаємо БЕЗ throws
-            return;
-        }
-
         // 🛍️ Перейти в кошик
         if (text.equalsIgnoreCase("🛍️ Перейти в кошик")) {
             bot.getUserStates().remove(userId);
