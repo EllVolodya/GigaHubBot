@@ -584,8 +584,24 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     case "selecting_product" -> {
-                        ProductSearchManager searchHandler = new ProductSearchManager(this);
-                        searchHandler.handleSearchNumber(userId, chatId, text);
+
+                        // Якщо це кнопка додавання — не відправляємо в пошук
+                        if ("🛒 Додати в кошик".equals(text)) {
+                            addToCart(userId);
+                            return;
+                        }
+
+                        // Якщо це число — вибір товару
+                        if (text.matches("\\d+")) {
+                            ProductSearchManager searchHandler =
+                                    new ProductSearchManager(this);
+                            searchHandler.handleSearchNumber(userId, chatId, text);
+                            return;
+                        }
+
+                        // Інакше ігноруємо або показуємо підказку
+                        sendText(chatId,
+                                "📝 Введіть номер товару зі списку.");
                     }
 
                     case "WAITING_FOR_PRODUCT_NAME" -> {
