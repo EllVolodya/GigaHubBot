@@ -304,10 +304,10 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // 🔥 Отримуємо кількість зі складу безпечним способом
+                // 🔹 Отримуємо кількість зі складу
                 Object qtyObj = product.get("quantity");
 
-                int maxAvailable = 9999; // за замовчуванням дозволяємо
+                int maxAvailable = -1; // -1 означає "невідомо"
 
                 if (qtyObj instanceof Number) {
                     maxAvailable = ((Number) qtyObj).intValue();
@@ -317,28 +317,23 @@ public class StoreBot extends TelegramLongPollingBot {
                         if (!cleaned.isEmpty()) {
                             maxAvailable = Integer.parseInt(cleaned);
                         }
-                    } catch (Exception ignored) {
-                        maxAvailable = 9999;
-                    }
+                    } catch (Exception ignored) {}
                 }
 
-                // Якщо quantity взагалі немає — вважаємо, що товар доступний
-                if (qtyObj == null) {
-                    maxAvailable = 9999;
-                }
-
-                if (maxAvailable <= 0) {
+                // 🔴 Якщо склад = 0
+                if (maxAvailable == 0) {
                     sendText(realChatId,
-                            "⛔ Цього товару зараз немає на складі.\n" +
+                            "⛔ На складі зараз: 0 шт.\n" +
                                     "Будь ласка, уточніть наявність у консультанта 🙏");
                     waitingForQuantity.put(realChatId, false);
                     return;
                 }
 
-                if (requestedQty > maxAvailable) {
+                // 🔴 Якщо склад відомий і запит перевищує
+                if (maxAvailable > 0 && requestedQty > maxAvailable) {
                     sendText(realChatId,
-                            "⚠️ На складі доступно: " + maxAvailable +
-                                    "\nВведіть меншу кількість 👇");
+                            "⚠️ На складі доступно: " + maxAvailable + " шт.\n" +
+                                    "Введіть меншу кількість 👇");
                     return;
                 }
 
@@ -355,7 +350,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(realChatId,
                         "🧺 Товар додано у кошик!\n\n" +
                                 "📦 " + product.get("name") + "\n" +
-                                "🔢 Замовлено: " + requestedQty);
+                                "🔢 Замовлено: " + requestedQty +
+                                (maxAvailable > 0 ? "\n📦 Було на складі: " + maxAvailable : "")
+                );
 
                 try {
                     showRemainingProductList(realChatId);
