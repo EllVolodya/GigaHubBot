@@ -507,6 +507,23 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔎 Якщо користувач у режимі пошуку і ввів число
         if ("waiting_for_search".equals(state)) {
 
+            // 🔥 Спочатку перехоплюємо кнопки
+            if (text.equals("🛠 Додати в кошик")) {
+                addToCart(userId);
+                return;
+            }
+
+            if (text.equals("🛍️ Перейти в кошик")) {
+                openCartForUser(userId);
+                return;
+            }
+
+            if (text.equals("⬅️ Назад")) {
+                userStates.remove(userId);
+                sendUserMenu(userId);
+                return;
+            }
+
             ProductSearchManager searchHandler =
                     new ProductSearchManager(this);
 
@@ -516,7 +533,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 searchHandler.performSearch(userId, chatId, text);
             }
 
-            return;   // 🔥 ВАЖЛИВО
+            return;
         }
 
         // ===== Optional: handle feedback / other states =====
