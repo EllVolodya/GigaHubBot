@@ -584,24 +584,12 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     case "selecting_product" -> {
-
-                        // Якщо це кнопка додавання — не відправляємо в пошук
-                        if ("🛒 Додати в кошик".equals(text)) {
-                            addToCart(userId);
-                            return;
-                        }
-
-                        // Якщо це число — вибір товару
                         if (text.matches("\\d+")) {
                             ProductSearchManager searchHandler =
                                     new ProductSearchManager(this);
                             searchHandler.handleSearchNumber(userId, chatId, text);
                             return;
                         }
-
-                        // Інакше ігноруємо або показуємо підказку
-                        sendText(chatId,
-                                "📝 Введіть номер товару зі списку.");
                     }
 
                     case "WAITING_FOR_PRODUCT_NAME" -> {
@@ -5120,6 +5108,41 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             default -> sendText(chatId, "❌ Невідома опція. Оберіть із меню.");
+        }
+    }
+
+    public void handleSearchNumber(Long userId, String chatId, String text) {
+
+        List<Map<String, Object>> results = searchResults.get(userId);
+
+        if (results == null || results.isEmpty()) {
+            sendText(chatId, "❌ Список товарів порожній.");
+            return;
+        }
+
+        int index;
+
+        try {
+            index = Integer.parseInt(text) - 1;
+        } catch (NumberFormatException e) {
+            sendText(chatId, "❌ Введіть номер товару цифрою.");
+            return;
+        }
+
+        if (index < 0 || index >= results.size()) {
+            sendText(chatId, "❌ Невірний номер товару.");
+            return;
+        }
+
+        Map<String, Object> product = results.get(index);
+
+        // 🔥 ОСЬ ГОЛОВНЕ — зберігаємо товар
+        lastShownProduct.put(userId, product);
+
+        try {
+            sendProductFromMap(userId, product);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
         }
     }
 
