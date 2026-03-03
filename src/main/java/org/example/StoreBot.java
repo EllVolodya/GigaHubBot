@@ -522,33 +522,41 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔎 Якщо користувач у режимі пошуку і ввів число
         if ("waiting_for_search".equals(state)) {
 
-            // 🔥 Спочатку перехоплюємо кнопки
-            if (text.equals("🛠 Додати в кошик")) {
-                addToCart(userId);
+            try {
+
+                // 🔥 Перехоплюємо кнопки
+                if (text.equals("🛠 Додати в кошик")) {
+                    addToCart(userId);
+                    return;
+                }
+
+                if (text.equals("🛍️ Перейти в кошик")) {
+                    openCartForUser(userId);
+                    return;
+                }
+
+                if (text.equals("⬅️ Назад")) {
+                    userStates.remove(userId);
+                    sendUserMenu(userId);
+                    return;
+                }
+
+                ProductSearchManager searchHandler =
+                        new ProductSearchManager(this);
+
+                if (text.matches("\\d+")) {
+                    searchHandler.handleSearchNumber(userId, chatId, text);
+                } else {
+                    searchHandler.performSearch(userId, chatId, text);
+                }
+
+                return;
+
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Сталася помилка під час пошуку.");
                 return;
             }
-
-            if (text.equals("🛍️ Перейти в кошик")) {
-                openCartForUser(userId);
-                return;
-            }
-
-            if (text.equals("⬅️ Назад")) {
-                userStates.remove(userId);
-                sendUserMenu(userId);
-                return;
-            }
-
-            ProductSearchManager searchHandler =
-                    new ProductSearchManager(this);
-
-            if (text.matches("\\d+")) {
-                searchHandler.handleSearchNumber(userId, chatId, text);
-            } else {
-                searchHandler.performSearch(userId, chatId, text);
-            }
-
-            return;
         }
 
         // ===== Optional: handle feedback / other states =====
@@ -2063,8 +2071,8 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    //Добавление в кошик
-    private void addToCart(Long chatId) {
+    // Добавление в кошик
+    private void addToCart(Long chatId) throws TelegramApiException {
 
         Map<String, Object> product = lastShownProduct.get(chatId);
 
@@ -2074,65 +2082,72 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        try {
+        String productName = String.valueOf(
+                product.getOrDefault("name", "Без назви"));
 
-            String productName = String.valueOf(
-                    product.getOrDefault("name", "Без назви"));
+        String unit = String.valueOf(
+                product.getOrDefault("unit", "")).toLowerCase();
 
-            String unit = String.valueOf(
-                            product.getOrDefault("unit", ""))
-                    .toLowerCase();
+        Object qtyObj = product.get("quantity");
 
-            String quantityText = String.valueOf(
-                    product.getOrDefault("quantity", ""));
+        int maxAvailable = -1; // -1 = невідомо
 
-            if (unit.equals("під замовлення")) {
-
-                sendText(chatId,
-                        "📦 *Товар під замовлення!*\n\n" +
-                                "🔎 \"" + productName + "\" наразі недоступний для швидкого замовлення.\n" +
-                                "Наш консультант зв’яжеться з тобою найближчим часом 🧱🤝");
-
-                String adminMsg =
-                        "📢 *Новий запит під замовлення!*\n\n" +
-                                "👤 Покупець цікавиться товаром:\n" +
-                                "📦 " + productName + "\n\n" +
-                                "🆔 Chat ID: " + chatId;
-
-                sendReplyButtonToConsultant(chatId);
-                sendText(String.valueOf(CONSULTANT_CHAT_ID), adminMsg);
-
-                return;
-            }
-
-            int maxAvailable =
-                    userManager.extractMaxQuantity(quantityText);
-
-            waitingForQuantity.put(chatId, true);
-
-            StringBuilder msg = new StringBuilder();
-            msg.append("📥 Добре, друже! Скільки тобі потрібно?\n")
-                    .append("👉 *").append(productName).append("*\n\n");
-
-            if (quantityText != null && !quantityText.isBlank()) {
-                msg.append("📊 Наявність на складі: *")
-                        .append(quantityText)
-                        .append("*\n");
-            }
-
-            if (maxAvailable > 0) {
-                msg.append("ℹ️ Максимально доступно: *")
-                        .append(maxAvailable)
-                        .append("*\n");
-            }
-
-            msg.append("\nВведи кількість числом (наприклад: 3)");
-
-            sendText(chatId, msg.toString());
-
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
+        // 🔹 Акуратно витягуємо кількість
+        if (qtyObj instanceof Number) {
+            maxAvailable = ((Number) qtyObj).intValue();
+        } else if (qtyObj instanceof String) {
+            try {
+                String cleaned = ((String) qtyObj).replaceAll("\\D+", "");
+                if (!cleaned.isEmpty()) {
+                    maxAvailable = Integer.parseInt(cleaned);
+                }
+            } catch (Exception ignored) {}
         }
+
+        // 🔴 Товар під замовлення
+        if (unit.equals("під замовлення")) {
+
+            sendText(chatId,
+                    "📦 *Товар під замовлення!*\n\n" +
+                            "🔎 \"" + productName + "\" наразі недоступний для швидкого замовлення.\n" +
+                            "Наш консультант зв’яжеться з тобою найближчим часом 🧱🤝");
+
+            String adminMsg =
+                    "📢 *Новий запит під замовлення!*\n\n" +
+                            "👤 Покупець цікавиться товаром:\n" +
+                            "📦 " + productName + "\n\n" +
+                            "🆔 Chat ID: " + chatId;
+
+            sendReplyButtonToConsultant(chatId);
+            sendText(String.valueOf(CONSULTANT_CHAT_ID), adminMsg);
+
+            return;
+        }
+
+        waitingForQuantity.put(chatId, true);
+
+        StringBuilder msg = new StringBuilder();
+        msg.append("📥 Добре, друже! Скільки тобі потрібно?\n")
+                .append("👉 *").append(productName).append("*\n\n");
+
+        // 🔹 Якщо склад відомий
+        if (maxAvailable >= 0) {
+
+            msg.append("📦 Наявність на складі: *")
+                    .append(maxAvailable)
+                    .append(" шт.*\n");
+
+            if (maxAvailable == 0) {
+                msg.append("⛔ Наразі товар відсутній.\n");
+            }
+
+        } else {
+            msg.append("📦 Наявність уточнюється.\n");
+        }
+
+        msg.append("\nВведи кількість числом (наприклад: 3)");
+
+        sendText(chatId, msg.toString());
     }
 
     public void addToCartTool(Long userId) {
@@ -2146,7 +2161,11 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // 🔥 Запускаємо ту саму логіку що і в каталозі
-        addToCart(userId);
+        try {
+            addToCart(userId);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 
     private final UserManager userManager = new UserManager();
@@ -3507,20 +3526,44 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🛒 Додати в кошик
-        if (text.equals("🛒 Додати в кошик")) {
+        // 🔎 Якщо користувач у режимі пошуку
+        if ("waiting_for_search".equals(state)) {
 
-            Map<String, Object> product =
-                    getLastShownProduct().get(userId);
+            try {
 
-            if (product != null) {
-                addToCart(userId);
-            } else {
-                sendText(chatId,
-                        "❌ Товар не знайдено для додавання в кошик.");
+                // 🔥 Перехоплюємо кнопки
+                if (text.equals("🛠 Додати в кошик")) {
+                    addToCart(userId);
+                    return;
+                }
+
+                if (text.equals("🛍️ Перейти в кошик")) {
+                    openCartForUser(userId);
+                    return;
+                }
+
+                if (text.equals("⬅️ Назад")) {
+                    userStates.remove(userId);
+                    sendUserMenu(userId);
+                    return;
+                }
+
+                ProductSearchManager searchHandler =
+                        new ProductSearchManager(this);
+
+                if (text.matches("\\d+")) {
+                    searchHandler.handleSearchNumber(userId, chatId, text);
+                } else {
+                    searchHandler.performSearch(userId, chatId, text);
+                }
+
+                return;
+
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Сталася помилка під час пошуку.");
+                return;
             }
-
-            return;
         }
 
         ProductSearchManager searchManager =
