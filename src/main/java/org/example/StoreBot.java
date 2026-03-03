@@ -219,7 +219,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 : "";
 
         String state = userStates.get(userId);
-        handleUpdate(update);
+        //handleUpdate(update);
 
         System.out.println("[DEBUG] Received message from userId=" + userId + ": '" + text + "' (state=" + state + ")");
 
@@ -507,17 +507,6 @@ public class StoreBot extends TelegramLongPollingBot {
         // ===== Optional: handle feedback / other states =====
         if (update.getMessage().hasText()) {
             text = update.getMessage().getText().trim();
-        }
-
-        if (state != null) {
-            try {
-                handleFeedbackState(userId, chatId, text, state);
-                handleState(userId, chatId, text, state, update);
-            } catch (TelegramApiException e) {
-                LOGGER.severe("[Bot Error] Failed to handle state for user " + userId + ": " + e.getMessage());
-                sendText(chatId, "❌ Сталася помилка при обробці вашого запиту.");
-            }
-            return;
         }
 
         if (text.matches("\\d+") && userProductLists.containsKey(realChatId)) {
