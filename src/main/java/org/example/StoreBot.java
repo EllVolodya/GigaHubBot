@@ -2088,23 +2088,22 @@ public class StoreBot extends TelegramLongPollingBot {
         String unit = String.valueOf(
                 product.getOrDefault("unit", "")).toLowerCase();
 
+        // 🔹 Отримуємо кількість напряму як число
+        int maxAvailable = 0;
+
         Object qtyObj = product.get("quantity");
 
-        int maxAvailable = -1; // -1 = невідомо
-
-        // 🔹 Акуратно витягуємо кількість
         if (qtyObj instanceof Number) {
             maxAvailable = ((Number) qtyObj).intValue();
         } else if (qtyObj instanceof String) {
             try {
-                String cleaned = ((String) qtyObj).replaceAll("\\D+", "");
-                if (!cleaned.isEmpty()) {
-                    maxAvailable = Integer.parseInt(cleaned);
-                }
-            } catch (Exception ignored) {}
+                maxAvailable = Integer.parseInt(((String) qtyObj).trim());
+            } catch (Exception ignored) {
+                maxAvailable = 0;
+            }
         }
 
-        // 🔴 Товар під замовлення
+        // 🔴 Якщо товар під замовлення
         if (unit.equals("під замовлення")) {
 
             sendText(chatId,
@@ -2130,19 +2129,12 @@ public class StoreBot extends TelegramLongPollingBot {
         msg.append("📥 Добре, друже! Скільки тобі потрібно?\n")
                 .append("👉 *").append(productName).append("*\n\n");
 
-        // 🔹 Якщо склад відомий
-        if (maxAvailable >= 0) {
+        msg.append("📦 Наявність на складі: *")
+                .append(maxAvailable)
+                .append(" шт.*\n");
 
-            msg.append("📦 Наявність на складі: *")
-                    .append(maxAvailable)
-                    .append(" шт.*\n");
-
-            if (maxAvailable == 0) {
-                msg.append("⛔ Наразі товар відсутній.\n");
-            }
-
-        } else {
-            msg.append("📦 Наявність уточнюється.\n");
+        if (maxAvailable == 0) {
+            msg.append("⛔ Наразі товар відсутній.\n");
         }
 
         msg.append("\nВведи кількість числом (наприклад: 3)");
