@@ -2130,7 +2130,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // Добавление в кошик
+    // 🛒 Добавление в кошик
     private void addToCart(Long chatId) throws TelegramApiException {
 
         Map<String, Object> product = lastShownProduct.get(chatId);
@@ -2140,48 +2140,36 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("Product map: " + product);
 
         if (product == null) {
-            System.out.println("ERROR: product == null");
-            sendText(chatId,
-                    "❌ Не вдалося визначити товар. Спробуй ще раз 🙏");
+            sendText(chatId, "❌ Не вдалося визначити товар. Спробуй ще раз 🙏");
             return;
         }
 
-        String productName = String.valueOf(
-                product.getOrDefault("name", "Без назви"));
-
-        String unit = String.valueOf(
-                product.getOrDefault("unit", "")).toLowerCase();
+        String productName = String.valueOf(product.getOrDefault("name", "Без назви"));
+        String unit = String.valueOf(product.getOrDefault("unit", "")).toLowerCase();
 
         System.out.println("Product name: " + productName);
         System.out.println("Unit: " + unit);
 
-        // 🔹 Отримуємо кількість на складі
+        // 🔹 Отримуємо склад
         int maxAvailable = 0;
 
-        Object stockObj =
-                product.getOrDefault("stock",
-                        product.getOrDefault("available",
-                                product.getOrDefault("quantity", 0)));
-
-        System.out.println("Raw stock object: " + stockObj);
-        System.out.println("Raw stock class: " + (stockObj != null ? stockObj.getClass() : "null"));
-
-        if (stockObj instanceof Number) {
-            maxAvailable = ((Number) stockObj).intValue();
-        } else if (stockObj instanceof String) {
-            try {
-                maxAvailable = Integer.parseInt(((String) stockObj).trim());
-            } catch (Exception ignored) {
-                maxAvailable = 0;
-            }
+        if (product.containsKey("stock")) {
+            maxAvailable = parseIntSafe(product.get("stock"));
+            System.out.println("Stock taken from: stock");
+        } else if (product.containsKey("quantity")) {
+            maxAvailable = parseIntSafe(product.get("quantity"));
+            System.out.println("Stock taken from: quantity");
+        } else if (product.containsKey("available")) {
+            maxAvailable = parseIntSafe(product.get("available"));
+            System.out.println("Stock taken from: available");
+        } else {
+            System.out.println("WARNING: Stock field not found in product map");
         }
 
         System.out.println("Calculated maxAvailable: " + maxAvailable);
 
         // 🔴 Якщо товар під замовлення
         if (unit.equals("під замовлення")) {
-
-            System.out.println("Product is custom order");
 
             sendText(chatId,
                     "📦 *Товар під замовлення!*\n\n" +
@@ -2213,8 +2201,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 .append(maxAvailable)
                 .append(" шт.*\n");
 
-        if (maxAvailable == 0) {
-            System.out.println("WARNING: Stock detected as 0");
+        if (maxAvailable <= 0) {
             msg.append("⛔ Наразі товар відсутній.\n");
         }
 
@@ -2223,6 +2210,22 @@ public class StoreBot extends TelegramLongPollingBot {
         sendText(chatId, msg.toString());
 
         System.out.println("===== END ADD TO CART =====");
+    }
+
+
+    // 🔧 Безпечний парсер числа
+    private int parseIntSafe(Object value) {
+        if (value == null) return 0;
+
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+
+        try {
+            return Integer.parseInt(value.toString().trim());
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     public void addToCartTool(Long userId) {
