@@ -3598,6 +3598,23 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try {
 
+            // 🔢 Якщо бот очікує кількість товару
+            if (waitingForQuantity.getOrDefault(userId, false)) {
+
+                if (!text.matches("\\d+")) {
+                    sendText(chatId, "❌ Введіть кількість числом (наприклад: 3)");
+                    return;
+                }
+
+                int qty = Integer.parseInt(text);
+
+                handleProductQuantity(userId, qty);
+
+                waitingForQuantity.remove(userId);
+
+                return;
+            }
+
             // ⬅️ Назад
             if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
 
@@ -3634,8 +3651,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            ProductSearchManager searchManager =
-                    new ProductSearchManager(this);
+            ProductSearchManager searchManager = new ProductSearchManager(this);
 
             // 🔢 Якщо користувач ввів номер товару
             if (text.matches("\\d+")) {
@@ -3645,7 +3661,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔎 Якщо користувач ввів текст
+            // 🔎 Якщо введений текст — запускаємо пошук
             userStates.put(userId, "waiting_for_search");
 
             searchManager.performSearch(userId, chatId, text);
@@ -3656,6 +3672,25 @@ public class StoreBot extends TelegramLongPollingBot {
 
             sendText(chatId, "❌ Сталася помилка під час пошуку.");
         }
+    }
+
+    private void handleProductQuantity(Long userId, int qty) {
+
+        Map<String, Object> product = lastShownProduct.get(userId);
+
+        if (product == null) {
+            sendText(userId, "❌ Товар не знайдено.");
+            return;
+        }
+
+        product.put("quantity", qty);
+
+        userCart.computeIfAbsent(userId, k -> new ArrayList<>()).add(product);
+
+        sendText(userId,
+                "✅ Товар додано в кошик!\n" +
+                        "📦 " + product.get("name") +
+                        "\n🔢 Кількість: " + qty);
     }
 
     public void safeAddToCart(Long userId) {
