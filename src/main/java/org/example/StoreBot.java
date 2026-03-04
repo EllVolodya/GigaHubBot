@@ -221,6 +221,15 @@ public class StoreBot extends TelegramLongPollingBot {
         String state = userStates.get(userId);
         //handleUpdate(update);
 
+        if (state != null) {
+
+            System.out.println("[STATE] " + state + " TEXT=" + text);
+
+            handleState(userId, chatId, text, state, update);
+
+            return;
+        }
+
         System.out.println("[DEBUG] Received message from userId=" + userId + ": '" + text + "' (state=" + state + ")");
 
         String normalizedText = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKC)
