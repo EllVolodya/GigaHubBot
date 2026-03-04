@@ -219,7 +219,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 : "";
 
         String state = userStates.get(userId);
-        //handleUpdate(update);
 
         if (state != null) {
 
@@ -5342,7 +5341,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // другий ряд — кнопка назад
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("⬅️ Назад");
+        row2.add(BACK_BUTTON);
         rows.add(row2);
 
         keyboard.setKeyboard(rows);
