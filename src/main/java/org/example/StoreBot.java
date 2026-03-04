@@ -833,6 +833,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "🛒 Замовити товар" -> {
+
+                    userStates.remove(userId); // 🔥 ОЧИЩАЄМО СТАН ПОШУКУ
+
                     List<Map<String, Object>> cart = userCart.get(userId);
                     if (cart == null || cart.isEmpty()) {
                         sendText(chatId, "🛒 Ваш кошик порожній.");
@@ -852,13 +855,14 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     markup.setKeyboard(List.of(deliveryRow, backRow));
 
-                    sendMessage(chatId, "\uD83D\uDE9A Оберіть спосіб доставки:\n" +
-                            "\n" +
-                            "\uD83C\uDFEC Самовивіз\n" +
-                            "\uD83D\uDCE6 Доставка по місту\n" +
-                            "\uD83D\uDCEE Нова Пошта\n" +
-                            "\n" +
-                            "Митрофан усе підготує та передасть замовлення на відправку максимально швидко \uD83D\uDE09", markup);
+                    sendMessage(chatId,
+                            "🚚 Оберіть спосіб доставки:\n\n" +
+                                    "🏬 Самовивіз\n" +
+                                    "📦 Доставка по місту\n" +
+                                    "📮 Нова Пошта\n\n" +
+                                    "Митрофан усе підготує та передасть замовлення максимально швидко 😉",
+                            markup);
+
                     userStates.put(userId, "awaiting_delivery_choice");
                 }
 
