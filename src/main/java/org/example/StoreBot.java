@@ -2135,7 +2135,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
         Map<String, Object> product = lastShownProduct.get(chatId);
 
+        System.out.println("===== ADD TO CART DEBUG =====");
+        System.out.println("ChatId: " + chatId);
+        System.out.println("Product map: " + product);
+
         if (product == null) {
+            System.out.println("ERROR: product == null");
             sendText(chatId,
                     "❌ Не вдалося визначити товар. Спробуй ще раз 🙏");
             return;
@@ -2147,6 +2152,9 @@ public class StoreBot extends TelegramLongPollingBot {
         String unit = String.valueOf(
                 product.getOrDefault("unit", "")).toLowerCase();
 
+        System.out.println("Product name: " + productName);
+        System.out.println("Unit: " + unit);
+
         // 🔹 Отримуємо кількість на складі
         int maxAvailable = 0;
 
@@ -2154,6 +2162,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 product.getOrDefault("stock",
                         product.getOrDefault("available",
                                 product.getOrDefault("quantity", 0)));
+
+        System.out.println("Raw stock object: " + stockObj);
+        System.out.println("Raw stock class: " + (stockObj != null ? stockObj.getClass() : "null"));
 
         if (stockObj instanceof Number) {
             maxAvailable = ((Number) stockObj).intValue();
@@ -2165,8 +2176,12 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
+        System.out.println("Calculated maxAvailable: " + maxAvailable);
+
         // 🔴 Якщо товар під замовлення
         if (unit.equals("під замовлення")) {
+
+            System.out.println("Product is custom order");
 
             sendText(chatId,
                     "📦 *Товар під замовлення!*\n\n" +
@@ -2187,6 +2202,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
         waitingForQuantity.put(chatId, true);
 
+        System.out.println("Waiting for quantity set for user: " + chatId);
+
         StringBuilder msg = new StringBuilder();
 
         msg.append("📥 Добре, друже! Скільки тобі потрібно?\n")
@@ -2197,12 +2214,15 @@ public class StoreBot extends TelegramLongPollingBot {
                 .append(" шт.*\n");
 
         if (maxAvailable == 0) {
+            System.out.println("WARNING: Stock detected as 0");
             msg.append("⛔ Наразі товар відсутній.\n");
         }
 
         msg.append("\nВведи кількість числом (наприклад: 3)");
 
         sendText(chatId, msg.toString());
+
+        System.out.println("===== END ADD TO CART =====");
     }
 
     public void addToCartTool(Long userId) {
