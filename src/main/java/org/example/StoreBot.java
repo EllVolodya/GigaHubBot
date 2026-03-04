@@ -4627,7 +4627,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // 🔹 2. Кнопка Перейти в кошик
-        if (text.equals("🛍️ Перейти в кошик")) {
+        if (text.equals("🛍️ Перейти в кошик") || text.equals(VIEW_CART_BUTTON)) {
             System.out.println("[handleText] Open cart button pressed");
             userStates.remove(chatId); // 🔹 Очищуємо стан пошуку
             showCart(chatId);
