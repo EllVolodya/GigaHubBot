@@ -3591,94 +3591,71 @@ public class StoreBot extends TelegramLongPollingBot {
         searchResults.remove(Long.parseLong(chatId));
     }
 
-    //Пошук товару
+    // 🔎 Пошук товару
     private void handleWaitingForSearch(Long userId, String chatId, String text) {
 
         text = text.trim();
 
-        // ⬅️ Назад
-        if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
+        try {
 
-            getUserStates().remove(userId);
+            // ⬅️ Назад
+            if (text.equalsIgnoreCase("⬅️ Назад") || text.equalsIgnoreCase("Назад")) {
 
-            try {
+                userStates.remove(userId);
+
                 execute(createUserMenu(chatId, userId));
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
 
-            System.out.println("[handleWaitingForSearch] User "
-                    + userId + " exited search mode.");
-
-            return;
-        }
-
-        // 🛍️ Перейти в кошик
-        if (text.equalsIgnoreCase("🛍️ Перейти в кошик")
-                || text.equalsIgnoreCase("Перейти в кошик")) {
-
-            getUserStates().remove(userId);
-
-            openCartForUser(userId);
-
-            System.out.println("[handleWaitingForSearch] User "
-                    + userId + " opened the cart.");
-
-            return;
-        }
-
-        // 🔎 Якщо користувач у режимі пошуку
-        if ("waiting_for_search".equals(state)) {
-
-            try {
-
-                // 🔥 Перехоплюємо кнопки
-                if (text.equals("🛠 Додати в кошик")) {
-                    addToCart(userId);
-                    return;
-                }
-
-                if (text.equals("🛍️ Перейти в кошик")) {
-                    openCartForUser(userId);
-                    return;
-                }
-
-                if (text.equals("⬅️ Назад")) {
-                    userStates.remove(userId);
-                    sendUserMenu(userId);
-                    return;
-                }
-
-                ProductSearchManager searchHandler =
-                        new ProductSearchManager(this);
-
-                if (text.matches("\\d+")) {
-                    searchHandler.handleSearchNumber(userId, chatId, text);
-                } else {
-                    searchHandler.performSearch(userId, chatId, text);
-                }
+                System.out.println("[handleWaitingForSearch] User "
+                        + userId + " exited search mode.");
 
                 return;
+            }
 
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-                sendText(chatId, "❌ Сталася помилка під час пошуку.");
+            // 🛍️ Перейти в кошик
+            if (text.equalsIgnoreCase("🛍️ Перейти в кошик")
+                    || text.equalsIgnoreCase("Перейти в кошик")) {
+
+                userStates.remove(userId);
+
+                openCartForUser(userId);
+
+                System.out.println("[handleWaitingForSearch] User "
+                        + userId + " opened the cart.");
+
                 return;
             }
+
+            // 🛒 Додати в кошик
+            if (text.equalsIgnoreCase("🛠 Додати в кошик")
+                    || text.equalsIgnoreCase("🔧 Додати в кошик")
+                    || text.contains("Додати в кошик")) {
+
+                addToCart(userId);
+                return;
+            }
+
+            ProductSearchManager searchManager =
+                    new ProductSearchManager(this);
+
+            // 🔢 Якщо користувач ввів номер товару
+            if (text.matches("\\d+")) {
+
+                searchManager.handleSearchNumber(userId, chatId, text);
+
+                return;
+            }
+
+            // 🔎 Якщо користувач ввів текст
+            userStates.put(userId, "waiting_for_search");
+
+            searchManager.performSearch(userId, chatId, text);
+
+        } catch (TelegramApiException e) {
+
+            e.printStackTrace();
+
+            sendText(chatId, "❌ Сталася помилка під час пошуку.");
         }
-
-        ProductSearchManager searchManager =
-                new ProductSearchManager(this);
-
-        // Якщо користувач ввів номер
-        if (text.matches("\\d+")) {
-            searchManager.handleSearchNumber(userId, chatId, text);
-            return;
-        }
-
-        // Якщо ввів текст
-        getUserStates().put(userId, "waiting_for_search");
-        searchManager.performSearch(userId, chatId, text);
     }
 
     public void safeAddToCart(Long userId) {
