@@ -5053,7 +5053,7 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row2);
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add("🔙 Назад");
+        row3.add(BACK_BUTTON);
         keyboard.add(row3);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
