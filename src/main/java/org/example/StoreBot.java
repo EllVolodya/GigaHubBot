@@ -4853,6 +4853,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
+    ///🔸 Показ товару по номераци
     private void sendProductList(Long chatId) throws TelegramApiException {
 
         String category = currentCategory.get(chatId);
@@ -4881,7 +4882,28 @@ public class StoreBot extends TelegramLongPollingBot {
                     .append("\n");
         }
 
-        sendText(chatId, sb.toString());
+        // 🔹 КНОПКИ
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add(ADD_TO_CART_BUTTON);
+        row1.add(VIEW_CART_BUTTON);
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("🔍 Пошук");
+
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add("⬅️ Назад");
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+        keyboard.add(row1);
+        keyboard.add(row2);
+        keyboard.add(row3);
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setKeyboard(keyboard);
+        markup.setResizeKeyboard(true);
+
+        sendTextWithMarkup(chatId, sb.toString(), markup);
     }
 
     private void showRemainingProductList(Long chatId)
