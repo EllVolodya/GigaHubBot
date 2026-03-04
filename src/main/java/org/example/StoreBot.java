@@ -519,37 +519,32 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
         photoHandler.handleUpdate(userId, chatId, update);
 
+        if (text == null || text.isBlank()) {
+            return;
+        }
+
         // 🔎 Якщо користувач у режимі пошуку
-        if ("waiting_for_search".equals(state)) {
+        if ("waiting_for_search".equals(state)
+                && !text.equals("🏬 Самовивіз")
+                && !text.equals("📦 Доставка по місту")
+                && !text.equals("📮 Доставка Новою поштою")) {
 
             try {
 
-                // 🛒 Додати в кошик
                 if (text.equals("🛠 Додати в кошик")) {
                     addToCart(userId);
                     return;
                 }
 
-                // 🛍 Перейти в кошик
                 if (text.equals("🛍️ Перейти в кошик") || text.equals(VIEW_CART_BUTTON)) {
                     showCart(userId);
                     return;
                 }
 
-                // ⬅️ Назад
                 if (text.equals("⬅️ Назад")) {
                     userStates.remove(userId);
                     sendUserMenu(userId);
                     return;
-                }
-
-                // 🚚 КНОПКИ ДОСТАВКИ (🔥 ВАЖЛИВО)
-                if (text.equals("🏬 Самовивіз") ||
-                        text.equals("📦 Доставка по місту") ||
-                        text.equals("📮 Доставка Новою поштою")) {
-
-                    userStates.remove(userId); // виходимо з режиму пошуку
-                    return; // 🔥 зупиняємо пошук
                 }
 
                 ProductSearchManager searchHandler =
@@ -565,8 +560,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             } catch (TelegramApiException e) {
                 e.printStackTrace();
-                sendText(chatId, "❌ Сталася помилка під час пошуку.");
-                return;
+                sendText(chatId, "❌ Помилка пошуку.");
             }
         }
 
@@ -584,7 +578,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return; // ❗ ОБОВʼЯЗКОВО
         }
 
-        if (text.isBlank()) return;
+        //if (text.isBlank()) return;
 
         try {
             // 🔹 Обробка станів користувача
