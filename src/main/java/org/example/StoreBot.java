@@ -648,48 +648,6 @@ public class StoreBot extends TelegramLongPollingBot {
                         sendText(chatId, "✅ Ваше замовлення на самовивіз успішно оформлено!\nКод замовлення: " + orderCode);
                     }
 
-                    // Пошук товара
-                    case "waiting_for_search" -> {
-
-                        try {
-
-                            // 🛒 Додати в кошик
-                            if (text.equals("🛒 Додати в кошик") || text.equals("🛠 Додати в кошик")) {
-                                addToCart(userId);
-                                return;
-                            }
-
-                            // 🛍 Перейти в кошик
-                            if (text.equals("🛍️ Перейти в кошик") || text.equals(VIEW_CART_BUTTON)) {
-                                showCart(userId);
-                                return;
-                            }
-
-                            // ⬅ Назад
-                            if (text.equals("⬅️ Назад") || text.equals("Назад")) {
-                                userStates.remove(userId);
-                                sendUserMenu(userId);
-                                return;
-                            }
-
-                            ProductSearchManager searchHandler =
-                                    new ProductSearchManager(this);
-
-                            // якщо введений номер товару
-                            if (text.matches("\\d+")) {
-                                searchHandler.handleSearchNumber(userId, chatId, text);
-                                return;
-                            }
-
-                            // якщо введений текст — робимо пошук
-                            searchHandler.performSearch(userId, chatId, text);
-
-                        } catch (TelegramApiException e) {
-                            e.printStackTrace();
-                            sendText(chatId, "❌ Помилка під час пошуку.");
-                        }
-                    }
-
                     case "selecting_product" -> {
                         if (text.matches("\\d+")) {
                             ProductSearchManager searchHandler =
