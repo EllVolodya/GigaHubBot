@@ -4967,7 +4967,7 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("🛍 Перейти в кошик");
+        row2.add(ADD_TO_CART_BUTTON);
         keyboard.add(row2);
 
         KeyboardRow row3 = new KeyboardRow();
@@ -5254,7 +5254,7 @@ public class StoreBot extends TelegramLongPollingBot {
         // перший ряд — кнопки для товарів
         KeyboardRow row1 = new KeyboardRow();
         row1.add("🛠 Додати в кошик");
-        row1.add("🛍️ Перейти в кошик");
+        row1.add(ADD_TO_CART_BUTTON);
         rows.add(row1);
 
         // другий ряд — кнопка назад
