@@ -1335,30 +1335,51 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            if (text.contains("Самовивіз")) {
+            // 🚚 Вибір способу доставки
+            if (text.equals("🏬 Самовивіз")) {
+
                 System.out.println("DEBUG: Натиснули Самовивіз");
+
+                userStates.remove(userId); // 🔥 виходимо з пошуку
                 userStates.put(userId, "order_pickup");
+
                 tempStorage.put(userId + "_deliveryType", "Самовивіз");
+
                 sendText(chatId,
                         "✏️ Введіть, будь-ласка, свої дані для самовивозу у форматі:\n" +
-                                "🏙 Місто\n👤 П.І.\n📞 Телефон\n💳 Бонусна картка (Від магазину)\n\n" +
+                                "🏙 Місто\n" +
+                                "👤 П.І.\n" +
+                                "📞 Телефон\n" +
+                                "💳 Бонусна картка (Від магазину)\n\n" +
                                 "📌 Приклад:\n" +
                                 "Казанка, Сидоренко Олена Олексіївна, +380631234567, 4444"
                 );
-            } else if (text.contains("Доставка по місту")) {
+
+            } else if (text.equals("📦 Доставка по місту")) {
+
                 System.out.println("DEBUG: Натиснули Доставка по місту");
+
+                userStates.remove(userId); // 🔥 вихід з пошуку
                 userStates.put(userId, "awaiting_city_delivery");
+
                 tempStorage.put(userId + "_deliveryType", "Доставка по місту");
+
                 sendText(chatId,
                         "📝 Введіть, будь-ласка, дані для доставки по місту у форматі:\n" +
                                 "📍 Адреса, 👤 П.І., 📞 Телефон, 💳 Бонусна картка (Від магазину)\n\n" +
                                 "📌 Приклад:\n" +
                                 "вул. Шевченка 10, Казанка, Петров Петро Петрович, +380671234567, 4444"
                 );
-            } else if (text.contains("Нова пошта")) {
+
+            } else if (text.equals("📮 Доставка Новою поштою")) {
+
                 System.out.println("DEBUG: Натиснули Доставка Новою поштою");
+
+                userStates.remove(userId); // 🔥 вихід з пошуку
                 userStates.put(userId, "awaiting_post_delivery");
+
                 tempStorage.put(userId + "_deliveryType", "Нова Пошта");
+
                 sendText(chatId,
                         "📝 Введіть, будь-ласка, дані для доставки Новою Поштою у форматі:\n" +
                                 "📮 Відділення НП, 👤 П.І., 📞 Телефон, 💳 Бонусна картка (Від магазину)\n\n" +
@@ -1366,6 +1387,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "№12, Іваненко Іван Іванович, +380501234567, 4444"
                 );
             }
+
             if (developerState.getOrDefault(chatId, "").equals("WAITING_FOR_XLSX_PRICES")) {
 
                 if (update.getMessage().hasDocument()) {
