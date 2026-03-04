@@ -3633,7 +3633,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 userStates.remove(userId);
 
-                openCartForUser(userId);
+                showCart(userId);
 
                 System.out.println("[handleWaitingForSearch] User "
                         + userId + " opened the cart.");
