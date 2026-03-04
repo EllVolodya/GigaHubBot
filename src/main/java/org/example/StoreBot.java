@@ -2888,30 +2888,32 @@ public class StoreBot extends TelegramLongPollingBot {
             /// 🚚 Обробка вибору доставки
             case "awaiting_delivery_choice" -> {
 
-                if (text.equals("🏬 Самовивіз")) {
+                System.out.println("DEBUG DELIVERY TEXT = " + text);
+
+                if (text.contains("Самовивіз")) {
 
                     userStates.put(userId, "order_pickup");
                     tempStorage.put(userId + "_deliveryType", "Самовивіз");
 
                     sendText(chatId,
-                            "✏️ Введіть, будь-ласка, свої дані для самовивозу у форматі:\n" +
+                            "✏️ Введіть, будь-ласка, свої дані для самовивозу:\n\n" +
                                     "🏙 Місто\n" +
                                     "👤 П.І.\n" +
                                     "📞 Телефон\n" +
-                                    "💳 Бонусна картка (Від магазину)\n\n" +
+                                    "💳 Бонусна картка\n\n" +
                                     "📌 Приклад:\n" +
                                     "Казанка, Сидоренко Олена Олексіївна, +380631234567, 4444");
 
                     return;
                 }
 
-                if (text.equals("📦 Доставка по місту")) {
+                if (text.contains("Доставка по місту")) {
 
                     userStates.put(userId, "awaiting_city_delivery");
                     tempStorage.put(userId + "_deliveryType", "Доставка по місту");
 
                     sendText(chatId,
-                            "📝 Введіть, будь-ласка, дані для доставки по місту у форматі:\n" +
+                            "📝 Введіть дані для доставки:\n\n" +
                                     "📍 Адреса, 👤 П.І., 📞 Телефон, 💳 Бонусна картка\n\n" +
                                     "📌 Приклад:\n" +
                                     "вул. Шевченка 10, Казанка, Петров Петро Петрович, +380671234567, 4444");
@@ -2919,13 +2921,13 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                if (text.equals("📮 Доставка Новою поштою")) {
+                if (text.contains("Нова пошта")) {
 
                     userStates.put(userId, "awaiting_post_delivery");
                     tempStorage.put(userId + "_deliveryType", "Нова Пошта");
 
                     sendText(chatId,
-                            "📝 Введіть, будь-ласка, дані для доставки Новою Поштою у форматі:\n" +
+                            "📝 Введіть дані для доставки Новою Поштою:\n\n" +
                                     "📮 Відділення НП, 👤 П.І., 📞 Телефон, 💳 Бонусна картка\n\n" +
                                     "📌 Приклад:\n" +
                                     "№12, Іваненко Іван Іванович, +380501234567, 4444");
@@ -2938,10 +2940,11 @@ public class StoreBot extends TelegramLongPollingBot {
                         handleBack(userId, chatId);
                     } catch (TelegramApiException e) {
                         e.printStackTrace();
-                        sendText(chatId, "❌ Помилка при поверненні назад.");
                     }
                     return;
                 }
+
+                sendText(chatId, "❌ Оберіть спосіб доставки кнопкою.");
             }
 
             // 🔹 Order Pickup
