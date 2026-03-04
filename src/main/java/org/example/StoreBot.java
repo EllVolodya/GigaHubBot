@@ -519,22 +519,24 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
         photoHandler.handleUpdate(userId, chatId, update);
 
-        // 🔎 Якщо користувач у режимі пошуку і ввів число
+        // 🔎 Якщо користувач у режимі пошуку
         if ("waiting_for_search".equals(state)) {
 
             try {
 
-                // 🔥 Перехоплюємо кнопки
+                // 🛒 Додати в кошик
                 if (text.equals("🛠 Додати в кошик")) {
                     addToCart(userId);
                     return;
                 }
 
-                if (text.equals("🛍️ Перейти в кошик")) {
-                    openCartForUser(userId);
+                // 🛍 Перейти в кошик
+                if (text.equals("🛍️ Перейти в кошик") || text.equals(VIEW_CART_BUTTON)) {
+                    showCart(userId);
                     return;
                 }
 
+                // ⬅️ Назад
                 if (text.equals("⬅️ Назад")) {
                     userStates.remove(userId);
                     sendUserMenu(userId);
