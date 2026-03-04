@@ -5254,7 +5254,7 @@ public class StoreBot extends TelegramLongPollingBot {
         // перший ряд — кнопки для товарів
         KeyboardRow row1 = new KeyboardRow();
         row1.add("🛠 Додати в кошик");
-        row1.add(ADD_TO_CART_BUTTON);
+        row1.add(VIEW_CART_BUTTON);
         rows.add(row1);
 
         // другий ряд — кнопка назад
