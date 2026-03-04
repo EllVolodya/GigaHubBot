@@ -2922,13 +2922,21 @@ public class StoreBot extends TelegramLongPollingBot {
                     } catch (Exception ignored) {}
                 }
             }
-
-            // Обробка вибору доставки
+            
+            /// 🚚 Обробка вибору доставки
             case "awaiting_delivery_choice" -> {
+
+                // 🔴 ігноруємо пусті повідомлення
+                if (text == null || text.isBlank()) {
+                    return;
+                }
 
                 switch (text) {
 
+                    // 🏬 Самовивіз
                     case "🏬 Самовивіз" -> {
+
+                        userStates.remove(userId); // 🔥 вихід зі старого state
 
                         tempStorage.put(userId + "_deliveryType", "Самовивіз");
                         userStates.put(userId, "order_pickup");
@@ -2945,34 +2953,47 @@ public class StoreBot extends TelegramLongPollingBot {
                         return;
                     }
 
+                    // 📦 Доставка по місту
                     case "📦 Доставка по місту" -> {
+
+                        userStates.remove(userId);
 
                         tempStorage.put(userId + "_deliveryType", "Доставка по місту");
                         userStates.put(userId, "awaiting_city_delivery");
 
                         sendText(chatId,
                                 "📝 Введіть, будь-ласка, дані для доставки по місту у форматі:\n" +
-                                        "📍 Адреса, 👤 П.І., 📞 Телефон, 💳 Бонусна картка\n\n" +
+                                        "📍 Адреса\n" +
+                                        "👤 П.І.\n" +
+                                        "📞 Телефон\n" +
+                                        "💳 Бонусна картка\n\n" +
                                         "📌 Приклад:\n" +
                                         "вул. Шевченка 10, Казанка, Петров Петро Петрович, +380671234567, 4444");
 
                         return;
                     }
 
+                    // 📮 Нова пошта
                     case "📮 Доставка Новою поштою" -> {
 
-                        tempStorage.put(userId + "_deliveryType", "Нова пошта");
+                        userStates.remove(userId);
+
+                        tempStorage.put(userId + "_deliveryType", "Нова Пошта");
                         userStates.put(userId, "awaiting_post_delivery");
 
                         sendText(chatId,
                                 "📝 Введіть, будь-ласка, дані для доставки Новою Поштою у форматі:\n" +
-                                        "📮 Відділення НП, 👤 П.І., 📞 Телефон, 💳 Бонусна картка\n\n" +
+                                        "📮 Відділення НП\n" +
+                                        "👤 П.І.\n" +
+                                        "📞 Телефон\n" +
+                                        "💳 Бонусна картка\n\n" +
                                         "📌 Приклад:\n" +
                                         "№12, Іваненко Іван Іванович, +380501234567, 4444");
 
                         return;
                     }
 
+                    // ⬅️ Назад
                     case BACK_BUTTON -> {
                         try {
                             handleBack(userId, chatId);
