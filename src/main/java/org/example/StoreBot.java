@@ -2150,25 +2150,56 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("Product name: " + productName);
         System.out.println("Unit: " + unit);
 
-        // 🔹 Отримуємо склад
         int maxAvailable = 0;
 
+        // 🔹 1. пробуємо взяти склад з Map
         if (product.containsKey("stock")) {
             maxAvailable = parseIntSafe(product.get("stock"));
             System.out.println("Stock taken from: stock");
-        } else if (product.containsKey("quantity")) {
+        }
+        else if (product.containsKey("quantity")) {
             maxAvailable = parseIntSafe(product.get("quantity"));
             System.out.println("Stock taken from: quantity");
-        } else if (product.containsKey("available")) {
+        }
+        else if (product.containsKey("available")) {
             maxAvailable = parseIntSafe(product.get("available"));
             System.out.println("Stock taken from: available");
-        } else {
-            System.out.println("WARNING: Stock field not found in product map");
+        }
+
+        // 🔹 2. якщо не знайшли — беремо з БД
+        if (maxAvailable == 0 && product.containsKey("id")) {
+
+            try {
+
+                int productId = parseIntSafe(product.get("id"));
+
+                Connection conn = DatabaseManager.getConnection();
+
+                PreparedStatement stmt = conn.prepareStatement(
+                        "SELECT quantity FROM products WHERE id = ?"
+                );
+
+                stmt.setInt(1, productId);
+
+                ResultSet rs = stmt.executeQuery();
+
+                if (rs.next()) {
+                    maxAvailable = rs.getInt("quantity");
+                    System.out.println("Stock loaded from DB: " + maxAvailable);
+                }
+
+                rs.close();
+                stmt.close();
+
+            } catch (Exception e) {
+                System.out.println("ERROR loading stock from DB");
+                e.printStackTrace();
+            }
         }
 
         System.out.println("Calculated maxAvailable: " + maxAvailable);
 
-        // 🔴 Якщо товар під замовлення
+        // 🔴 товар під замовлення
         if (unit.equals("під замовлення")) {
 
             sendText(chatId,
@@ -2212,9 +2243,9 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("===== END ADD TO CART =====");
     }
 
-
     // 🔧 Безпечний парсер числа
     private int parseIntSafe(Object value) {
+
         if (value == null) return 0;
 
         if (value instanceof Number) {
