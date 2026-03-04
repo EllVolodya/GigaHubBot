@@ -2763,23 +2763,57 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case "choose_delivery_type" -> {
-                System.out.println("DEBUG: User ID = " + userId + ", State = " + userStates.get(userId) + ", Text = " + text);
-                // Вибір способу доставки
+
+                System.out.println("DEBUG: User ID = " + userId +
+                        ", State = " + userStates.get(userId) +
+                        ", Text = " + text);
+
+                // 🔥 Виходимо зі стану пошуку
+                userStates.remove(userId);
+
+                // 🏬 Самовивіз
                 if ("🏬 Самовивіз".equals(text)) {
+
                     tempStorage.put(userId + "_deliveryType", "Самовивіз");
-                    sendText(chatId, "📝 Введіть, будь ласка, дані для самовивозу у форматі:\n" +
-                            "🏙 Місто, 👤 П.І., 📞 Телефон, 💳 Картка");
                     userStates.put(userId, "order_pickup");
-                } else if ("📍 Доставка по місту".equals(text)) {
+
+                    sendText(chatId,
+                            "✏️ Введіть, будь ласка, дані для самовивозу у форматі:\n" +
+                                    "🏙 Місто, 👤 П.І., 📞 Телефон, 💳 Бонусна картка\n\n" +
+                                    "📌 Приклад:\n" +
+                                    "Казанка, Сидоренко Олена Олексіївна, +380631234567, 4444");
+
+                    return;
+                }
+
+                // 📦 Доставка по місту
+                if ("📦 Доставка по місту".equals(text)) {
+
                     tempStorage.put(userId + "_deliveryType", "Доставка по місту");
-                    sendText(chatId, "📝 Введіть, будь ласка, дані для доставки по місту у форматі:\n" +
-                            "📍 Адреса, 👤 П.І., 📞 Телефон, 💳 Картка");
                     userStates.put(userId, "awaiting_city_delivery");
-                } else if ("📮 Нова Пошта".equals(text)) {
+
+                    sendText(chatId,
+                            "📝 Введіть, будь ласка, дані для доставки по місту у форматі:\n" +
+                                    "📍 Адреса, 👤 П.І., 📞 Телефон, 💳 Бонусна картка\n\n" +
+                                    "📌 Приклад:\n" +
+                                    "вул. Шевченка 10, Казанка, Петров Петро Петрович, +380671234567, 4444");
+
+                    return;
+                }
+
+                // 📮 Нова Пошта
+                if ("📮 Доставка Новою поштою".equals(text)) {
+
                     tempStorage.put(userId + "_deliveryType", "Нова Пошта");
-                    sendText(chatId, "📝 Введіть, будь ласка, дані для доставки Новою Поштою у форматі:\n" +
-                            "📮 Відділення НП, 👤 П.І., 📞 Телефон, 💳 Картка");
                     userStates.put(userId, "awaiting_post_delivery");
+
+                    sendText(chatId,
+                            "📝 Введіть, будь ласка, дані для доставки Новою Поштою у форматі:\n" +
+                                    "📮 Відділення НП, 👤 П.І., 📞 Телефон, 💳 Бонусна картка\n\n" +
+                                    "📌 Приклад:\n" +
+                                    "№12, Іваненко Іван Іванович, +380501234567, 4444");
+
+                    return;
                 }
             }
 
