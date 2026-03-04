@@ -543,6 +543,15 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
+                // 🚚 КНОПКИ ДОСТАВКИ (🔥 ВАЖЛИВО)
+                if (text.equals("🏬 Самовивіз") ||
+                        text.equals("📦 Доставка по місту") ||
+                        text.equals("📮 Доставка Новою поштою")) {
+
+                    userStates.remove(userId); // виходимо з режиму пошуку
+                    return; // 🔥 зупиняємо пошук
+                }
+
                 ProductSearchManager searchHandler =
                         new ProductSearchManager(this);
 
