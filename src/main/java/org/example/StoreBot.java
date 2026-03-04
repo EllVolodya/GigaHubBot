@@ -3629,8 +3629,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             // 🛍️ Перейти в кошик
-            if (text.equalsIgnoreCase("🛍️ Перейти в кошик")
-                    || text.equalsIgnoreCase("Перейти в кошик")) {
+            if (text.equals(VIEW_CART_BUTTON)) {
 
                 userStates.remove(userId);
 
