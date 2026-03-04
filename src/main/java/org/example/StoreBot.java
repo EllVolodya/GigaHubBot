@@ -686,9 +686,13 @@ public class StoreBot extends TelegramLongPollingBot {
                         tempProductName.remove(chatId);
                     }
 
-                    default -> {
+                    /*default -> {
                         sendText(chatId, "🔎 Введіть назву товару для пошуку:");
                         userStates.put(userId, "waiting_for_search");
+                    }*/
+
+                    default -> {
+                        return;
                     }
                 }
             }
@@ -1293,7 +1297,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🚚 Вибір способу доставки
+            /*// 🚚 Вибір способу доставки
             if (text.equals("🏬 Самовивіз")) {
 
                 System.out.println("DEBUG: Натиснули Самовивіз");
@@ -1344,7 +1348,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "📌 Приклад:\n" +
                                 "№12, Іваненко Іван Іванович, +380501234567, 4444"
                 );
-            }
+            }*/
 
             if (developerState.getOrDefault(chatId, "").equals("WAITING_FOR_XLSX_PRICES")) {
 
