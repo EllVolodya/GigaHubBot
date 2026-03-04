@@ -523,44 +523,65 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔎 Якщо користувач у режимі пошуку
-        if ("waiting_for_search".equals(state)
-                && !text.equals("🏬 Самовивіз")
-                && !text.equals("📦 Доставка по місту")
-                && !text.equals("📮 Доставка Новою поштою")) {
+        // 🔎 Режим пошуку товару
+        if ("waiting_for_search".equals(state)) {
+
+            // 🔴 Ігноруємо пусті повідомлення
+            if (text == null || text.isBlank()) {
+                return;
+            }
 
             try {
 
-                if (text.equals("🛠 Додати в кошик")) {
+                // 🛒 Додати в кошик
+                if (text.equals(ADD_TO_CART_BUTTON) || text.equals("🛒 Додати в кошик")) {
                     addToCart(userId);
                     return;
                 }
 
-                if (text.equals("🛍️ Перейти в кошик") || text.equals(VIEW_CART_BUTTON)) {
+                // 🛍 Перейти в кошик
+                if (text.equals(VIEW_CART_BUTTON) || text.equals("🛍️ Перейти в кошик")) {
                     showCart(userId);
                     return;
                 }
 
-                if (text.equals("⬅️ Назад")) {
+                // ⬅️ Назад
+                if (text.equals(BACK_BUTTON) || text.equals("⬅️ Назад")) {
                     userStates.remove(userId);
                     sendUserMenu(userId);
                     return;
                 }
 
+                // 🚚 ВИБІР ДОСТАВКИ (важливо)
+                if (text.equals("🏬 Самовивіз")
+                        || text.equals("📦 Доставка по місту")
+                        || text.equals("📮 Доставка Новою поштою")) {
+
+                    userStates.remove(userId); // виходимо з пошуку
+                    return;
+                }
+
+                // 🔢 Вибір товару по номеру
+                if (text.matches("\\d+")) {
+
+                    ProductSearchManager searchHandler =
+                            new ProductSearchManager(this);
+
+                    searchHandler.handleSearchNumber(userId, chatId, text);
+                    return;
+                }
+
+                // 🔎 Пошук по тексту
                 ProductSearchManager searchHandler =
                         new ProductSearchManager(this);
 
-                if (text.matches("\\d+")) {
-                    searchHandler.handleSearchNumber(userId, chatId, text);
-                } else {
-                    searchHandler.performSearch(userId, chatId, text);
-                }
-
+                searchHandler.performSearch(userId, chatId, text);
                 return;
 
             } catch (TelegramApiException e) {
                 e.printStackTrace();
-                sendText(chatId, "❌ Помилка пошуку.");
+                sendText(chatId, "❌ Помилка під час пошуку.");
+                return;
             }
         }
 
