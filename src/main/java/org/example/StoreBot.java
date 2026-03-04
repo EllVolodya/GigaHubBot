@@ -2147,16 +2147,19 @@ public class StoreBot extends TelegramLongPollingBot {
         String unit = String.valueOf(
                 product.getOrDefault("unit", "")).toLowerCase();
 
-        // 🔹 Отримуємо кількість напряму як число
+        // 🔹 Отримуємо кількість на складі
         int maxAvailable = 0;
 
-        Object qtyObj = product.get("quantity");
+        Object stockObj =
+                product.getOrDefault("stock",
+                        product.getOrDefault("available",
+                                product.getOrDefault("quantity", 0)));
 
-        if (qtyObj instanceof Number) {
-            maxAvailable = ((Number) qtyObj).intValue();
-        } else if (qtyObj instanceof String) {
+        if (stockObj instanceof Number) {
+            maxAvailable = ((Number) stockObj).intValue();
+        } else if (stockObj instanceof String) {
             try {
-                maxAvailable = Integer.parseInt(((String) qtyObj).trim());
+                maxAvailable = Integer.parseInt(((String) stockObj).trim());
             } catch (Exception ignored) {
                 maxAvailable = 0;
             }
@@ -2185,6 +2188,7 @@ public class StoreBot extends TelegramLongPollingBot {
         waitingForQuantity.put(chatId, true);
 
         StringBuilder msg = new StringBuilder();
+
         msg.append("📥 Добре, друже! Скільки тобі потрібно?\n")
                 .append("👉 *").append(productName).append("*\n\n");
 
