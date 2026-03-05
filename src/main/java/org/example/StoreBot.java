@@ -891,6 +891,23 @@ public class StoreBot extends TelegramLongPollingBot {
                     userStates.put(userId, "awaiting_delivery_choice");
                 }
 
+                case "❌ Видалити товар" -> {
+
+                    List<Map<String, Object>> cart = userCart.get(userId);
+
+                    if (cart == null || cart.isEmpty()) {
+                        sendText(chatId, "🧺 Кошик порожній.");
+                        return;
+                    }
+
+                    userStates.put(userId, "awaiting_remove_item");
+
+                    sendText(chatId,
+                            "🗑 Введіть номер товару, який хочете видалити.\n\n" +
+                                    "Наприклад: 1");
+
+                }
+
                 case "🏬 Самовивіз" -> {
 
                     // 🔥 ВИХОДИМО З ПОШУКУ
@@ -1336,6 +1353,45 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
+            //Видалення товару з списку
+            if ("awaiting_remove_item".equals(userStates.get(userId))) {
+
+                try {
+
+                    int index = Integer.parseInt(text) - 1;
+
+                    List<Map<String, Object>> cart = userCart.get(userId);
+
+                    if (cart == null || cart.isEmpty()) {
+                        sendText(chatId, "🧺 Кошик порожній.");
+                        userStates.remove(userId);
+                        return;
+                    }
+
+                    if (index < 0 || index >= cart.size()) {
+                        sendText(chatId, "❌ Невірний номер товару.");
+                        return;
+                    }
+
+                    Map<String, Object> removedItem = cart.remove(index);
+
+                    sendText(chatId,
+                            "🗑 Видалено:\n" +
+                                    removedItem.get("name"));
+
+                    userStates.remove(userId);
+
+                    showCart(userId);
+
+                } catch (Exception e) {
+
+                    sendText(chatId,
+                            "❌ Введіть номер товару цифрою.");
+                }
+
+                return;
+            }
+
             // 🚚 Вибір способу доставки
             if (text.equals("🏬 Самовивіз")) {
 
@@ -1486,12 +1542,15 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row1 = new KeyboardRow();
         row1.add("🛒 Замовити товар");
-        row1.add("🧹 Очистити кошик");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add(BACK_BUTTON);
+        row2.add("❌ Видалити товар");
+        row2.add("🧹 Очистити кошик");
 
-        markup.setKeyboard(List.of(row1, row2));
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add(BACK_BUTTON);
+
+        markup.setKeyboard(List.of(row1, row2, row3));
 
         SendMessage msg = SendMessage.builder()
                 .chatId(String.valueOf(userId))
