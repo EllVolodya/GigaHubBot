@@ -1950,6 +1950,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 8. Повернення назад з редагування товара
         if ("editing_product".equals(userStates.get(userId))) {
 
             adminEditingProduct.remove(userId);
@@ -1964,7 +1965,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 8. Головне меню (fallback)
+        // 9. Головне меню (fallback)
         sendMessage(createUserMenu(chatId, userId));
     }
 
@@ -3015,12 +3016,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
             // 🔹 Order Pickup
             case "order_pickup" -> {
-                if (text.equals("⬅️ Назад")) {
+
+                /*if (text.equals("⬅️ Назад")) {
                     sendText(chatId,
                             "❗ Ви зараз оформлюєте замовлення.\n" +
                                     "⬅️ Повернення назад буде доступне після завершення оформлення.");
                     return;
-                }
+                }*/
 
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
