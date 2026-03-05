@@ -56,6 +56,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, String> userState = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userCart = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userOrders = new HashMap<>();
+    private Map<Long, Integer> editItemIndex = new HashMap<>();
     private final Map<Long, Boolean> waitingForQuantity = new HashMap<>();
     private final Map<Long, Boolean> waitingForCatalogSearch = new HashMap<>();
     private final Map<Long, Integer> searchIndex = new HashMap<>();
@@ -279,6 +280,76 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId,
                         "❌ Введіть номер товару цифрою.\n" +
                                 "Наприклад: 1");
+            }
+
+            return;
+        }
+
+        if ("awaiting_edit_item".equals(userStates.get(userId))) {
+
+            try {
+
+                int index = Integer.parseInt(text) - 1;
+
+                List<Map<String,Object>> cart = userCart.get(userId);
+
+                if (index < 0 || index >= cart.size()) {
+                    sendText(chatId,"❌ Невірний номер товару.");
+                    return;
+                }
+
+                editItemIndex.put(userId,index);
+
+                userStates.put(userId,"awaiting_new_quantity");
+
+                sendText(chatId,
+                        "🔢 Введіть нову кількість:");
+
+            } catch (Exception e) {
+
+                sendText(chatId,"❌ Введіть номер товару цифрою.");
+            }
+
+            return;
+        }
+
+        if ("awaiting_new_quantity".equals(userStates.get(userId))) {
+
+            try {
+
+                int newQty = Integer.parseInt(text);
+
+                if (newQty <= 0) {
+                    sendText(chatId,"❌ Кількість має бути більше 0.");
+                    return;
+                }
+
+                int index = editItemIndex.get(userId);
+
+                List<Map<String,Object>> cart = userCart.get(userId);
+
+                Map<String,Object> item = cart.get(index);
+
+                item.put("quantity",newQty);
+
+                double price = Double.parseDouble(item.get("price").toString());
+
+                double sum = price * newQty;
+
+                sendText(chatId,
+                        "✅ Кількість змінено!\n\n" +
+                                "📦 " + item.get("name") + "\n" +
+                                "🔢 Нова кількість: " + newQty + "\n" +
+                                "💰 Нова сума: " + sum + " грн");
+
+                userStates.remove(userId);
+                editItemIndex.remove(userId);
+
+                showCart(userId);
+
+            } catch (Exception e) {
+
+                sendText(chatId,"❌ Введіть число.");
             }
 
             return;
@@ -995,6 +1066,22 @@ public class StoreBot extends TelegramLongPollingBot {
                     execute(msg);
                 }
 
+                case "✏️ Зміни кількість" -> {
+
+                    List<Map<String,Object>> cart = userCart.get(userId);
+
+                    if (cart == null || cart.isEmpty()) {
+                        sendText(chatId,"🧺 Кошик порожній.");
+                        return;
+                    }
+
+                    userStates.put(userId,"awaiting_edit_item");
+
+                    sendText(chatId,
+                            "✏️ Введіть номер товару, який хочете змінити.\n\n" +
+                                    "Наприклад: 1");
+                }
+
                 case "🏬 Самовивіз" -> {
 
                     // 🔥 ВИХОДИМО З ПОШУКУ
@@ -1592,7 +1679,7 @@ public class StoreBot extends TelegramLongPollingBot {
         row1.add("🛒 Замовити товар");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("✏️ Редагувати товар");
+        row2.add("✏️ Змінити кількість");
         row2.add("❌ Видалити товар");
 
         KeyboardRow row3 = new KeyboardRow();
