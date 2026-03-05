@@ -293,12 +293,31 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (waitingForQuantity.getOrDefault(realChatId, false)) {
 
+            // 🔹 Якщо користувач натиснув Назад
+            if (text.equals("⬅️ Назад")) {
+
+                waitingForQuantity.put(realChatId, false);
+
+                sendText(realChatId,
+                        "↩️ Ви скасували додавання товару до кошика.");
+
+                try {
+                    showRemainingProductList(realChatId);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+
+                return;
+            }
+
             try {
+
                 int requestedQty = Integer.parseInt(text);
 
                 if (requestedQty <= 0) {
                     sendText(realChatId,
-                            "❌ Кількість має бути більше 0. Введіть ще раз:");
+                            "❌ Кількість має бути більше 0.\n" +
+                                    "Введіть ще раз:");
                     return;
                 }
 
@@ -315,13 +334,16 @@ public class StoreBot extends TelegramLongPollingBot {
                 // 🔹 Отримуємо кількість зі складу
                 Object qtyObj = product.get("quantity");
 
-                int maxAvailable = -1; // -1 означає "невідомо"
+                int maxAvailable = -1;
 
                 if (qtyObj instanceof Number) {
                     maxAvailable = ((Number) qtyObj).intValue();
-                } else if (qtyObj instanceof String) {
+                }
+                else if (qtyObj instanceof String) {
                     try {
-                        String cleaned = ((String) qtyObj).replaceAll("\\D+", "");
+                        String cleaned = ((String) qtyObj)
+                                .replaceAll("\\D+", "");
+
                         if (!cleaned.isEmpty()) {
                             maxAvailable = Integer.parseInt(cleaned);
                         }
@@ -337,21 +359,26 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // 🔴 Якщо склад відомий і запит перевищує
+                // 🔴 Якщо користувач просить більше ніж є
                 if (maxAvailable > 0 && requestedQty > maxAvailable) {
+
                     sendText(realChatId,
                             "⚠️ На складі доступно: " + maxAvailable + " шт.\n" +
                                     "Введіть меншу кількість 👇");
+
                     return;
                 }
 
-                // ✅ Додаємо в кошик
+                // ✅ Додаємо товар у кошик
                 Map<String, Object> cartItem =
                         new HashMap<>(product);
+
                 cartItem.put("quantity", requestedQty);
 
-                userCart.computeIfAbsent(realChatId,
-                        k -> new ArrayList<>()).add(cartItem);
+                userCart
+                        .computeIfAbsent(realChatId,
+                                k -> new ArrayList<>())
+                        .add(cartItem);
 
                 waitingForQuantity.put(realChatId, false);
 
@@ -359,7 +386,8 @@ public class StoreBot extends TelegramLongPollingBot {
                         "🧺 Товар додано у кошик!\n\n" +
                                 "📦 " + product.get("name") + "\n" +
                                 "🔢 Замовлено: " + requestedQty +
-                                (maxAvailable > 0 ? "\n📦 Було на складі: " + maxAvailable : "")
+                                (maxAvailable > 0 ?
+                                        "\n📦 Було на складі: " + maxAvailable : "")
                 );
 
                 try {
@@ -371,8 +399,11 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
 
             } catch (NumberFormatException e) {
+
                 sendText(realChatId,
-                        "❌ Це не число. Введіть кількість ще раз:");
+                        "❌ Це не число.\n" +
+                                "Введіть кількість ще раз:");
+
                 return;
             }
         }
