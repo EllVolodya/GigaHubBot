@@ -1679,16 +1679,14 @@ public class StoreBot extends TelegramLongPollingBot {
         row1.add("🛒 Замовити товар");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("✏️ Змінити кількість");
         row2.add("❌ Видалити товар");
+        row2.add("✏️ Змінити кількість");
+        row2.add("🧹 Очистити кошик");
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add("🧹 Очистити кошик");
+        row3.add(BACK_BUTTON);
 
-        KeyboardRow row4 = new KeyboardRow();
-        row4.add(BACK_BUTTON);
-
-        markup.setKeyboard(List.of(row1, row2, row3, row4));
+        markup.setKeyboard(List.of(row1, row2, row3));
 
         SendMessage msg = SendMessage.builder()
                 .chatId(String.valueOf(userId))
