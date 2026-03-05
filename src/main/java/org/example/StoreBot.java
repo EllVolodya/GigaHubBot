@@ -1376,11 +1376,11 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔹 Видалення товару з кошика
+            // 🔴 ВИДАЛЕННЯ ТОВАРУ З КОШИКА
             if ("awaiting_remove_item".equals(userStates.get(userId))) {
 
-                // 🔙 якщо натиснули Назад
                 if (text.equals("⬅️ Назад")) {
+
                     userStates.remove(userId);
                     sendText(chatId, "↩️ Видалення товару скасовано.");
                     showCart(userId);
@@ -1409,17 +1409,20 @@ public class StoreBot extends TelegramLongPollingBot {
                     Map<String, Object> removedItem = cart.remove(index);
 
                     sendText(chatId,
-                            "🗑 Товар видалено:\n" +
+                            "🗑 Видалено товар:\n" +
                                     "📦 " + removedItem.get("name"));
 
                     userStates.remove(userId);
+
                     showCart(userId);
 
                 } catch (NumberFormatException e) {
+
                     sendText(chatId,
                             "❌ Введіть номер товару цифрою.\n" +
                                     "Наприклад: 1");
                 }
+
                 return;
             }
 
