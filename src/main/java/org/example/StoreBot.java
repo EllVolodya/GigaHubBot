@@ -3045,9 +3045,19 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 String[] parts = text.split(",", 4); // Місто, П.І., Телефон, Картка
-                String city = parts.length > 0 ? parts[0].trim() : "Невідомо";
-                String fullName = parts.length > 1 ? parts[1].trim() : "Невідомо";
-                String phone = parts.length > 2 ? parts[2].trim() : "Невідомо";
+
+                // 🔴 перевірка правильності введення
+                if (parts.length < 3) {
+                    sendText(chatId,
+                            "❌ Дані введені неправильно.\n\n" +
+                                    "📌 Приклад:\n" +
+                                    "Казанка, Іваненко Іван Іванович, +380501234567, 4444");
+                    return;
+                }
+
+                String city = parts[0].trim();
+                String fullName = parts[1].trim();
+                String phone = parts[2].trim();
                 String card = parts.length > 3 ? parts[3].trim() : "0000";
 
                 tempDeliveryType.put(userId, "Самовивіз");
@@ -3074,7 +3084,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 tempOrderItems.put(userId, items.toString());
                 tempTotal.put(userId, total);
 
-                askPaymentMethod(userId, Long.valueOf(chatId));
+                askPaymentMethod(userId, Long.parseLong(chatId));
                 userStates.put(userId, "awaiting_payment_method");
             }
 
@@ -3095,10 +3105,20 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                String[] parts = text.split(",", 4); // Адреса, П.І., Телефон, Картка
-                String address = parts.length > 0 ? parts[0].trim() : "Невідомо";
-                String fullName = parts.length > 1 ? parts[1].trim() : "Невідомо";
-                String phone = parts.length > 2 ? parts[2].trim() : "Невідомо";
+                String[] parts = text.split(",", 4); // Місто, П.І., Телефон, Картка
+
+                // 🔴 перевірка правильності введення
+                if (parts.length < 3) {
+                    sendText(chatId,
+                            "❌ Дані введені неправильно.\n\n" +
+                                    "📌 Приклад:\n" +
+                                    "Казанка, Іваненко Іван Іванович, +380501234567, 4444");
+                    return;
+                }
+
+                String address = parts[0].trim();
+                String fullName = parts[1].trim();
+                String phone = parts[2].trim();
                 String card = parts.length > 3 ? parts[3].trim() : "0000";
 
                 tempDeliveryType.put(userId, "Доставка по місту");
@@ -3146,10 +3166,20 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                String[] parts = text.split(",", 4); // Відділення НП, П.І., Телефон, Картка
-                String postOffice = parts.length > 0 ? parts[0].trim() : "Невідомо";
-                String fullName = parts.length > 1 ? parts[1].trim() : "Невідомо";
-                String phone = parts.length > 2 ? parts[2].trim() : "Невідомо";
+                String[] parts = text.split(",", 4); // Місто, П.І., Телефон, Картка
+
+                // 🔴 перевірка правильності введення
+                if (parts.length < 3) {
+                    sendText(chatId,
+                            "❌ Дані введені неправильно.\n\n" +
+                                    "📌 Приклад:\n" +
+                                    "Казанка, Іваненко Іван Іванович, +380501234567, 4444");
+                    return;
+                }
+
+                String postOffice = parts[0].trim();
+                String fullName = parts[1].trim();
+                String phone = parts[2].trim();
                 String card = parts.length > 3 ? parts[3].trim() : "0000";
 
                 tempDeliveryType.put(userId, "Нова пошта");
@@ -6198,7 +6228,7 @@ public class StoreBot extends TelegramLongPollingBot {
             stmt.setString(8, phone);
             stmt.setString(9, card);
             stmt.setString(10, items);
-            stmt.setDouble(11, total);
+            stmt.setDouble(11, Math.round(total * 100.0) / 100.0);
             stmt.setString(12, method);                        // paymentmethod
 
             // paymentstatus
@@ -6210,9 +6240,12 @@ public class StoreBot extends TelegramLongPollingBot {
             stmt.executeUpdate();
 
         } catch (Exception e) {
+            System.out.println("ORDER ERROR:");
             e.printStackTrace();
-            sendText(chatId.toString(), "❌ Сталася помилка при створенні замовлення.");
-            return;
+
+            sendText(chatId.toString(),
+                    "❌ Сталася помилка при створенні замовлення.\n" +
+                            "Код: " + e.getMessage());
         }
 
         // 🔹 Очищаємо тимчасові дані
