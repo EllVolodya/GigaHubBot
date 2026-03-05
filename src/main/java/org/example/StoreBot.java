@@ -1353,8 +1353,16 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            //Видалення товару з списку
+            // 🔹 Видалення товару з кошика
             if ("awaiting_remove_item".equals(userStates.get(userId))) {
+
+                // 🔙 якщо натиснули Назад
+                if (text.equals("⬅️ Назад")) {
+                    userStates.remove(userId);
+                    sendText(chatId, "↩️ Видалення товару скасовано.");
+                    showCart(userId);
+                    return;
+                }
 
                 try {
 
@@ -1369,26 +1377,26 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     if (index < 0 || index >= cart.size()) {
-                        sendText(chatId, "❌ Невірний номер товару.");
+                        sendText(chatId,
+                                "❌ Невірний номер товару.\n" +
+                                        "Введіть номер від 1 до " + cart.size());
                         return;
                     }
 
                     Map<String, Object> removedItem = cart.remove(index);
 
                     sendText(chatId,
-                            "🗑 Видалено:\n" +
-                                    removedItem.get("name"));
+                            "🗑 Товар видалено:\n" +
+                                    "📦 " + removedItem.get("name"));
 
                     userStates.remove(userId);
-
                     showCart(userId);
 
-                } catch (Exception e) {
-
+                } catch (NumberFormatException e) {
                     sendText(chatId,
-                            "❌ Введіть номер товару цифрою.");
+                            "❌ Введіть номер товару цифрою.\n" +
+                                    "Наприклад: 1");
                 }
-
                 return;
             }
 
