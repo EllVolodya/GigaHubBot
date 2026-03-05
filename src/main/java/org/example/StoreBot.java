@@ -6246,6 +6246,7 @@ public class StoreBot extends TelegramLongPollingBot {
             sendText(chatId.toString(),
                     "❌ Сталася помилка при створенні замовлення.\n" +
                             "Код: " + e.getMessage());
+            return;
         }
 
         // 🔹 Очищаємо тимчасові дані
