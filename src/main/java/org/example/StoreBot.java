@@ -1066,7 +1066,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     execute(msg);
                 }
 
-                case "✏️ Зміни кількість" -> {
+                case "✏️ Змінити кількість" -> {
 
                     List<Map<String,Object>> cart = userCart.get(userId);
 
