@@ -3182,6 +3182,15 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "awaiting_payment_method" -> {
 
+                if (text.equals("⬅️ Назад")) {
+                    try {
+                        handleBack(userId, chatId);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                    }
+                    return;
+                }
+
                 if (text.equals("💵 Готівка")) {
                     createOrderWithPayment(userId, Long.valueOf(chatId), "Готівка", false);
                     return;
