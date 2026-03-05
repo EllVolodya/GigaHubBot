@@ -5004,7 +5004,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    ///🔸 Показ товару по номераци
+    ///🔸 Показ товару по списку
     private void sendProductList(Long chatId) throws TelegramApiException {
 
         String category = currentCategory.get(chatId);
@@ -5027,14 +5027,23 @@ public class StoreBot extends TelegramLongPollingBot {
         StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
 
         for (int i = 0; i < products.size(); i++) {
-            sb.append(i + 1)
-                    .append(". ")
-                    .append(products.get(i).get("name"))
-                    .append("\n");
+
+            String line = (i + 1) + ". " + products.get(i).get("name") + "\n";
+
+            // 🔴 якщо повідомлення стає занадто великим
+            if (sb.length() + line.length() > 3500) {
+                sendText(chatId, sb.toString());
+                sb = new StringBuilder();
+            }
+
+            sb.append(line);
+        }
+
+        if (sb.length() > 0) {
+            sendText(chatId, sb.toString());
         }
 
         // 🔹 КНОПКИ
-
         KeyboardRow row1 = new KeyboardRow();
         row1.add(ADD_TO_CART_BUTTON);
         row1.add(VIEW_CART_BUTTON);
@@ -5054,7 +5063,7 @@ public class StoreBot extends TelegramLongPollingBot {
         markup.setKeyboard(keyboard);
         markup.setResizeKeyboard(true);
 
-        sendTextWithMarkup(chatId, sb.toString(), markup);
+        sendTextWithMarkup(chatId, "👇 Обери номер товару:", markup);
     }
 
     private void showRemainingProductList(Long chatId)
