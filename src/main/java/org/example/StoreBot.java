@@ -1858,11 +1858,24 @@ public class StoreBot extends TelegramLongPollingBot {
         if ("awaiting_delivery_choice".equals(state) ||
                 "order_pickup".equals(state) ||
                 "awaiting_city_delivery".equals(state) ||
-                "awaiting_post_delivery".equals(state)) {
+                "awaiting_post_delivery".equals(state) ||
+                "awaiting_payment_method".equals(state)) {
 
-            sendText(chatId,
-                    "❗ Повернення назад недоступне під час оформлення замовлення.\n" +
-                            "📝 Будь ласка, завершіть заповнення даних або оформіть замовлення.");
+            // очищаємо дані замовлення
+            tempDeliveryType.remove(userId);
+            tempAddress.remove(userId);
+            tempFullname.remove(userId);
+            tempPhone.remove(userId);
+            tempCard.remove(userId);
+            tempOrderCode.remove(userId);
+            tempOrderItems.remove(userId);
+            tempTotal.remove(userId);
+
+            userStates.remove(userId);
+
+            sendText(chatId,"↩️ Повертаємо вас у головне меню.");
+
+            sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
@@ -3067,12 +3080,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
             // 🔹 City Delivery
             case "awaiting_city_delivery" -> {
-                if (text.equals("⬅️ Назад")) {
+
+                /*if (text.equals("⬅️ Назад")) {
                     sendText(chatId,
                             "❗ Ви зараз оформлюєте замовлення.\n" +
                                     "⬅️ Повернення назад буде доступне після завершення оформлення.");
                     return;
-                }
+                }*/
 
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
@@ -3117,12 +3131,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
             // 🔹 Nova Poshta Delivery
             case "awaiting_post_delivery" -> {
-                if (text.equals("⬅️ Назад")) {
+
+                /*if (text.equals("⬅️ Назад")) {
                     sendText(chatId,
                             "❗ Ви зараз оформлюєте замовлення.\n" +
                                     "⬅️ Повернення назад буде доступне після завершення оформлення.");
                     return;
-                }
+                }*/
 
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
