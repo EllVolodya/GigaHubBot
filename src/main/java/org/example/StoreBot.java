@@ -220,6 +220,70 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
+        // 🗑 Видалення товару з кошику
+        if ("awaiting_remove_item".equals(userStates.get(userId))) {
+
+            // 🔙 Якщо натиснули Назад
+            if (text.equals("⬅️ Назад")) {
+
+                userStates.remove(userId);
+
+                sendText(chatId, "↩️ Видалення товару скасовано.");
+
+                try {
+                    showCart(userId);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при відкритті кошика.");
+                }
+
+                return;
+            }
+
+            try {
+
+                int index = Integer.parseInt(text) - 1;
+
+                List<Map<String, Object>> cart = userCart.get(userId);
+
+                if (cart == null || cart.isEmpty()) {
+                    sendText(chatId, "🧺 Кошик порожній.");
+                    userStates.remove(userId);
+                    return;
+                }
+
+                if (index < 0 || index >= cart.size()) {
+                    sendText(chatId,
+                            "❌ Невірний номер товару.\n" +
+                                    "Введіть номер від 1 до " + cart.size());
+                    return;
+                }
+
+                Map<String, Object> removedItem = cart.remove(index);
+
+                sendText(chatId,
+                        "🗑 Видалено товар:\n" +
+                                "📦 " + removedItem.get("name"));
+
+                userStates.remove(userId);
+
+                try {
+                    showCart(userId);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при відкритті кошика.");
+                }
+
+            } catch (NumberFormatException e) {
+
+                sendText(chatId,
+                        "❌ Введіть номер товару цифрою.\n" +
+                                "Наприклад: 1");
+            }
+
+            return;
+        }
+
         if (state != null) {
 
             System.out.println("[STATE] " + state + " TEXT=" + text);
@@ -1373,56 +1437,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 FeedbackManager.addFeedback(userId, text);
                 sendText(chatId, "✅ Ваш відгук надіслано адміністратору!");
                 userStates.remove(userId);
-                return;
-            }
-
-            // 🔴 ВИДАЛЕННЯ ТОВАРУ З КОШИКА
-            if ("awaiting_remove_item".equals(userStates.get(userId))) {
-
-                if (text.equals("⬅️ Назад")) {
-
-                    userStates.remove(userId);
-                    sendText(chatId, "↩️ Видалення товару скасовано.");
-                    showCart(userId);
-                    return;
-                }
-
-                try {
-
-                    int index = Integer.parseInt(text) - 1;
-
-                    List<Map<String, Object>> cart = userCart.get(userId);
-
-                    if (cart == null || cart.isEmpty()) {
-                        sendText(chatId, "🧺 Кошик порожній.");
-                        userStates.remove(userId);
-                        return;
-                    }
-
-                    if (index < 0 || index >= cart.size()) {
-                        sendText(chatId,
-                                "❌ Невірний номер товару.\n" +
-                                        "Введіть номер від 1 до " + cart.size());
-                        return;
-                    }
-
-                    Map<String, Object> removedItem = cart.remove(index);
-
-                    sendText(chatId,
-                            "🗑 Видалено товар:\n" +
-                                    "📦 " + removedItem.get("name"));
-
-                    userStates.remove(userId);
-
-                    showCart(userId);
-
-                } catch (NumberFormatException e) {
-
-                    sendText(chatId,
-                            "❌ Введіть номер товару цифрою.\n" +
-                                    "Наприклад: 1");
-                }
-
                 return;
             }
 
