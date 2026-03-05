@@ -902,10 +902,33 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     userStates.put(userId, "awaiting_remove_item");
 
-                    sendText(chatId,
-                            "🗑 Введіть номер товару, який хочете видалити.\n\n" +
-                                    "Наприклад: 1");
+                    ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+                    markup.setResizeKeyboard(true);
 
+                    List<KeyboardRow> rows = new ArrayList<>();
+
+                    KeyboardRow numbers = new KeyboardRow();
+
+                    for (int i = 1; i <= cart.size(); i++) {
+                        numbers.add(String.valueOf(i));
+                    }
+
+                    rows.add(numbers);
+
+                    KeyboardRow backRow = new KeyboardRow();
+                    backRow.add("⬅️ Назад");
+
+                    rows.add(backRow);
+
+                    markup.setKeyboard(rows);
+
+                    SendMessage msg = SendMessage.builder()
+                            .chatId(chatId)
+                            .text("🗑 Введіть номер товару, який хочете видалити.\n\nНаприклад: 1")
+                            .replyMarkup(markup)
+                            .build();
+
+                    execute(msg);
                 }
 
                 case "🏬 Самовивіз" -> {
