@@ -3253,15 +3253,24 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "❌ Оберіть спосіб доставки кнопкою.");
             }
 
-            // 🔹 Order Pickup
+            // 🔹 Самовивіз доставка
             case "order_pickup" -> {
 
-                /*if (text.equals("⬅️ Назад")) {
-                    sendText(chatId,
-                            "❗ Ви зараз оформлюєте замовлення.\n" +
-                                    "⬅️ Повернення назад буде доступне після завершення оформлення.");
+                if (text.equals("⬅️ Назад")) {
+
+                    userStates.remove(userId);
+
+                    sendText(chatId,"↩️ Повертаємось у кошик.");
+
+                    try {
+                        showCart(userId);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                        sendText(chatId,"❌ Помилка при відкритті кошика.");
+                    }
+
                     return;
-                }*/
+                }
 
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
@@ -3270,9 +3279,8 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                String[] parts = text.split(",", 4); // Місто, П.І., Телефон, Картка
+                String[] parts = text.split(",", 4);
 
-                // 🔴 перевірка правильності введення
                 if (parts.length < 3) {
                     sendText(chatId,
                             "❌ Дані введені неправильно.\n\n" +
@@ -3287,7 +3295,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 String card = parts.length > 3 ? parts[3].trim() : "0000";
 
                 tempDeliveryType.put(userId, "Самовивіз");
-                tempAddress.put(userId, city);        // у city тримаємо місто
+                tempAddress.put(userId, city);
                 tempFullname.put(userId, fullName);
                 tempPhone.put(userId, phone);
                 tempCard.put(userId, card);
@@ -3299,30 +3307,46 @@ public class StoreBot extends TelegramLongPollingBot {
                 double total = 0;
 
                 for (Map<String, Object> item : cart) {
+
                     String name = item.get("name").toString();
                     double price = Double.parseDouble(item.get("price").toString());
-                    int qty = item.get("quantity") == null ? 1 : Integer.parseInt(item.get("quantity").toString());
+                    int qty = item.get("quantity") == null ? 1 :
+                            Integer.parseInt(item.get("quantity").toString());
 
                     total += price * qty;
-                    items.append(name).append(":").append(price).append(":").append(qty).append(";");
+
+                    items.append(name)
+                            .append(":")
+                            .append(price)
+                            .append(":")
+                            .append(qty)
+                            .append(";");
                 }
 
                 tempOrderItems.put(userId, items.toString());
                 tempTotal.put(userId, total);
 
                 askPaymentMethod(userId, Long.parseLong(chatId));
+
                 userStates.put(userId, "awaiting_payment_method");
             }
 
             // 🔹 City Delivery
             case "awaiting_city_delivery" -> {
 
-                /*if (text.equals("⬅️ Назад")) {
-                    sendText(chatId,
-                            "❗ Ви зараз оформлюєте замовлення.\n" +
-                                    "⬅️ Повернення назад буде доступне після завершення оформлення.");
+                if (text.equals("⬅️ Назад")) {
+
+                    userStates.remove(userId);
+                    sendText(chatId,"↩️ Повертаємось у кошик.");
+
+                    try {
+                        showCart(userId);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                        sendText(chatId,"❌ Помилка при відкритті кошика.");
+                    }
                     return;
-                }*/
+                }
 
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
@@ -3378,12 +3402,19 @@ public class StoreBot extends TelegramLongPollingBot {
             // 🔹 Nova Poshta Delivery
             case "awaiting_post_delivery" -> {
 
-                /*if (text.equals("⬅️ Назад")) {
-                    sendText(chatId,
-                            "❗ Ви зараз оформлюєте замовлення.\n" +
-                                    "⬅️ Повернення назад буде доступне після завершення оформлення.");
+                if (text.equals("⬅️ Назад")) {
+
+                    userStates.remove(userId);
+                    sendText(chatId,"↩️ Повертаємось у кошик.");
+
+                    try {
+                        showCart(userId);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                        sendText(chatId,"❌ Помилка при відкритті кошика.");
+                    }
                     return;
-                }*/
+                }
 
                 List<Map<String, Object>> cart = userCart.get(userId);
                 if (cart == null || cart.isEmpty()) {
