@@ -5347,7 +5347,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
         for (int i = 0; i < products.size(); i++) {
 
-            String line = (i + 1) + ". " + products.get(i).get("name") + "\n";
+            String name = escapeTelegram(products.get(i).get("name").toString());
+
+            String line = (i + 1) + ". " + name + "\n";
 
             // 🔴 якщо повідомлення стає занадто великим
             if (sb.length() + line.length() > 3500) {
@@ -6771,5 +6773,15 @@ public class StoreBot extends TelegramLongPollingBot {
     private Integer safeParseInt(String s) {
         try { return Integer.parseInt(s.replaceAll("[^0-9]", "")); }
         catch (Exception e) { return null; }
+    }
+
+    private String escapeTelegram(String text) {
+
+        if (text == null) return "";
+
+        return text
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;");
     }
 }
