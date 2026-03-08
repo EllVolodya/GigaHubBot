@@ -5324,8 +5324,14 @@ public class StoreBot extends TelegramLongPollingBot {
         String subcategory = currentSubcategory.get(chatId);
 
         CatalogSearcher searcher = new CatalogSearcher();
-        List<Map<String, Object>> products =
-                searcher.getProducts(category, subcategory);
+
+        List<Map<String, Object>> products;
+
+        if (subcategory == null) {
+            products = searcher.getProductsByCategory(category);
+        } else {
+            products = searcher.getProducts(category, subcategory);
+        }
 
         if (products == null || products.isEmpty()) {
             sendText(chatId, "❌ Товарів немає.");

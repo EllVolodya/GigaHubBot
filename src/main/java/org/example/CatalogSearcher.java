@@ -285,6 +285,37 @@ public class CatalogSearcher {
         return products;
     }
 
+    public List<Map<String, Object>> getProductsByCategory(String category) {
+
+        List<Map<String, Object>> products = new ArrayList<>();
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT * FROM products WHERE category = ? ORDER BY id")) {
+
+            stmt.setString(1, category);
+
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+
+                Map<String, Object> product = new HashMap<>();
+
+                product.put("id", rs.getInt("id"));
+                product.put("name", rs.getString("name"));
+                product.put("price", rs.getString("price"));
+                product.put("quantity", rs.getString("quantity"));
+
+                products.add(product);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return products;
+    }
+
     public List<String> searchMixed(String keyword) {
         List<String> results = new ArrayList<>();
 
