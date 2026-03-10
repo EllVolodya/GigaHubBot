@@ -5252,7 +5252,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 currentSubcategory.put(chatId, text);
                 productIndex.put(chatId, 0);
 
-                sendProductList(chatId);
+                sendFilters(chatId);
 
                 return;
             }
@@ -7075,5 +7075,65 @@ public class StoreBot extends TelegramLongPollingBot {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    private void sendFilters(Long chatId) throws TelegramApiException {
+
+        CatalogSearcher searcher = new CatalogSearcher();
+
+        List<String> filters = searcher.getFilters();
+
+        if(filters.isEmpty()){
+            sendText(chatId,"❌ Фільтрів немає.");
+            return;
+        }
+
+        List<KeyboardRow> rows = new ArrayList<>();
+
+        for(String filter : filters){
+
+            KeyboardRow row = new KeyboardRow();
+            row.add(filter);
+
+            rows.add(row);
+        }
+
+        KeyboardRow back = new KeyboardRow();
+        back.add("⬅️ Назад");
+
+        rows.add(back);
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setKeyboard(rows);
+        markup.setResizeKeyboard(true);
+
+        sendMessage(chatId,"🔎 Обери фільтр:",markup);
+    }
+
+    private void sendProductsByFilter(Long chatId,String filterName) throws TelegramApiException {
+
+        CatalogSearcher searcher = new CatalogSearcher();
+
+        List<Map<String,Object>> products =
+                searcher.getProductsByFilter(filterName);
+
+        if(products.isEmpty()){
+            sendText(chatId,"❌ У цьому фільтрі немає товарів.");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder("📦 Товари у фільтрі:\n\n");
+
+        for(int i=0;i<products.size();i++){
+
+            sb.append(i+1)
+                    .append(". ")
+                    .append(products.get(i).get("name"))
+                    .append("\n");
+        }
+
+        sendText(chatId,sb.toString());
+
+        userProductLists.put(chatId,products);
     }
 }

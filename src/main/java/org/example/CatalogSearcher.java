@@ -395,25 +395,60 @@ public class CatalogSearcher {
         return product;
     }
 
-    public List<String> getFilters() {
+    public List<String> getFilters(){
 
         List<String> filters = new ArrayList<>();
 
-        try (Connection conn = DatabaseManager.getConnection()) {
+        try(Connection conn = DatabaseManager.getConnection()){
 
-            PreparedStatement ps = conn.prepareStatement(
-                    "SELECT name FROM filters ORDER BY name");
+            PreparedStatement ps =
+                    conn.prepareStatement("SELECT name FROM filters ORDER BY id");
 
             ResultSet rs = ps.executeQuery();
 
-            while (rs.next()) {
+            while(rs.next()){
+
                 filters.add(rs.getString("name"));
             }
 
-        } catch (Exception e) {
+        }catch(Exception e){
             e.printStackTrace();
         }
 
         return filters;
+    }
+
+    public List<Map<String,Object>> getProductsByFilter(String filterName){
+
+        List<Map<String,Object>> products = new ArrayList<>();
+
+        try(Connection conn = DatabaseManager.getConnection()){
+
+            PreparedStatement ps = conn.prepareStatement(
+
+                    "SELECT p.* FROM products p " +
+                            "JOIN filters f ON p.filter_id = f.id " +
+                            "WHERE f.name=?");
+
+            ps.setString(1,filterName);
+
+            ResultSet rs = ps.executeQuery();
+
+            while(rs.next()){
+
+                Map<String,Object> p = new HashMap<>();
+
+                p.put("id",rs.getInt("id"));
+                p.put("name",rs.getString("name"));
+                p.put("price",rs.getDouble("price"));
+
+                products.add(p);
+            }
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return products;
     }
 }
