@@ -1573,6 +1573,18 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
+            //Добавление фільтра в базу даних
+            if ("awaiting_new_filter".equals(userStates.get(userId))) {
+
+                createFilter(text);
+
+                userStates.remove(userId);
+
+                sendText(chatId, "✅ Фільтр створено: " + text);
+
+                return;
+            }
+
             // 🚚 Вибір способу доставки
             if (text.equals("🏬 Самовивіз")) {
 
@@ -7009,5 +7021,21 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         sendText(chatId, sb.toString());
+    }
+
+    private void createFilter(String filterName) {
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement(
+                    "INSERT INTO filters(name) VALUES (?)");
+
+            ps.setString(1, filterName);
+
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
