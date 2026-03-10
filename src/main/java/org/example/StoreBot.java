@@ -1009,6 +1009,35 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendMessageSafely(createFiltersAdminMenu(chatId));
                 }
 
+                case "➕ Додати фільтр" -> {
+                    userStates.put(userId, "awaiting_new_filter");
+                    sendText(chatId, "✏️ Введіть назву нового фільтра:");
+                }
+
+                case "✏️ Редагувати фільтр" -> {
+                    userStates.put(userId, "awaiting_filter_edit");
+                    sendMessageSafely(createFilterSelectMenu(chatId));
+                }
+
+                case "🗑 Видалити фільтр" -> {
+                    userStates.put(userId, "awaiting_filter_delete");
+                    sendMessageSafely(createFilterSelectMenu(chatId));
+                }
+
+                case "📋 Список фільтрів" -> {
+                    sendFiltersList(chatId);
+                }
+
+                case "📦 Товари у фільтрі" -> {
+                    userStates.put(userId, "awaiting_filter_products");
+                    sendMessageSafely(createFilterSelectMenu(chatId));
+                }
+
+                case "🧹 Очистити фільтр" -> {
+                    userStates.put(userId, "awaiting_filter_clear");
+                    sendMessageSafely(createFilterSelectMenu(chatId));
+                }
+
                 case "🛒 Замовити товар" -> {
 
                     userStates.remove(userId); // 🔥 ОЧИЩАЄМО СТАН ПОШУКУ
@@ -6958,5 +6987,27 @@ public class StoreBot extends TelegramLongPollingBot {
         }catch(Exception e){
             e.printStackTrace();
         }
+    }
+
+    private void sendFiltersList(String chatId) {
+
+        StringBuilder sb = new StringBuilder("📋 Список фільтрів:\n\n");
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement(
+                    "SELECT name FROM filters ORDER BY name");
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                sb.append("• ").append(rs.getString("name")).append("\n");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        sendText(chatId, sb.toString());
     }
 }
