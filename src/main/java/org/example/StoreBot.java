@@ -702,6 +702,18 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        //Добавление фільтра в базу даних
+        if ("awaiting_new_filter".equals(userStates.get(userId))) {
+
+            createFilter(text);
+
+            userStates.remove(userId);
+
+            sendText(chatId, "✅ Фільтр створено: " + text);
+
+            return;
+        }
+
         // 🔹 DEFAULT DELEGATION TO PHOTO HANDLER
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
         photoHandler.handleUpdate(userId, chatId, update);
@@ -1570,18 +1582,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 FeedbackManager.addFeedback(userId, text);
                 sendText(chatId, "✅ Ваш відгук надіслано адміністратору!");
                 userStates.remove(userId);
-                return;
-            }
-
-            //Добавление фільтра в базу даних
-            if ("awaiting_new_filter".equals(userStates.get(userId))) {
-
-                createFilter(text);
-
-                userStates.remove(userId);
-
-                sendText(chatId, "✅ Фільтр створено: " + text);
-
                 return;
             }
 
@@ -7024,14 +7024,14 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     //Створення фільтра
-    private void createFilter(String filterName) {
+    private void createFilter(String name) {
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
             PreparedStatement ps = conn.prepareStatement(
                     "INSERT INTO filters(name) VALUES (?)");
 
-            ps.setString(1, filterName);
+            ps.setString(1, name);
 
             ps.executeUpdate();
 
