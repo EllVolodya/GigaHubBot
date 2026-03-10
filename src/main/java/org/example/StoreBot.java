@@ -7043,7 +7043,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    //Додати товар в фільтр
+    //Додати товар фільтр
     private void addProductToFilter(Long userId, String chatId, String filterName) {
 
         String productName = adminEditingProduct.get(userId);
