@@ -221,7 +221,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
-        // 🗑 Видалення товару з кошику
+        // 🗑 Видалення товару з кошика
         if ("awaiting_remove_item".equals(userStates.get(userId))) {
 
             // 🔙 Якщо натиснули Назад
@@ -4855,7 +4855,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 .build();
     }
 
-    // Меню оновлення каталога
+    // Меню оновлення
     private SendMessage createDeveloperCatalogMenu(String chatId) {
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
@@ -6594,7 +6594,7 @@ public class StoreBot extends TelegramLongPollingBot {
             stmt.setString(2, orderCode);
             stmt.setString(3, deliveryType);
 
-            // 🔹 Розподіл по полях в залежності типу доставки
+            // 🔹 Розподіл по полях в залежності типу доставка
             String city = null;
             String address = null;
             String postOffice = null;
