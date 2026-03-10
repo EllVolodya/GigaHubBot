@@ -6969,7 +6969,7 @@ public class StoreBot extends TelegramLongPollingBot {
         row3.add("🧹 Очистити фільтр");
 
         KeyboardRow row4 = new KeyboardRow();
-        row4.add("⬅️ Назад");
+        row4.add(BACK_BUTTON);
 
         keyboard.add(row1);
         keyboard.add(row2);
