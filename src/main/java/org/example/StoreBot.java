@@ -7023,6 +7023,7 @@ public class StoreBot extends TelegramLongPollingBot {
         sendText(chatId, sb.toString());
     }
 
+    //Створення фільтра
     private void createFilter(String filterName) {
 
         try (Connection conn = DatabaseManager.getConnection()) {
