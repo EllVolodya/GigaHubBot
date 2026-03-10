@@ -702,18 +702,6 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        //Добавление фільтра в базу даних
-        if ("awaiting_new_filter".equals(userStates.get(userId))) {
-
-            createFilter(text);
-
-            userStates.remove(userId);
-
-            sendText(chatId, "✅ Фільтр створено: " + text);
-
-            return;
-        }
-
         // 🔹 DEFAULT DELEGATION TO PHOTO HANDLER
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
         photoHandler.handleUpdate(userId, chatId, update);
@@ -1582,6 +1570,26 @@ public class StoreBot extends TelegramLongPollingBot {
                 FeedbackManager.addFeedback(userId, text);
                 sendText(chatId, "✅ Ваш відгук надіслано адміністратору!");
                 userStates.remove(userId);
+                return;
+            }
+
+            // 🔹 Створення нового фільтра
+            if ("awaiting_new_filter".equals(state)) {
+
+                if (text.equals("⬅️ Назад")) {
+                    userStates.remove(userId);
+                    sendMessageSafely(createFiltersAdminMenu(chatId));
+                    return;
+                }
+
+                createFilter(text.trim());
+
+                userStates.remove(userId);
+
+                sendText(chatId, "✅ Фільтр створено: " + text);
+
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+
                 return;
             }
 
