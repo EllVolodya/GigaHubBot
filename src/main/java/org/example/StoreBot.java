@@ -7004,38 +7004,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 .build();
     }
 
-    private void addProductToFilter(Long userId, String chatId, String filterName){
-
-        String productName = adminEditingProduct.get(userId);
-
-        try(Connection conn = DatabaseManager.getConnection()){
-
-            PreparedStatement getFilter = conn.prepareStatement(
-                    "SELECT id FROM filters WHERE name=?");
-
-            getFilter.setString(1, filterName);
-
-            ResultSet rs = getFilter.executeQuery();
-
-            if(rs.next()){
-
-                int filterId = rs.getInt("id");
-
-                PreparedStatement insert = conn.prepareStatement(
-                        "INSERT INTO product_filters(product_id, filter_id) " +
-                                "SELECT id, ? FROM products WHERE name=?");
-
-                insert.setInt(1, filterId);
-                insert.setString(2, productName);
-
-                insert.executeUpdate();
-            }
-
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-    }
-
     private void sendFiltersList(String chatId) {
 
         StringBuilder sb = new StringBuilder("📋 Список фільтрів:\n\n");
@@ -7069,6 +7037,40 @@ public class StoreBot extends TelegramLongPollingBot {
             ps.setString(1, name);
 
             ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    //Додати товар в фільтр
+    private void addProductToFilter(Long userId, String chatId, String filterName) {
+
+        String productName = adminEditingProduct.get(userId);
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            // отримуємо id фільтра
+            PreparedStatement getFilter = conn.prepareStatement(
+                    "SELECT id FROM filters WHERE name=?");
+
+            getFilter.setString(1, filterName);
+
+            ResultSet rs = getFilter.executeQuery();
+
+            if (rs.next()) {
+
+                int filterId = rs.getInt("id");
+
+                // оновлюємо товар
+                PreparedStatement update = conn.prepareStatement(
+                        "UPDATE products SET filter_id=? WHERE name=?");
+
+                update.setInt(1, filterId);
+                update.setString(2, productName);
+
+                update.executeUpdate();
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
