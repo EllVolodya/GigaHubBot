@@ -394,4 +394,26 @@ public class CatalogSearcher {
         product.put("category", rs.getString("category"));
         return product;
     }
+
+    public List<String> getFilters() {
+
+        List<String> filters = new ArrayList<>();
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement(
+                    "SELECT name FROM filters ORDER BY name");
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                filters.add(rs.getString("name"));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return filters;
+    }
 }

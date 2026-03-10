@@ -355,6 +355,19 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if("awaiting_filter_select".equals(userStates.get(userId))){
+
+            addProductToFilter(userId, chatId, text);
+
+            userStates.remove(userId);
+
+            sendText(chatId,"✅ Товар додано у фільтр: " + text);
+
+            sendMessageSafely(createEditMenu(chatId, userId));
+
+            return;
+        }
+
         if (state != null) {
 
             System.out.println("[STATE] " + state + " TEXT=" + text);
@@ -4274,6 +4287,24 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "✏️ Введіть назву виробника для товару (або ❌ щоб видалити):");
                 break;
 
+            case "⚙️ Додати в фільтр":
+
+                if (productsToEdit != null && productsToEdit.size() > 1) {
+                    sendText(chatId, "⚠️ Масове додавання у фільтр не підтримується. Виберіть один товар.");
+                    break;
+                }
+
+                if (singleProduct == null) {
+                    sendText(chatId, "⚠️ Спочатку виберіть товар.");
+                    break;
+                }
+
+                userStates.put(userId, "awaiting_filter_select");
+
+                sendMessageSafely(createFilterSelectMenu(chatId));
+
+                return;
+
             case BACK_BUTTON:
                 // 🔹 Очищаємо тимчасові стани редагування
                 adminEditingField.remove(userId);
@@ -4836,9 +4867,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow r4 = new KeyboardRow();
         r4.add(new KeyboardButton("🏭 Виробник"));
-        r4.add(new KeyboardButton("⬅️ Назад"));
+        r4.add(new KeyboardButton("⚙️ Додати в фільтр"));
 
-        kb.setKeyboard(List.of(r1, r2, r3, r4));
+        KeyboardRow r5 = new KeyboardRow();
+        r5.add(new KeyboardButton("⬅️ Назад"));
+
+        kb.setKeyboard(List.of(r1, r2, r3, r4, r5));
         msg.setReplyMarkup(kb);
 
         return msg;
@@ -6783,5 +6817,101 @@ public class StoreBot extends TelegramLongPollingBot {
                 .replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;");
+    }
+
+    private List<String> getFiltersFromDatabase(){
+
+        List<String> filters = new ArrayList<>();
+
+        try(Connection conn = DatabaseManager.getConnection()){
+
+            PreparedStatement ps = conn.prepareStatement(
+                    "SELECT name FROM filters ORDER BY name");
+
+            ResultSet rs = ps.executeQuery();
+
+            while(rs.next()){
+                filters.add(rs.getString("name"));
+            }
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return filters;
+    }
+
+    private SendMessage createFilterSelectMenu(String chatId){
+
+        ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
+        kb.setResizeKeyboard(true);
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        CatalogSearcher searcher = new CatalogSearcher();
+        List<String> filters = searcher.getFilters();
+
+        KeyboardRow row = new KeyboardRow();
+        int count = 0;
+
+        for(String filter : filters){
+
+            row.add(filter);
+            count++;
+
+            if(count == 2){
+                keyboard.add(row);
+                row = new KeyboardRow();
+                count = 0;
+            }
+        }
+
+        if(!row.isEmpty()){
+            keyboard.add(row);
+        }
+
+        KeyboardRow backRow = new KeyboardRow();
+        backRow.add("⬅️ Назад");
+        keyboard.add(backRow);
+
+        kb.setKeyboard(keyboard);
+
+        return SendMessage.builder()
+                .chatId(chatId)
+                .text("Оберіть фільтр:")
+                .replyMarkup(kb)
+                .build();
+    }
+
+    private void addProductToFilter(Long userId, String chatId, String filterName){
+
+        String productName = adminEditingProduct.get(userId);
+
+        try(Connection conn = DatabaseManager.getConnection()){
+
+            PreparedStatement getFilter = conn.prepareStatement(
+                    "SELECT id FROM filters WHERE name=?");
+
+            getFilter.setString(1, filterName);
+
+            ResultSet rs = getFilter.executeQuery();
+
+            if(rs.next()){
+
+                int filterId = rs.getInt("id");
+
+                PreparedStatement insert = conn.prepareStatement(
+                        "INSERT INTO product_filters(product_id, filter_id) " +
+                                "SELECT id, ? FROM products WHERE name=?");
+
+                insert.setInt(1, filterId);
+                insert.setString(2, productName);
+
+                insert.executeUpdate();
+            }
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
     }
 }
