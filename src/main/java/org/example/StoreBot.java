@@ -663,7 +663,7 @@ public class StoreBot extends TelegramLongPollingBot {
             // надсилаємо покупцю
             sendText(target, "📩 Відповідь консультанта:\n\n" + text);
 
-            // зберігаємо відповідь у історію
+            // зберігаємо відповідь в історію
             supportAnswers.computeIfAbsent(target, k -> new ArrayList<>())
                     .add("📨 Відповідь консультанта:\n" + text);
 
@@ -3600,7 +3600,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 // ВАЖЛИВО: обробляємо натискання «Назад» ПЕРЕД усім іншим
                 if (text != null && text.equals("Назад")) {
-                    // очищаємо всі стани і повертаємося в головне меню розробника
+                    // очищаємо всі стани й повертаємося в головне меню розробника
                     userStates.remove(userId);
                     adminEditingProduct.remove(userId);
                     adminSelectedProductsRange.remove(userId);
@@ -6594,7 +6594,7 @@ public class StoreBot extends TelegramLongPollingBot {
             stmt.setString(2, orderCode);
             stmt.setString(3, deliveryType);
 
-            // 🔹 Розподіл по полях в залежності від типу доставки
+            // 🔹 Розподіл по полях в залежності типу доставки
             String city = null;
             String address = null;
             String postOffice = null;
