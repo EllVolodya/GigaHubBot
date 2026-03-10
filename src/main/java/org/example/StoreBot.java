@@ -219,6 +219,26 @@ public class StoreBot extends TelegramLongPollingBot {
                 ? update.getMessage().getText().trim()
                 : "";
 
+        // 🔹 Створення нового фільтра
+        if ("awaiting_new_filter".equals(state)) {
+
+            if (text.equals("⬅️ Назад")) {
+                userStates.remove(userId);
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+                return;
+            }
+
+            createFilter(text.trim());
+
+            userStates.remove(userId);
+
+            sendText(chatId, "✅ Фільтр створено: " + text);
+
+            sendMessageSafely(createFiltersAdminMenu(chatId));
+
+            return;
+        }
+
         String state = userStates.get(userId);
 
         // 🗑 Видалення товару з кошику
@@ -351,19 +371,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 sendText(chatId,"❌ Введіть число.");
             }
-
-            return;
-        }
-
-        if("awaiting_filter_select".equals(userStates.get(userId))){
-
-            addProductToFilter(userId, chatId, text);
-
-            userStates.remove(userId);
-
-            sendText(chatId,"✅ Товар додано у фільтр: " + text);
-
-            sendMessageSafely(createEditMenu(chatId, userId));
 
             return;
         }
