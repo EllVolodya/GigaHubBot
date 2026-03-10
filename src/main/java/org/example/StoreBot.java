@@ -1005,6 +1005,10 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendText(chatId, "🔍 Введіть код замовлення (наприклад: 9141):");
                 }
 
+                case "⚙️ Керування фільтрами" -> {
+                    sendMessageSafely(createFiltersAdminMenu(chatId));
+                }
+
                 case "🛒 Замовити товар" -> {
 
                     userStates.remove(userId); // 🔥 ОЧИЩАЄМО СТАН ПОШУКУ
@@ -4738,6 +4742,7 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private SendMessage createDeveloperMenu(String chatId) {
+
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setResizeKeyboard(true);
 
@@ -4747,19 +4752,23 @@ public class StoreBot extends TelegramLongPollingBot {
         row1.add("🔄 Оновити каталог");
         row1.add("✏️ Редагувати товар");
         row1.add("Редагувати категорії");
-        row1.add("⭐ Додати товар у Хіт продажу");
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("🔗 Запрошувальні посилання");
-        row2.add("📜 Логирування");
-        row2.add("📝 Список онови");
+        row2.add("⭐ Додати товар у Хіт продажу");
+        row2.add("⚙️ Керування фільтрами");
         keyboard.add(row2);
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add("💬 Відгуки користувачів");
-        row3.add(new KeyboardButton(BACK_BUTTON));
+        row3.add("🔗 Запрошувальні посилання");
+        row3.add("📜 Логирування");
+        row3.add("📝 Список онови");
         keyboard.add(row3);
+
+        KeyboardRow row4 = new KeyboardRow();
+        row4.add("💬 Відгуки користувачів");
+        row4.add(new KeyboardButton(BACK_BUTTON));
+        keyboard.add(row4);
 
         markup.setKeyboard(keyboard);
 
@@ -6880,6 +6889,42 @@ public class StoreBot extends TelegramLongPollingBot {
                 .chatId(chatId)
                 .text("Оберіть фільтр:")
                 .replyMarkup(kb)
+                .build();
+    }
+
+    private SendMessage createFiltersAdminMenu(String chatId) {
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setResizeKeyboard(true);
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("➕ Додати фільтр");
+        row1.add("✏️ Редагувати фільтр");
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("🗑 Видалити фільтр");
+        row2.add("📋 Список фільтрів");
+
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add("📦 Товари у фільтрі");
+        row3.add("🧹 Очистити фільтр");
+
+        KeyboardRow row4 = new KeyboardRow();
+        row4.add("⬅️ Назад");
+
+        keyboard.add(row1);
+        keyboard.add(row2);
+        keyboard.add(row3);
+        keyboard.add(row4);
+
+        markup.setKeyboard(keyboard);
+
+        return SendMessage.builder()
+                .chatId(chatId)
+                .text("⚙️ Керування фільтрами:")
+                .replyMarkup(markup)
                 .build();
     }
 
