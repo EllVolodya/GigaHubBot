@@ -3296,12 +3296,19 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case "choose_filter_for_subcategory" -> {
-                try {
-                    addFilterToSubcategory(Long.valueOf(chatId), text);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                    sendText(chatId, "❌ Помилка при додаванні фільтра.");
-                }
+
+                String subcategory =
+                        selectedSubcategoryForFilter.get(chatId);
+
+                addFilterToSubcategory(subcategory, text);
+
+                sendText(chatId,
+                        "✅ Фільтр '" + text +
+                                "' додано до підкатегорії '" +
+                                subcategory + "'");
+
+                userStates.remove(chatId);
+                selectedSubcategoryForFilter.remove(chatId);
             }
 
             /// 🚚 Обробка вибору доставки
@@ -6987,7 +6994,19 @@ public class StoreBot extends TelegramLongPollingBot {
         List<KeyboardRow> keyboard = new ArrayList<>();
 
         CatalogSearcher searcher = new CatalogSearcher();
-        List<String> filters = searcher.getFilters();
+
+        // беремо вибрану підкатегорію
+        String subcategory = selectedSubcategoryForFilter.get(Long.valueOf(chatId));
+
+        List<String> filters =
+                searcher.getFiltersBySubcategory(subcategory);
+
+        if(filters.isEmpty()){
+            return SendMessage.builder()
+                    .chatId(chatId)
+                    .text("❌ У цій підкатегорії немає фільтрів.")
+                    .build();
+        }
 
         KeyboardRow row = new KeyboardRow();
         int count = 0;
@@ -7016,7 +7035,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         return SendMessage.builder()
                 .chatId(chatId)
-                .text("Оберіть фільтр:")
+                .text("🔎 Оберіть фільтр:")
                 .replyMarkup(kb)
                 .build();
     }
@@ -7256,18 +7275,27 @@ public class StoreBot extends TelegramLongPollingBot {
         sendFilters(chatId);
     }
 
-    private void addFilterToSubcategory(Long chatId, String filterName) throws TelegramApiException {
+    public void addFilterToSubcategory(String subcategoryName,String filterName){
 
-        String subcategory = selectedSubcategoryForFilter.get(chatId);
+        String sql = """
+        UPDATE filters
+        SET subcategory_id = (
+            SELECT id FROM subcategories WHERE name = ?
+        )
+        WHERE name = ?
+    """;
 
-        CatalogSearcher searcher = new CatalogSearcher();
+        try(Connection conn = DatabaseManager.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)){
 
-        searcher.addFilterToSubcategory(subcategory, filterName);
+            ps.setString(1, subcategoryName);
+            ps.setString(2, filterName);
 
-        sendText(chatId, "✅ Фільтр '" + filterName + "' додано до підкатегорії '" + subcategory + "'");
+            ps.executeUpdate();
 
-        userStates.remove(chatId);
-        selectedSubcategoryForFilter.remove(chatId);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
     }
 
     private void addFilter(Long userId, String chatId, String filterName) {

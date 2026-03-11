@@ -517,4 +517,34 @@ public class CatalogSearcher {
             e.printStackTrace();
         }
     }
+
+    public List<String> getFiltersBySubcategory(String subcategoryName){
+
+        List<String> filters = new ArrayList<>();
+
+        String sql = """
+        SELECT f.name
+        FROM filters f
+        JOIN subcategories s ON f.subcategory_id = s.id
+        WHERE s.name = ?
+        ORDER BY f.id
+    """;
+
+        try(Connection conn = DatabaseManager.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)){
+
+            ps.setString(1, subcategoryName);
+
+            ResultSet rs = ps.executeQuery();
+
+            while(rs.next()){
+                filters.add(rs.getString("name"));
+            }
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return filters;
+    }
 }
