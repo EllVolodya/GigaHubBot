@@ -6995,25 +6995,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
         CatalogSearcher searcher = new CatalogSearcher();
 
-        // беремо товар який редагується
-        String productName = adminEditingProduct.get(Long.valueOf(chatId));
-
-        if(productName == null){
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("❌ Товар не вибрано.")
-                    .build();
-        }
-
-        // отримуємо підкатегорію товару
-        String subcategory = searcher.getProductSubcategory(productName);
-
-        List<String> filters = searcher.getFiltersBySubcategory(subcategory);
+        // беремо ВСІ фільтри
+        List<String> filters = searcher.getFilters();
 
         if(filters.isEmpty()){
             return SendMessage.builder()
                     .chatId(chatId)
-                    .text("❌ У цій підкатегорії немає фільтрів.")
+                    .text("❌ Фільтрів немає.")
                     .build();
         }
 
