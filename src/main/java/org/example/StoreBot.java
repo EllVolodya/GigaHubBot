@@ -4606,7 +4606,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case "➕ Додати фільтр у підкатегорію" -> {
-                userStates.put(userId, "choose_subcategory_for_filter");
+                userStates.put(userId, "chooseSubcategoryForFilter");
                 sendText(chatId, "📂 Введіть назву підкатегорії, до якої потрібно додати фільтр:");
             }
 
