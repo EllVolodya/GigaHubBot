@@ -50,6 +50,7 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔹 Користувацькі стани
     private final Map<Long, String> currentCategory = new HashMap<>();
     private final Map<Long, String> currentSubcategory = new HashMap<>();
+    private Map<Long, String> currentFilter = new HashMap<>();
     private final Map<Long, Integer> productIndex = new HashMap<>();
     protected Map<Long, Map<String, Object>> lastShownProduct = new HashMap<>();
     private final Map<Long, String> userStates = new HashMap<>();
@@ -86,7 +87,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
     //Права
     private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню
-    private final List<Long> DEVELOPERS = List.of(620298889L, 1030917576L, 533570832L, 772278568L); // тут айді розробників меню
+    private final List<Long> DEVELOPERS = List.of(620298889L, 1030917576L, 533570832L); // тут айді розробників меню
     private final Long CONSULTANT_CHAT_ID = 620298889L;
 
     // 🔹 Адмінські стани
@@ -5317,15 +5318,20 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // 🔹 6. Підкатегорії
         if (currentCategory.containsKey(chatId)) {
+
             String cat = currentCategory.get(chatId);
             List<String> subcats = catalogSearcher.getSubcategories(cat);
 
             if (subcats.contains(text)) {
+
                 System.out.println("[handleText] Subcategory selected: " + text);
+
                 currentSubcategory.put(chatId, text);
                 productIndex.put(chatId, 0);
 
+                // показуємо фільтри
                 sendFilters(chatId);
+
                 return;
             }
         }
@@ -5334,12 +5340,39 @@ public class StoreBot extends TelegramLongPollingBot {
         List<String> filters = catalogSearcher.getFilters();
 
         if (filters.contains(text)) {
+
             System.out.println("[handleText] Filter selected: " + text);
-            sendProductsByFilter(chatId, text);
+
+            // ⭐ перевіряємо чи є підфільтри
+            if (catalogSearcher.hasSubfilters(text)) {
+
+                // показуємо підфільтри
+                sendSubfilters(chatId, text);
+
+            } else {
+
+                // показуємо товари
+                sendProductsByFilter(chatId, text);
+            }
+
             return;
         }
 
-        // 🔹 8. Якщо нічого не підійшло
+        // 🔹 8. Підфільтри
+        String filter = currentFilter.get(chatId);
+
+        List<String> subfilters = catalogSearcher.getSubfilters(filter);
+
+        if (subfilters.contains(text)) {
+
+            System.out.println("[handleText] Subfilter selected: " + text);
+
+            sendProductsBySubfilter(chatId, text);
+
+            return;
+        }
+
+        // 🔹 9. Якщо нічого не підійшло
             sendText(chatId, "Невідома команда 😅 Натисніть /start або виберіть із меню.");
         }
 
@@ -7205,14 +7238,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         for (String filter : filters) {
 
-            String buttonText = filter;
-
-            // ⭐ перевірка на підфільтри
-            if(hasSubfilters(filter)){
-                buttonText = filter + " ▶";
-            }
-
-            currentRow.add(buttonText);
+            currentRow.add(filter);
 
             if (currentRow.size() == 2) {
                 rows.add(currentRow);
@@ -7235,6 +7261,64 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessage(chatId, "🔎 Обери фільтр:", markup);
     }
 
+    private void sendSubfilters(Long chatId, String filterName) throws TelegramApiException {
+
+        List<String> subfilters = new ArrayList<>();
+
+        try(Connection conn = DatabaseManager.getConnection()){
+
+            PreparedStatement ps = conn.prepareStatement("""
+            SELECT sf.name
+            FROM subfilters sf
+            JOIN filters f ON sf.filter_id = f.id
+            WHERE f.name=?
+        """);
+
+            ps.setString(1, filterName);
+
+            ResultSet rs = ps.executeQuery();
+
+            while(rs.next()){
+                subfilters.add(rs.getString("name"));
+            }
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        if(subfilters.isEmpty()){
+            sendText(chatId,"❌ Підфільтрів немає.");
+            return;
+        }
+
+        List<KeyboardRow> rows = new ArrayList<>();
+        KeyboardRow row = new KeyboardRow();
+
+        for(String sub : subfilters){
+
+            row.add(sub);
+
+            if(row.size()==2){
+                rows.add(row);
+                row = new KeyboardRow();
+            }
+        }
+
+        if(!row.isEmpty()){
+            rows.add(row);
+        }
+
+        KeyboardRow back = new KeyboardRow();
+        back.add("⬅️ Назад");
+        rows.add(back);
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setKeyboard(rows);
+        markup.setResizeKeyboard(true);
+
+        sendMessage(chatId,"🔎 Обери підфільтр:",markup);
+    }
+
     private boolean hasSubfilters(String filterName){
 
         try(Connection conn = DatabaseManager.getConnection()){
@@ -7246,7 +7330,7 @@ public class StoreBot extends TelegramLongPollingBot {
             WHERE f.name=?
         """);
 
-            ps.setString(1,filterName);
+            ps.setString(1, filterName);
 
             ResultSet rs = ps.executeQuery();
 
@@ -7439,5 +7523,30 @@ public class StoreBot extends TelegramLongPollingBot {
 
         userStates.remove(userId);
         selectedFilterForSubfilter.remove(userId);
+    }
+
+    private void sendProductsBySubfilter(Long chatId, String subfilterName) {
+
+        CatalogSearcher searcher = new CatalogSearcher();
+
+        List<Map<String,Object>> products =
+                searcher.getProductsBySubfilter(subfilterName);
+
+        if(products == null || products.isEmpty()){
+            sendText(chatId,"❌ У цьому підфільтрі немає товарів.");
+            return;
+        }
+
+        // зберігаємо список товарів
+        userProductLists.put(chatId, products);
+
+        // починаємо з першого
+        productIndex.put(chatId, 0);
+
+        try {
+            showNextProduct(chatId);
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+        }
     }
 }
