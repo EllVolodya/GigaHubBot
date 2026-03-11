@@ -451,4 +451,48 @@ public class CatalogSearcher {
 
         return products;
     }
+
+    public void insertFilter(String filterName, String subcategoryName){
+
+        String sql = """
+        INSERT INTO filters (name, subcategory_id)
+        SELECT ?, s.id
+        FROM subcategories s
+        WHERE s.name = ?
+    """;
+
+        try(Connection conn = DatabaseManager.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)){
+
+            ps.setString(1, filterName);
+            ps.setString(2, subcategoryName);
+
+            ps.executeUpdate();
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public List<String> getAllSubcategories() {
+
+        List<String> subcategories = new ArrayList<>();
+
+        String sql = "SELECT name FROM subcategories ORDER BY name";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                subcategories.add(rs.getString("name"));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return subcategories;
+    }
 }

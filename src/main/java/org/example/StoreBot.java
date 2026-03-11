@@ -54,6 +54,7 @@ public class StoreBot extends TelegramLongPollingBot {
     protected Map<Long, Map<String, Object>> lastShownProduct = new HashMap<>();
     private final Map<Long, String> userStates = new HashMap<>();
     private final Map<Long, String> userState = new HashMap<>();
+    private Map<Long, String> userSelectedSubcategory = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userCart = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userOrders = new HashMap<>();
     private Map<Long, Integer> editItemIndex = new HashMap<>();
@@ -4591,27 +4592,39 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void handleCategoryManagementState(Long userId, String chatId, String text) {
+
         switch (text) {
+
             case "➕ Додати категорію" -> {
-                userStates.put(userId, "add_category"); // тут запускається твій handleAddCategory
+                userStates.put(userId, "add_category");
                 sendText(chatId, "✏️ Введіть назву нової категорії:");
             }
+
             case "➕ Додати підкатегорію" -> {
                 userStates.put(userId, "choose_category_for_sub");
                 sendText(chatId, "📂 Введіть назву категорії, до якої хочете додати нову підкатегорію:");
             }
+
+            case "➕ Додати фільтр у підкатегорію" -> {
+                userStates.put(userId, "choose_subcategory_for_filter");
+                sendText(chatId, "📂 Введіть назву підкатегорії, до якої потрібно додати фільтр:");
+            }
+
             case "✏️ Змінити назву категорії" -> {
                 userStates.put(userId, "rename_category_select");
                 sendText(chatId, "✏️ Введіть назву категорії, яку хочете змінити:");
             }
+
             case "🗑️ Видалити категорію" -> {
                 userStates.put(userId, "delete_category_select");
                 sendText(chatId, "🗑️ Введіть назву категорії, яку хочете видалити:");
             }
+
             case BACK_BUTTON -> {
                 userStates.remove(userId);
                 sendMessage(createAdminMenu(chatId));
             }
+
             default -> sendText(chatId, "🤖 Не зрозумів команду. Спробуйте ще раз.");
         }
     }
@@ -4964,21 +4977,28 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private SendMessage createCategoryAdminMenu(String chatId) {
+
         SendMessage msg = new SendMessage(chatId, "🔧 Редагування категорій:");
+
         ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
         kb.setResizeKeyboard(true);
 
         KeyboardRow r1 = new KeyboardRow();
-        r1.add(new KeyboardButton("➕ Додати категорію"));// стартує стан add_category
+        r1.add(new KeyboardButton("➕ Додати категорію"));
         r1.add(new KeyboardButton("➕ Додати підкатегорію"));
-        r1.add(new KeyboardButton("✏️ Змінити назву категорії"));
 
         KeyboardRow r2 = new KeyboardRow();
-        r2.add(new KeyboardButton("🗑️ Видалити категорію"));
-        r2.add(new KeyboardButton(BACK_BUTTON));
+        r2.add(new KeyboardButton("➕ Додати фільтр у підкатегорію"));
+        r2.add(new KeyboardButton("✏️ Змінити назву категорії"));
 
-        kb.setKeyboard(List.of(r1, r2));
+        KeyboardRow r3 = new KeyboardRow();
+        r3.add(new KeyboardButton("🗑️ Видалити категорію"));
+        r3.add(new KeyboardButton(BACK_BUTTON));
+
+        kb.setKeyboard(List.of(r1, r2, r3));
+
         msg.setReplyMarkup(kb);
+
         return msg;
     }
 
@@ -7151,5 +7171,40 @@ public class StoreBot extends TelegramLongPollingBot {
         sendText(chatId,sb.toString());
 
         userProductLists.put(chatId,products);
+    }
+
+    private void chooseSubcategoryForFilter(Long userId, String chatId, String text) {
+
+        CatalogSearcher searcher = new CatalogSearcher();
+
+        // перевіряємо чи існує підкатегорія
+        List<String> subcategories = searcher.getAllSubcategories();
+
+        if (!subcategories.contains(text)) {
+            sendText(chatId, "❌ Такої підкатегорії не існує. Спробуйте ще раз.");
+            return;
+        }
+
+        // зберігаємо вибрану підкатегорію
+        userSelectedSubcategory.put(userId, text);
+
+        // змінюємо стан
+        userStates.put(userId, "add_filter_name");
+
+        sendText(chatId, "✏️ Введіть назву нового фільтра:");
+    }
+
+    private void addFilter(Long userId, String chatId, String filterName) {
+
+        String subcategory = userSelectedSubcategory.get(userId);
+
+        CatalogSearcher searcher = new CatalogSearcher();
+
+        searcher.insertFilter(filterName, subcategory);
+
+        userStates.remove(userId);
+        userSelectedSubcategory.remove(userId);
+
+        sendText(chatId, "✅ Фільтр успішно додано.");
     }
 }
