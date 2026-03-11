@@ -7088,34 +7088,42 @@ public class StoreBot extends TelegramLongPollingBot {
     private void sendFilters(Long chatId) throws TelegramApiException {
 
         CatalogSearcher searcher = new CatalogSearcher();
-
         List<String> filters = searcher.getFilters();
 
-        if(filters.isEmpty()){
-            sendText(chatId,"❌ Фільтрів немає.");
+        if (filters.isEmpty()) {
+            sendText(chatId, "❌ Фільтрів немає.");
             return;
         }
 
         List<KeyboardRow> rows = new ArrayList<>();
 
-        for(String filter : filters){
+        KeyboardRow currentRow = new KeyboardRow();
 
-            KeyboardRow row = new KeyboardRow();
-            row.add(filter);
+        for (int i = 0; i < filters.size(); i++) {
 
-            rows.add(row);
+            currentRow.add(filters.get(i));
+
+            // кожні 2 кнопки створюємо новий рядок
+            if (currentRow.size() == 2) {
+                rows.add(currentRow);
+                currentRow = new KeyboardRow();
+            }
+        }
+
+        // якщо залишилась одна кнопка
+        if (!currentRow.isEmpty()) {
+            rows.add(currentRow);
         }
 
         KeyboardRow back = new KeyboardRow();
         back.add("⬅️ Назад");
-
         rows.add(back);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(rows);
         markup.setResizeKeyboard(true);
 
-        sendMessage(chatId,"🔎 Обери фільтр:",markup);
+        sendMessage(chatId, "🔎 Обери фільтр:", markup);
     }
 
     private void sendProductsByFilter(Long chatId,String filterName) throws TelegramApiException {
