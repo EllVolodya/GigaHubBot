@@ -5253,14 +5253,22 @@ public class StoreBot extends TelegramLongPollingBot {
                 productIndex.put(chatId, 0);
 
                 sendFilters(chatId);
-
                 return;
             }
         }
 
-        // 🔹 7. Якщо нічого не підійшло — повідомлення
-        sendText(chatId, "Невідома команда 😅 Натисніть /start або виберіть із меню.");
-    }
+        // 🔹 7. Фільтри
+        List<String> filters = catalogSearcher.getFilters();
+
+        if (filters.contains(text)) {
+            System.out.println("[handleText] Filter selected: " + text);
+            sendProductsByFilter(chatId, text);
+            return;
+        }
+
+        // 🔹 8. Якщо нічого не підійшло
+            sendText(chatId, "Невідома команда 😅 Натисніть /start або виберіть із меню.");
+        }
 
     // --- Допоміжні методи для надсилання повідомлень ---
     private void sendText(Long chatId, String text) {
