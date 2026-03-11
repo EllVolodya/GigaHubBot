@@ -3286,6 +3286,24 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
+            case "choose_subcategory_for_filter" -> {
+                try {
+                    chooseSubcategoryForFilter(Long.valueOf(chatId), text);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при виборі підкатегорії.");
+                }
+            }
+
+            case "choose_filter_for_subcategory" -> {
+                try {
+                    addFilterToSubcategory(Long.valueOf(chatId), text);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при додаванні фільтра.");
+                }
+            }
+
             /// 🚚 Обробка вибору доставки
             case "awaiting_delivery_choice" -> {
 
@@ -7220,35 +7238,36 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessage(chatId,"📂 Обери підкатегорію:",markup);
     }
 
-    private void chooseSubcategoryForFilter(Long chatId,String text) throws TelegramApiException {
+    private void chooseSubcategoryForFilter(Long chatId, String text) throws TelegramApiException {
 
         CatalogSearcher searcher = new CatalogSearcher();
 
         List<String> subcategories = searcher.getAllSubcategories();
 
-        if(!subcategories.contains(text)){
-            sendText(chatId,"❌ Такої підкатегорії не існує.");
+        if (!subcategories.contains(text)) {
+            sendText(chatId, "❌ Такої підкатегорії не існує.");
             return;
         }
 
-        selectedSubcategoryForFilter.put(chatId,text);
+        selectedSubcategoryForFilter.put(chatId, text);
 
-        userStates.put(chatId,"choose_filter_for_subcategory");
+        userStates.put(chatId, "choose_filter_for_subcategory");
 
         sendFilters(chatId);
     }
 
-    private void addFilterToSubcategory(Long chatId,String filterName) throws TelegramApiException {
+    private void addFilterToSubcategory(Long chatId, String filterName) throws TelegramApiException {
 
         String subcategory = selectedSubcategoryForFilter.get(chatId);
 
         CatalogSearcher searcher = new CatalogSearcher();
 
-        searcher.addFilterToSubcategory(subcategory,filterName);
+        searcher.addFilterToSubcategory(subcategory, filterName);
 
-        sendText(chatId,"✅ Фільтр '"+filterName+"' додано до підкатегорії '"+subcategory+"'");
+        sendText(chatId, "✅ Фільтр '" + filterName + "' додано до підкатегорії '" + subcategory + "'");
 
         userStates.remove(chatId);
+        selectedSubcategoryForFilter.remove(chatId);
     }
 
     private void addFilter(Long userId, String chatId, String filterName) {
