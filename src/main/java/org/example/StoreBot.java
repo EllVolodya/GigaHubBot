@@ -3297,8 +3297,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "choose_filter_for_subcategory" -> {
 
-                String subcategory =
-                        selectedSubcategoryForFilter.get(chatId);
+                String subcategory = selectedSubcategoryForFilter.get(chatId);
+
+                System.out.println("DEBUG SUBCATEGORY: " + subcategory);
 
                 addFilterToSubcategory(subcategory, text);
 
@@ -3308,7 +3309,6 @@ public class StoreBot extends TelegramLongPollingBot {
                                 subcategory + "'");
 
                 userStates.remove(chatId);
-                selectedSubcategoryForFilter.remove(chatId);
             }
 
             /// 🚚 Обробка вибору доставки
@@ -7268,15 +7268,15 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 ЗБЕРІГАЄМО ПІДКАТЕГОРІЮ
+        // 🔥 ЗБЕРІГАЄМО ПІДКАТЕГОРІЮ
         selectedSubcategoryForFilter.put(chatId, text);
 
         userStates.put(chatId, "choose_filter_for_subcategory");
 
-        sendFilters(chatId);
+        sendMessage(createFilterSelectMenu(chatId.toString()));
     }
 
-    public void addFilterToSubcategory(String subcategoryName, String filterName){
+    public void addFilterToSubcategory(String subcategoryName,String filterName){
 
         String sql = """
         UPDATE filters
