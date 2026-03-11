@@ -547,4 +547,31 @@ public class CatalogSearcher {
 
         return filters;
     }
+
+    public String getProductSubcategory(String productName){
+
+        String sql = """
+        SELECT s.name
+        FROM products p
+        JOIN subcategories s ON p.subcategory_id = s.id
+        WHERE p.name = ?
+    """;
+
+        try(Connection conn = DatabaseManager.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)){
+
+            ps.setString(1, productName);
+
+            ResultSet rs = ps.executeQuery();
+
+            if(rs.next()){
+                return rs.getString("name");
+            }
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return null;
+    }
 }
