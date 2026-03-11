@@ -57,6 +57,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private Map<Long, String> userSelectedSubcategory = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userCart = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userOrders = new HashMap<>();
+    private final Map<Long, String> selectedSubcategoryForFilter = new HashMap<>();
     private Map<Long, Integer> editItemIndex = new HashMap<>();
     private final Map<Long, Boolean> waitingForQuantity = new HashMap<>();
     private final Map<Long, Boolean> waitingForCatalogSearch = new HashMap<>();
@@ -4606,8 +4607,14 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case "➕ Додати фільтр у підкатегорію" -> {
-                userStates.put(userId, "chooseSubcategoryForFilter");
-                sendText(chatId, "📂 Введіть назву підкатегорії, до якої потрібно додати фільтр:");
+
+                userStates.put(userId,"choose_subcategory_for_filter");
+
+                try {
+                    sendSubcategoriesForFilter(Long.valueOf(chatId));
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
             }
 
             case "✏️ Змінити назву категорії" -> {
@@ -7173,25 +7180,75 @@ public class StoreBot extends TelegramLongPollingBot {
         userProductLists.put(chatId,products);
     }
 
-    private void chooseSubcategoryForFilter(Long userId, String chatId, String text) {
+    private void sendSubcategoriesForFilter(Long chatId) throws TelegramApiException {
 
         CatalogSearcher searcher = new CatalogSearcher();
 
-        // перевіряємо чи існує підкатегорія
         List<String> subcategories = searcher.getAllSubcategories();
 
-        if (!subcategories.contains(text)) {
-            sendText(chatId, "❌ Такої підкатегорії не існує. Спробуйте ще раз.");
+        if(subcategories.isEmpty()){
+            sendText(chatId,"❌ Підкатегорій немає.");
             return;
         }
 
-        // зберігаємо вибрану підкатегорію
-        userSelectedSubcategory.put(userId, text);
+        List<KeyboardRow> rows = new ArrayList<>();
+        KeyboardRow row = new KeyboardRow();
 
-        // змінюємо стан
-        userStates.put(userId, "add_filter_name");
+        for(int i=0;i<subcategories.size();i++){
 
-        sendText(chatId, "✏️ Введіть назву нового фільтра:");
+            row.add(subcategories.get(i));
+
+            if(row.size() == 2){
+                rows.add(row);
+                row = new KeyboardRow();
+            }
+        }
+
+        if(!row.isEmpty()){
+            rows.add(row);
+        }
+
+        KeyboardRow back = new KeyboardRow();
+        back.add("⬅️ Назад");
+
+        rows.add(back);
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setKeyboard(rows);
+        markup.setResizeKeyboard(true);
+
+        sendMessage(chatId,"📂 Обери підкатегорію:",markup);
+    }
+
+    private void chooseSubcategoryForFilter(Long chatId,String text) throws TelegramApiException {
+
+        CatalogSearcher searcher = new CatalogSearcher();
+
+        List<String> subcategories = searcher.getAllSubcategories();
+
+        if(!subcategories.contains(text)){
+            sendText(chatId,"❌ Такої підкатегорії не існує.");
+            return;
+        }
+
+        selectedSubcategoryForFilter.put(chatId,text);
+
+        userStates.put(chatId,"choose_filter_for_subcategory");
+
+        sendFilters(chatId);
+    }
+
+    private void addFilterToSubcategory(Long chatId,String filterName) throws TelegramApiException {
+
+        String subcategory = selectedSubcategoryForFilter.get(chatId);
+
+        CatalogSearcher searcher = new CatalogSearcher();
+
+        searcher.addFilterToSubcategory(subcategory,filterName);
+
+        sendText(chatId,"✅ Фільтр '"+filterName+"' додано до підкатегорії '"+subcategory+"'");
+
+        userStates.remove(chatId);
     }
 
     private void addFilter(Long userId, String chatId, String filterName) {

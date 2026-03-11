@@ -495,4 +495,26 @@ public class CatalogSearcher {
 
         return subcategories;
     }
+
+    public void addFilterToSubcategory(String subcategoryName,String filterName){
+
+        String sql = """
+    INSERT INTO subcategory_filters(subcategory_id,filter_id)
+    SELECT s.id,f.id
+    FROM subcategories s,filters f
+    WHERE s.name=? AND f.name=?
+    """;
+
+        try(Connection conn = DatabaseManager.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)){
+
+            ps.setString(1,subcategoryName);
+            ps.setString(2,filterName);
+
+            ps.executeUpdate();
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
 }
