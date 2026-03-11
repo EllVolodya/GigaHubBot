@@ -7115,37 +7115,56 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    //Додати товар фільтр
+    // Додати товар у фільтр
     private void addProductToFilter(Long userId, String chatId, String filterName) {
 
         String productName = adminEditingProduct.get(userId);
 
+        if (productName == null) {
+            sendText(chatId, "❌ Товар не вибрано.");
+            return;
+        }
+
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            // отримуємо id фільтра
-            PreparedStatement getFilter = conn.prepareStatement(
-                    "SELECT id FROM filters WHERE name=?");
+            // 1️⃣ Отримуємо id фільтра
+            String filterSql = "SELECT id FROM filters WHERE name=?";
 
-            getFilter.setString(1, filterName);
+            try (PreparedStatement getFilter = conn.prepareStatement(filterSql)) {
 
-            ResultSet rs = getFilter.executeQuery();
+                getFilter.setString(1, filterName);
 
-            if (rs.next()) {
+                try (ResultSet rs = getFilter.executeQuery()) {
 
-                int filterId = rs.getInt("id");
+                    if (!rs.next()) {
+                        sendText(chatId, "❌ Фільтр не знайдено.");
+                        return;
+                    }
 
-                // оновлюємо товар
-                PreparedStatement update = conn.prepareStatement(
-                        "UPDATE products SET filter_id=? WHERE name=?");
+                    int filterId = rs.getInt("id");
 
-                update.setInt(1, filterId);
-                update.setString(2, productName);
+                    // 2️⃣ Оновлюємо товар
+                    String updateSql = "UPDATE products SET filter_id=? WHERE name=?";
 
-                update.executeUpdate();
+                    try (PreparedStatement update = conn.prepareStatement(updateSql)) {
+
+                        update.setInt(1, filterId);
+                        update.setString(2, productName);
+
+                        int rows = update.executeUpdate();
+
+                        if (rows > 0) {
+                            sendText(chatId, "✅ Товар додано у фільтр: " + filterName);
+                        } else {
+                            sendText(chatId, "❌ Товар не знайдено.");
+                        }
+                    }
+                }
             }
 
         } catch (Exception e) {
             e.printStackTrace();
+            sendText(chatId, "❌ Помилка при додаванні товару у фільтр.");
         }
     }
 
