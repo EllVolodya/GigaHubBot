@@ -7201,21 +7201,25 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         List<KeyboardRow> rows = new ArrayList<>();
-
         KeyboardRow currentRow = new KeyboardRow();
 
-        for (int i = 0; i < filters.size(); i++) {
+        for (String filter : filters) {
 
-            currentRow.add(filters.get(i));
+            String buttonText = filter;
 
-            // кожні 2 кнопки створюємо новий рядок
+            // ⭐ перевірка на підфільтри
+            if(hasSubfilters(filter)){
+                buttonText = filter + " ▶";
+            }
+
+            currentRow.add(buttonText);
+
             if (currentRow.size() == 2) {
                 rows.add(currentRow);
                 currentRow = new KeyboardRow();
             }
         }
 
-        // якщо залишилась одна кнопка
         if (!currentRow.isEmpty()) {
             rows.add(currentRow);
         }
@@ -7229,6 +7233,32 @@ public class StoreBot extends TelegramLongPollingBot {
         markup.setResizeKeyboard(true);
 
         sendMessage(chatId, "🔎 Обери фільтр:", markup);
+    }
+
+    private boolean hasSubfilters(String filterName){
+
+        try(Connection conn = DatabaseManager.getConnection()){
+
+            PreparedStatement ps = conn.prepareStatement("""
+            SELECT COUNT(*)
+            FROM subfilters sf
+            JOIN filters f ON sf.filter_id = f.id
+            WHERE f.name=?
+        """);
+
+            ps.setString(1,filterName);
+
+            ResultSet rs = ps.executeQuery();
+
+            if(rs.next()){
+                return rs.getInt(1) > 0;
+            }
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return false;
     }
 
     private void sendProductsByFilter(Long chatId,String filterName) throws TelegramApiException {
