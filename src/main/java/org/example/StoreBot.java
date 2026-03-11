@@ -58,6 +58,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, List<Map<String, Object>>> userCart = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userOrders = new HashMap<>();
     private final Map<Long, String> selectedSubcategoryForFilter = new HashMap<>();
+    private Map<Long,String> selectedFilterForSubfilter = new HashMap<>();
     private Map<Long, Integer> editItemIndex = new HashMap<>();
     private final Map<Long, Boolean> waitingForQuantity = new HashMap<>();
     private final Map<Long, Boolean> waitingForCatalogSearch = new HashMap<>();
@@ -1041,6 +1042,12 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "➕ Додати фільтр" -> {
                     userStates.put(userId, "awaiting_new_filter");
                     sendText(chatId, "✏️ Введіть назву нового фільтра:");
+                }
+
+                case "➕ Додати підфільтр" -> {
+                    userStates.put(userId, "awaiting_filter_for_subfilter");
+                    sendMessageSafely(createFilterSelectMenu(chatId));
+                    return;
                 }
 
                 case "✏️ Редагувати фільтр" -> {
@@ -3293,6 +3300,20 @@ public class StoreBot extends TelegramLongPollingBot {
                     e.printStackTrace();
                     sendText(chatId, "❌ Помилка при виборі підкатегорії.");
                 }
+            }
+
+            case "awaiting_filter_for_subfilter" -> {
+
+                chooseFilterForSubfilter(userId, chatId, text);
+
+                return;
+            }
+
+            case "awaiting_subfilter_name" -> {
+
+                createSubfilter(userId, chatId, text);
+
+                return;
             }
 
             case "choose_filter_for_subcategory" -> {
@@ -7046,23 +7067,27 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row1 = new KeyboardRow();
         row1.add("➕ Додати фільтр");
-        row1.add("✏️ Редагувати фільтр");
+        row1.add("➕ Додати підфільтр");   // ⭐ нова кнопка
 
         KeyboardRow row2 = new KeyboardRow();
+        row2.add("✏️ Редагувати фільтр");
         row2.add("🗑 Видалити фільтр");
-        row2.add("📋 Список фільтрів");
 
         KeyboardRow row3 = new KeyboardRow();
+        row3.add("📋 Список фільтрів");
         row3.add("📦 Товари у фільтрі");
-        row3.add("🧹 Очистити фільтр");
 
         KeyboardRow row4 = new KeyboardRow();
-        row4.add(BACK_BUTTON);
+        row4.add("🧹 Очистити фільтр");
+
+        KeyboardRow row5 = new KeyboardRow();
+        row5.add(BACK_BUTTON);
 
         keyboard.add(row1);
         keyboard.add(row2);
         keyboard.add(row3);
         keyboard.add(row4);
+        keyboard.add(row5);
 
         markup.setKeyboard(keyboard);
 
@@ -7327,5 +7352,62 @@ public class StoreBot extends TelegramLongPollingBot {
         userSelectedSubcategory.remove(userId);
 
         sendText(chatId, "✅ Фільтр успішно додано.");
+    }
+
+    private void chooseFilterForSubfilter(Long userId, String chatId, String filterName){
+
+        CatalogSearcher searcher = new CatalogSearcher();
+
+        List<String> filters = searcher.getFilters();
+
+        if(!filters.contains(filterName)){
+            sendText(chatId,"❌ Фільтр не знайдено.");
+            return;
+        }
+
+        selectedFilterForSubfilter.put(userId, filterName);
+
+        userStates.put(userId,"awaiting_subfilter_name");
+
+        sendText(chatId,"✏️ Введіть назву підфільтра:");
+    }
+
+    private void createSubfilter(Long userId, String chatId, String subfilterName){
+
+        String filterName = selectedFilterForSubfilter.get(userId);
+
+        try(Connection conn = DatabaseManager.getConnection()){
+
+            PreparedStatement getFilter = conn.prepareStatement(
+                    "SELECT id FROM filters WHERE name=?");
+
+            getFilter.setString(1,filterName);
+
+            ResultSet rs = getFilter.executeQuery();
+
+            if(rs.next()){
+
+                int filterId = rs.getInt("id");
+
+                PreparedStatement insert = conn.prepareStatement(
+                        "INSERT INTO subfilters(name,filter_id) VALUES(?,?)");
+
+                insert.setString(1,subfilterName);
+                insert.setInt(2,filterId);
+
+                insert.executeUpdate();
+
+                sendText(chatId,
+                        "✅ Підфільтр '"+subfilterName+
+                                "' додано до фільтра '"+filterName+"'");
+
+            }
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        userStates.remove(userId);
+        selectedFilterForSubfilter.remove(userId);
     }
 }
