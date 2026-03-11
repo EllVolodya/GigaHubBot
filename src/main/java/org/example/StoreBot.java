@@ -7268,6 +7268,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🔹 ЗБЕРІГАЄМО ПІДКАТЕГОРІЮ
         selectedSubcategoryForFilter.put(chatId, text);
 
         userStates.put(chatId, "choose_filter_for_subcategory");
@@ -7275,7 +7276,7 @@ public class StoreBot extends TelegramLongPollingBot {
         sendFilters(chatId);
     }
 
-    public void addFilterToSubcategory(String subcategoryName,String filterName){
+    public void addFilterToSubcategory(String subcategoryName, String filterName){
 
         String sql = """
         UPDATE filters
