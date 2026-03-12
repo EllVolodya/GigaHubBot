@@ -7260,54 +7260,63 @@ public class StoreBot extends TelegramLongPollingBot {
         if (page < 0) page = 0;
         if (page >= totalPages) page = totalPages - 1;
 
+        filterPage.put(chatId, page);
+
         int start = page * pageSize;
         int end = Math.min(start + pageSize, filters.size());
 
         List<KeyboardRow> rows = new ArrayList<>();
-        KeyboardRow currentRow = new KeyboardRow();
+        KeyboardRow row = new KeyboardRow();
 
         for (int i = start; i < end; i++) {
 
             String filter = filters.get(i);
-            if (filter == null || filter.trim().isEmpty()) continue;
 
-            currentRow.add(filter);
+            if (filter == null) continue;
 
-            if (currentRow.size() == 2) {
-                rows.add(currentRow);
-                currentRow = new KeyboardRow();
+            // 🔹 обрізаємо довгі назви
+            if (filter.length() > 25) {
+                filter = filter.substring(0, 25);
+            }
+
+            row.add(filter);
+
+            if (row.size() == 2) {
+                rows.add(row);
+                row = new KeyboardRow();
             }
         }
 
-        if (!currentRow.isEmpty()) {
-            rows.add(currentRow);
+        if (!row.isEmpty()) {
+            rows.add(row);
         }
 
-        // 🔹 Кнопки навігації
-        KeyboardRow navigation = new KeyboardRow();
+        // 🔹 навігація
+        KeyboardRow nav = new KeyboardRow();
 
         if (page > 0) {
-            navigation.add("⬅️ Попередні");
+            nav.add("⬅️ Попередні");
         }
 
         if (page < totalPages - 1) {
-            navigation.add("➡️ Далі");
+            nav.add("➡️ Далі");
         }
 
-        if (!navigation.isEmpty()) {
-            rows.add(navigation);
+        if (!nav.isEmpty()) {
+            rows.add(nav);
         }
 
-        // 🔹 Кнопка назад
-        KeyboardRow backRow = new KeyboardRow();
-        backRow.add("⬅️ Назад");
-        rows.add(backRow);
+        KeyboardRow back = new KeyboardRow();
+        back.add("🔙 Назад");
+        rows.add(back);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(rows);
         markup.setResizeKeyboard(true);
 
-        sendMessage(chatId, "🔎 Обери фільтр (" + (page + 1) + "/" + totalPages + "):", markup);
+        sendMessage(chatId,
+                "🔎 Обери фільтр (" + (page + 1) + "/" + totalPages + "):",
+                markup);
     }
 
     private void sendSubfilters(Long chatId, String filterName) throws TelegramApiException {
