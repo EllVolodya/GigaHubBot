@@ -7606,8 +7606,14 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private void chooseFilterForSubfilter(Long userId, String chatId, String filterName){
 
-        CatalogSearcher searcher = new CatalogSearcher();
+        // 🔹 ІГНОРУЄМО кнопки пагінації
+        if(filterName.equals("➡️ Далі") ||
+                filterName.equals("⬅️ Попередні") ||
+                filterName.equals("⬅️ Назад")){
+            return;
+        }
 
+        CatalogSearcher searcher = new CatalogSearcher();
         List<String> filters = searcher.getFilters();
 
         if(!filters.contains(filterName)){
