@@ -7077,54 +7077,47 @@ public class StoreBot extends TelegramLongPollingBot {
         return filters;
     }
 
-    private SendMessage createFilterSelectMenu(String chatId){
-
-        ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
-        kb.setResizeKeyboard(true);
-
-        List<KeyboardRow> keyboard = new ArrayList<>();
+    private SendMessage createFilterSelectMenu(String chatId) {
 
         CatalogSearcher searcher = new CatalogSearcher();
-
-        // беремо ВСІ фільтри
         List<String> filters = searcher.getFilters();
 
-        if(filters.isEmpty()){
-            return SendMessage.builder()
-                    .chatId(chatId)
-                    .text("❌ Фільтрів немає.")
-                    .build();
-        }
-
+        List<KeyboardRow> rows = new ArrayList<>();
         KeyboardRow row = new KeyboardRow();
+
         int count = 0;
 
-        for(String filter : filters){
+        for (String filter : filters) {
 
             row.add(filter);
             count++;
 
-            if(count == 2){
-                keyboard.add(row);
+            if (count == 2) {
+                rows.add(row);
                 row = new KeyboardRow();
                 count = 0;
             }
+
+            // 🔴 ОБМЕЖЕННЯ TELEGRAM
+            if (rows.size() >= 20) break;
         }
 
-        if(!row.isEmpty()){
-            keyboard.add(row);
+        if (!row.isEmpty()) {
+            rows.add(row);
         }
 
-        KeyboardRow backRow = new KeyboardRow();
-        backRow.add("⬅️ Назад");
-        keyboard.add(backRow);
+        KeyboardRow back = new KeyboardRow();
+        back.add("⬅️ Назад");
+        rows.add(back);
 
-        kb.setKeyboard(keyboard);
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setKeyboard(rows);
+        markup.setResizeKeyboard(true);
 
         return SendMessage.builder()
                 .chatId(chatId)
                 .text("🔎 Оберіть фільтр:")
-                .replyMarkup(kb)
+                .replyMarkup(markup)
                 .build();
     }
 
