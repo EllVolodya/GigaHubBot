@@ -7223,21 +7223,32 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    private void sendFilters(Long chatId, int page) throws TelegramApiException {
+    private void sendFilters(Long chatId) throws TelegramApiException {
 
         CatalogSearcher searcher = new CatalogSearcher();
         List<String> filters = searcher.getFilters();
 
-        int pageSize = 20;
-        int start = page * pageSize;
-        int end = Math.min(start + pageSize, filters.size());
+        if (filters == null || filters.isEmpty()) {
+            sendText(chatId, "❌ Фільтрів немає.");
+            return;
+        }
+
+        // 🔹 Telegram має ліміт на клавіатуру, тому обмежимо кількість
+        int maxButtons = 40;
+        if (filters.size() > maxButtons) {
+            filters = filters.subList(0, maxButtons);
+        }
 
         List<KeyboardRow> rows = new ArrayList<>();
         KeyboardRow currentRow = new KeyboardRow();
 
-        for (int i = start; i < end; i++) {
+        for (String filter : filters) {
 
-            currentRow.add(filters.get(i));
+            if (filter == null || filter.trim().isEmpty()) {
+                continue;
+            }
+
+            currentRow.add(filter);
 
             if (currentRow.size() == 2) {
                 rows.add(currentRow);
@@ -7249,21 +7260,15 @@ public class StoreBot extends TelegramLongPollingBot {
             rows.add(currentRow);
         }
 
-        KeyboardRow nav = new KeyboardRow();
-
-        if (page > 0) nav.add("⬅️ Попередні");
-
-        if (end < filters.size()) nav.add("➡️ Далі");
-
-        if (!nav.isEmpty()) rows.add(nav);
-
-        KeyboardRow back = new KeyboardRow();
-        back.add("⬅️ Назад");
-        rows.add(back);
+        // 🔹 Кнопка назад
+        KeyboardRow backRow = new KeyboardRow();
+        backRow.add("⬅️ Назад");
+        rows.add(backRow);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(rows);
         markup.setResizeKeyboard(true);
+        markup.setSelective(true);
 
         sendMessage(chatId, "🔎 Обери фільтр:", markup);
     }
