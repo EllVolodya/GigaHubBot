@@ -105,6 +105,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, String> adminSearchSource = new HashMap<>();  // джерело пошуку для кожного користувача
     private final Map<Long, String> adminSearchKeyword = new HashMap<>(); // ключове слово для пошуку
     private final Map<String, Object> tempStorage = new HashMap<>();
+    private Map<Long, Integer> filterPage = new HashMap<>();
 
     private final CatalogSearcher catalogSearcher = new CatalogSearcher();
     protected Map<Long, List<Map<String, Object>>> searchResults = new HashMap<>();
@@ -5306,6 +5307,26 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if (text.equals("➡️ Далі")) {
+
+            int page = filterPage.getOrDefault(chatId, 0) + 1;
+            filterPage.put(chatId, page);
+
+            sendFilters(chatId, page);
+            return;
+        }
+
+        if (text.equals("⬅️ Попередні")) {
+
+            int page = filterPage.getOrDefault(chatId, 0) - 1;
+            if (page < 0) page = 0;
+
+            filterPage.put(chatId, page);
+
+            sendFilters(chatId, page);
+            return;
+        }
+
         // 🔹 5. Категорії
         List<String> categories = catalogSearcher.getCategories();
         if (categories.contains(text)) {
@@ -5330,7 +5351,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 productIndex.put(chatId, 0);
 
                 // показуємо фільтри
-                sendFilters(chatId);
+                sendFilters(chatId, 0);
 
                 return;
             }
@@ -7223,7 +7244,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    private void sendFilters(Long chatId) throws TelegramApiException {
+    private void sendFilters(Long chatId, int page) throws TelegramApiException {
 
         CatalogSearcher searcher = new CatalogSearcher();
         List<String> filters = searcher.getFilters();
@@ -7233,20 +7254,22 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 Telegram має ліміт на клавіатуру, тому обмежимо кількість
-        int maxButtons = 40;
-        if (filters.size() > maxButtons) {
-            filters = filters.subList(0, maxButtons);
-        }
+        int pageSize = 20;
+        int totalPages = (int) Math.ceil((double) filters.size() / pageSize);
+
+        if (page < 0) page = 0;
+        if (page >= totalPages) page = totalPages - 1;
+
+        int start = page * pageSize;
+        int end = Math.min(start + pageSize, filters.size());
 
         List<KeyboardRow> rows = new ArrayList<>();
         KeyboardRow currentRow = new KeyboardRow();
 
-        for (String filter : filters) {
+        for (int i = start; i < end; i++) {
 
-            if (filter == null || filter.trim().isEmpty()) {
-                continue;
-            }
+            String filter = filters.get(i);
+            if (filter == null || filter.trim().isEmpty()) continue;
 
             currentRow.add(filter);
 
@@ -7260,6 +7283,21 @@ public class StoreBot extends TelegramLongPollingBot {
             rows.add(currentRow);
         }
 
+        // 🔹 Кнопки навігації
+        KeyboardRow navigation = new KeyboardRow();
+
+        if (page > 0) {
+            navigation.add("⬅️ Попередні");
+        }
+
+        if (page < totalPages - 1) {
+            navigation.add("➡️ Далі");
+        }
+
+        if (!navigation.isEmpty()) {
+            rows.add(navigation);
+        }
+
         // 🔹 Кнопка назад
         KeyboardRow backRow = new KeyboardRow();
         backRow.add("⬅️ Назад");
@@ -7268,9 +7306,8 @@ public class StoreBot extends TelegramLongPollingBot {
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(rows);
         markup.setResizeKeyboard(true);
-        markup.setSelective(true);
 
-        sendMessage(chatId, "🔎 Обери фільтр:", markup);
+        sendMessage(chatId, "🔎 Обери фільтр (" + (page + 1) + "/" + totalPages + "):", markup);
     }
 
     private void sendSubfilters(Long chatId, String filterName) throws TelegramApiException {
