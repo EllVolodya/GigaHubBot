@@ -5412,36 +5412,14 @@ public class StoreBot extends TelegramLongPollingBot {
 
             if (markup != null && markup.getKeyboard() != null) {
 
-                List<KeyboardRow> safeRows = new ArrayList<>();
-                int buttonCount = 0;
-                int maxButtons = 40;
+                int rows = markup.getKeyboard().size();
+                int buttons = 0;
 
-                for (KeyboardRow row : markup.getKeyboard()) {
-
-                    if (buttonCount >= maxButtons) break;
-
-                    KeyboardRow safeRow = new KeyboardRow();
-
-                    for (KeyboardButton btn : row) {
-
-                        if (buttonCount >= maxButtons) break;
-
-                        String t = btn.getText();
-
-                        if (t.length() > 25) {
-                            t = t.substring(0, 25);
-                        }
-
-                        safeRow.add(t);
-                        buttonCount++;
-                    }
-
-                    if (!safeRow.isEmpty()) {
-                        safeRows.add(safeRow);
-                    }
+                for (KeyboardRow r : markup.getKeyboard()) {
+                    buttons += r.size();
                 }
 
-                markup.setKeyboard(safeRows);
+                System.out.println("[DEBUG] Rows: " + rows + " Buttons: " + buttons);
             }
 
             SendMessage msg = SendMessage.builder()
