@@ -5368,7 +5368,7 @@ public class StoreBot extends TelegramLongPollingBot {
             if (catalogSearcher.hasSubfilters(text)) {
 
                 // показуємо підфільтри
-                sendSubfilters(chatId, text);
+                sendSubfilters(chatId, currentFilter.get(chatId), 0);
 
             } else {
 
@@ -7319,17 +7319,17 @@ public class StoreBot extends TelegramLongPollingBot {
                 markup);
     }
 
-    private void sendSubfilters(Long chatId, String filterName) throws TelegramApiException {
+    private void sendSubfilters(Long chatId, String filterName, int page) throws TelegramApiException {
 
         List<String> subfilters = new ArrayList<>();
 
         try(Connection conn = DatabaseManager.getConnection()){
 
             PreparedStatement ps = conn.prepareStatement("""
-            SELECT sf.name
-            FROM subfilters sf
-            JOIN filters f ON sf.filter_id = f.id
-            WHERE f.name=?
+        SELECT sf.name
+        FROM subfilters sf
+        JOIN filters f ON sf.filter_id = f.id
+        WHERE f.name=?
         """);
 
             ps.setString(1, filterName);
@@ -7349,10 +7349,25 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        int pageSize = 20;
+        int totalPages = (int)Math.ceil((double)subfilters.size()/pageSize);
+
+        if(page < 0) page = 0;
+        if(page >= totalPages) page = totalPages - 1;
+
+        int start = page * pageSize;
+        int end = Math.min(start + pageSize, subfilters.size());
+
         List<KeyboardRow> rows = new ArrayList<>();
         KeyboardRow row = new KeyboardRow();
 
-        for(String sub : subfilters){
+        for(int i = start; i < end; i++){
+
+            String sub = subfilters.get(i);
+
+            if(sub.length() > 25){
+                sub = sub.substring(0,25);
+            }
 
             row.add(sub);
 
@@ -7366,6 +7381,20 @@ public class StoreBot extends TelegramLongPollingBot {
             rows.add(row);
         }
 
+        KeyboardRow nav = new KeyboardRow();
+
+        if(page > 0){
+            nav.add("⬅️ Попередні");
+        }
+
+        if(page < totalPages-1){
+            nav.add("➡️ Далі");
+        }
+
+        if(!nav.isEmpty()){
+            rows.add(nav);
+        }
+
         KeyboardRow back = new KeyboardRow();
         back.add("⬅️ Назад");
         rows.add(back);
@@ -7374,7 +7403,9 @@ public class StoreBot extends TelegramLongPollingBot {
         markup.setKeyboard(rows);
         markup.setResizeKeyboard(true);
 
-        sendMessage(chatId,"🔎 Обери підфільтр:",markup);
+        sendMessage(chatId,
+                "🔎 Обери підфільтр ("+(page+1)+"/"+totalPages+"):",
+                markup);
     }
 
     private boolean hasSubfilters(String filterName){
