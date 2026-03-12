@@ -5407,13 +5407,48 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void sendMessage(String chatId, String text, ReplyKeyboardMarkup markup) {
+
         try {
+
+            if (markup != null && markup.getKeyboard() != null) {
+
+                List<KeyboardRow> safeRows = new ArrayList<>();
+
+                int maxRows = 25;
+
+                for (KeyboardRow row : markup.getKeyboard()) {
+
+                    if (safeRows.size() >= maxRows) break;
+
+                    KeyboardRow safeRow = new KeyboardRow();
+
+                    for (int i = 0; i < row.size() && i < 3; i++) {
+
+                        KeyboardButton button = row.get(i);
+
+                        String buttonText = button.getText();
+
+                        if (buttonText.length() > 30) {
+                            buttonText = buttonText.substring(0, 30);
+                        }
+
+                        safeRow.add(buttonText);
+                    }
+
+                    safeRows.add(safeRow);
+                }
+
+                markup.setKeyboard(safeRows);
+            }
+
             SendMessage msg = SendMessage.builder()
                     .chatId(chatId)
                     .text(text)
                     .replyMarkup(markup)
                     .build();
+
             execute(msg);
+
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
