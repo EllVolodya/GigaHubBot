@@ -5296,20 +5296,24 @@ public class StoreBot extends TelegramLongPollingBot {
             if (text.equals("➡️ Продовжити")) {
 
                 int page = filterPage.getOrDefault(chatId, 0) + 1;
+
                 filterPage.put(chatId, page);
 
                 sendMessageSafely(createFilterSelectMenu(chatId.toString(), page));
+
                 return;
             }
 
             if (text.equals("⬅️ Попередні")) {
 
                 int page = filterPage.getOrDefault(chatId, 0) - 1;
+
                 if (page < 0) page = 0;
 
                 filterPage.put(chatId, page);
 
                 sendMessageSafely(createFilterSelectMenu(chatId.toString(), page));
+
                 return;
             }
 
@@ -7091,10 +7095,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private SendMessage createFilterSelectMenu(String chatId, int page) {
 
-        CatalogSearcher searcher = new CatalogSearcher();
-        List<String> filters = searcher.getFilters();
+        List<String> filters = catalogSearcher.getFilters();
 
-        int pageSize = 20;
+        int pageSize = 8; // фільтрів на сторінку
         int totalPages = (int) Math.ceil((double) filters.size() / pageSize);
 
         if (page < 0) page = 0;
@@ -7110,9 +7113,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         for (int i = start; i < end; i++) {
 
-            String filter = filters.get(i);
-
-            row.add(filter);
+            row.add(filters.get(i));
             count++;
 
             if (count == 2) {
@@ -7126,7 +7127,6 @@ public class StoreBot extends TelegramLongPollingBot {
             rows.add(row);
         }
 
-        // 🔹 Кнопки навігації
         KeyboardRow nav = new KeyboardRow();
 
         if (page > 0) {
@@ -7137,13 +7137,7 @@ public class StoreBot extends TelegramLongPollingBot {
             nav.add("➡️ Продовжити");
         }
 
-        if (!nav.isEmpty()) {
-            rows.add(nav);
-        }
-
-        KeyboardRow back = new KeyboardRow();
-        back.add("⬅️ Назад");
-        rows.add(back);
+        rows.add(nav);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(rows);
@@ -7151,7 +7145,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         return SendMessage.builder()
                 .chatId(chatId)
-                .text("🔎 Оберіть фільтр (" + (page + 1) + "/" + totalPages + "):")
+                .text("🔎 Оберіть фільтр (" + (page + 1) + "/" + totalPages + ")")
                 .replyMarkup(markup)
                 .build();
     }
