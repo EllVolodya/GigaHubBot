@@ -1048,18 +1048,18 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "➕ Додати підфільтр" -> {
                     userStates.put(userId, "awaiting_filter_for_subfilter");
-                    sendMessageSafely(createFilterSelectMenu(chatId));
+                    sendMessageSafely(createFilterSelectMenu(chatId, 0));
                     return;
                 }
 
                 case "✏️ Редагувати фільтр" -> {
                     userStates.put(userId, "awaiting_filter_edit");
-                    sendMessageSafely(createFilterSelectMenu(chatId));
+                    sendMessageSafely(createFilterSelectMenu(chatId, 0));
                 }
 
                 case "🗑 Видалити фільтр" -> {
                     userStates.put(userId, "awaiting_filter_delete");
-                    sendMessageSafely(createFilterSelectMenu(chatId));
+                    sendMessageSafely(createFilterSelectMenu(chatId, 0));
                 }
 
                 case "📋 Список фільтрів" -> {
@@ -1068,12 +1068,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "📦 Товари у фільтрі" -> {
                     userStates.put(userId, "awaiting_filter_products");
-                    sendMessageSafely(createFilterSelectMenu(chatId));
+                    sendMessageSafely(createFilterSelectMenu(chatId, 0));
                 }
 
                 case "🧹 Очистити фільтр" -> {
                     userStates.put(userId, "awaiting_filter_clear");
-                    sendMessageSafely(createFilterSelectMenu(chatId));
+                    sendMessageSafely(createFilterSelectMenu(chatId, 0));
                 }
 
                 case "🛒 Замовити товар" -> {
@@ -4431,7 +4431,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 userStates.put(userId, "awaiting_filter_select");
 
-                sendMessageSafely(createFilterSelectMenu(chatId));
+                sendMessageSafely(createFilterSelectMenu(chatId, 0));
 
                 return;
 
@@ -5312,18 +5312,19 @@ public class StoreBot extends TelegramLongPollingBot {
             int page = filterPage.getOrDefault(chatId, 0) + 1;
             filterPage.put(chatId, page);
 
-            sendFilters(chatId, page);
+            sendMessageSafely(createFilterSelectMenu(chatId.toString(), page));
             return;
         }
 
         if (text.equals("⬅️ Попередні")) {
 
             int page = filterPage.getOrDefault(chatId, 0) - 1;
+
             if (page < 0) page = 0;
 
             filterPage.put(chatId, page);
 
-            sendFilters(chatId, page);
+            sendMessageSafely(createFilterSelectMenu(chatId.toString(), page));
             return;
         }
 
@@ -5394,8 +5395,8 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // 🔹 9. Якщо нічого не підійшло
-            sendText(chatId, "Невідома команда 😅 Натисніть /start або виберіть із меню.");
-        }
+        sendText(chatId, "Невідома команда 😅 Натисніть /start або виберіть із меню.");
+    }
 
     // --- Допоміжні методи для надсилання повідомлень ---
     private void sendText(Long chatId, String text) {
@@ -7077,17 +7078,28 @@ public class StoreBot extends TelegramLongPollingBot {
         return filters;
     }
 
-    private SendMessage createFilterSelectMenu(String chatId) {
+    private SendMessage createFilterSelectMenu(String chatId, int page) {
 
         CatalogSearcher searcher = new CatalogSearcher();
         List<String> filters = searcher.getFilters();
+
+        int pageSize = 20;
+        int totalPages = (int) Math.ceil((double) filters.size() / pageSize);
+
+        if (page < 0) page = 0;
+        if (page >= totalPages) page = totalPages - 1;
+
+        int start = page * pageSize;
+        int end = Math.min(start + pageSize, filters.size());
 
         List<KeyboardRow> rows = new ArrayList<>();
         KeyboardRow row = new KeyboardRow();
 
         int count = 0;
 
-        for (String filter : filters) {
+        for (int i = start; i < end; i++) {
+
+            String filter = filters.get(i);
 
             row.add(filter);
             count++;
@@ -7097,13 +7109,25 @@ public class StoreBot extends TelegramLongPollingBot {
                 row = new KeyboardRow();
                 count = 0;
             }
-
-            // 🔴 ОБМЕЖЕННЯ TELEGRAM
-            if (rows.size() >= 20) break;
         }
 
         if (!row.isEmpty()) {
             rows.add(row);
+        }
+
+        // 🔹 Кнопки навігації
+        KeyboardRow nav = new KeyboardRow();
+
+        if (page > 0) {
+            nav.add("⬅️ Попередні");
+        }
+
+        if (page < totalPages - 1) {
+            nav.add("➡️ Далі");
+        }
+
+        if (!nav.isEmpty()) {
+            rows.add(nav);
         }
 
         KeyboardRow back = new KeyboardRow();
@@ -7116,7 +7140,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         return SendMessage.builder()
                 .chatId(chatId)
-                .text("🔎 Оберіть фільтр:")
+                .text("🔎 Оберіть фільтр (" + (page + 1) + "/" + totalPages + "):")
                 .replyMarkup(markup)
                 .build();
     }
@@ -7512,21 +7536,24 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private void chooseSubcategoryForFilter(Long chatId, String text) throws TelegramApiException {
 
-        CatalogSearcher searcher = new CatalogSearcher();
+        List<String> subcategories = catalogSearcher.getAllSubcategories();
 
-        List<String> subcategories = searcher.getAllSubcategories();
-
-        if (!subcategories.contains(text)) {
+        if (subcategories == null || !subcategories.contains(text)) {
             sendText(chatId, "❌ Такої підкатегорії не існує.");
             return;
         }
 
-        // 🔥 ЗБЕРІГАЄМО ПІДКАТЕГОРІЮ
+        // 🔹 Зберігаємо вибрану підкатегорію
         selectedSubcategoryForFilter.put(chatId, text);
 
+        // 🔹 Стан користувача
         userStates.put(chatId, "choose_filter_for_subcategory");
 
-        sendMessage(createFilterSelectMenu(chatId.toString()));
+        // 🔹 Початкова сторінка фільтрів
+        filterPage.put(chatId, 0);
+
+        // 🔹 Показуємо список фільтрів
+        sendMessageSafely(createFilterSelectMenu(chatId.toString(), 0));
     }
 
     public void addFilterToSubcategory(String subcategoryName,String filterName){
