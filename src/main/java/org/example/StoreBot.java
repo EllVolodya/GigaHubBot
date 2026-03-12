@@ -1047,8 +1047,13 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "➕ Додати підфільтр" -> {
+
                     userStates.put(userId, "awaiting_filter_for_subfilter");
-                    sendMessageSafely(createFilterSelectMenu(chatId, 0));
+
+                    filterPage.put(userId, 0);
+
+                    sendMessageSafely(createFilterSelectMenu(chatId.toString(), 0));
+
                     return;
                 }
 
@@ -5279,14 +5284,14 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(chatId);
 
-        // 🔹 1. Кнопка Назад
+        // 🔹 Назад
         if (text.equals("⬅️ Назад")) {
             handleBack(chatId, chatId.toString());
             return;
         }
 
-        // 🔹 ПАГІНАЦІЯ ФІЛЬТРІВ
-        if ("awaiting_filter_for_subfilter".equals(userStates.get(chatId))) {
+        // 🔹 ПАГІНАЦІЯ ФІЛЬТРІВ (важливо: обробляємо раніше всього)
+        if ("awaiting_filter_for_subfilter".equals(state)) {
 
             if (text.equals("➡️ Далі")) {
 
@@ -5307,9 +5312,21 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendMessageSafely(createFilterSelectMenu(chatId.toString(), page));
                 return;
             }
+
+            // 🔹 якщо це фільтр
+            List<String> filters = catalogSearcher.getFilters();
+
+            if (filters.contains(text)) {
+
+                selectedFilterForSubfilter.put(chatId, text);
+                userStates.put(chatId, "awaiting_subfilter_name");
+
+                sendText(chatId, "✏️ Введіть назву підфільтра:");
+                return;
+            }
         }
 
-        // 🔹 3. Кошик
+        // 🔹 Кошик
         if (text.equals("🛍️ Перейти в кошик") || text.equals(VIEW_CART_BUTTON)) {
             userStates.remove(chatId);
             showCart(chatId);
@@ -5327,7 +5344,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 4. Категорії
+        // 🔹 Категорії
         List<String> categories = catalogSearcher.getCategories();
 
         if (categories.contains(text)) {
@@ -5339,7 +5356,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 5. Підкатегорії
+        // 🔹 Підкатегорії
         if (currentCategory.containsKey(chatId)) {
 
             String cat = currentCategory.get(chatId);
@@ -5355,7 +5372,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        // 🔹 6. Фільтри
+        // 🔹 Фільтри каталогу
         List<String> filters = catalogSearcher.getFilters();
 
         if (filters.contains(text)) {
@@ -5374,7 +5391,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 7. Підфільтри
+        // 🔹 Підфільтри
         String filter = currentFilter.get(chatId);
 
         if (filter != null) {
@@ -5383,14 +5400,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
             if (subfilters.contains(text)) {
 
-                System.out.println("[handleText] Subfilter selected: " + text);
-
                 sendProductsBySubfilter(chatId, text);
                 return;
             }
         }
 
-        // 🔹 8. Невідома команда
+        // 🔹 Невідома команда
         sendText(chatId, "Невідома команда 😅 Натисніть /start або виберіть із меню.");
     }
 
