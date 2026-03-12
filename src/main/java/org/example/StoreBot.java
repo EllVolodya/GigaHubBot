@@ -5379,7 +5379,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 8. Підфільтри
+        // 🔹 8. Підфільтр
         String filter = currentFilter.get(chatId);
 
         List<String> subfilters = catalogSearcher.getSubfilters(filter);
