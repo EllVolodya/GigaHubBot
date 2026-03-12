@@ -7223,22 +7223,21 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    private void sendFilters(Long chatId) throws TelegramApiException {
+    private void sendFilters(Long chatId, int page) throws TelegramApiException {
 
         CatalogSearcher searcher = new CatalogSearcher();
         List<String> filters = searcher.getFilters();
 
-        if (filters.isEmpty()) {
-            sendText(chatId, "❌ Фільтрів немає.");
-            return;
-        }
+        int pageSize = 20;
+        int start = page * pageSize;
+        int end = Math.min(start + pageSize, filters.size());
 
         List<KeyboardRow> rows = new ArrayList<>();
         KeyboardRow currentRow = new KeyboardRow();
 
-        for (String filter : filters) {
+        for (int i = start; i < end; i++) {
 
-            currentRow.add(filter);
+            currentRow.add(filters.get(i));
 
             if (currentRow.size() == 2) {
                 rows.add(currentRow);
@@ -7249,6 +7248,14 @@ public class StoreBot extends TelegramLongPollingBot {
         if (!currentRow.isEmpty()) {
             rows.add(currentRow);
         }
+
+        KeyboardRow nav = new KeyboardRow();
+
+        if (page > 0) nav.add("⬅️ Попередні");
+
+        if (end < filters.size()) nav.add("➡️ Далі");
+
+        if (!nav.isEmpty()) rows.add(nav);
 
         KeyboardRow back = new KeyboardRow();
         back.add("⬅️ Назад");
