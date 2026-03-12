@@ -5285,8 +5285,8 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 2. Пагінація фільтрів (тільки у стані вибору фільтра)
-        if ("awaiting_filter_for_subfilter".equals(state)) {
+        // 🔹 ПАГІНАЦІЯ ФІЛЬТРІВ
+        if ("awaiting_filter_for_subfilter".equals(userStates.get(chatId))) {
 
             if (text.equals("➡️ Далі")) {
 
@@ -5360,9 +5360,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (filters.contains(text)) {
 
-            System.out.println("[handleText] Filter selected: " + text);
-
-            currentFilter.put(chatId, text);   // 🔥 ОБОВʼЯЗКОВО
+            currentFilter.put(chatId, text);
 
             if (catalogSearcher.hasSubfilters(text)) {
 
