@@ -5594,40 +5594,51 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // --- Показ підкатегорій ---
     private void sendSubcategories(Long chatId, String categoryName) {
-        try {
-            Connection conn = DatabaseManager.getConnection(); // одне постійне підключення
 
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT s.name FROM subcategories s " +
-                            "JOIN categories c ON s.category_id = c.id " +
-                            "WHERE c.name = ? ORDER BY s.id")) {
+        String sql = """
+        SELECT s.name
+        FROM subcategories s
+        JOIN categories c ON s.category_id = c.id
+        WHERE c.name = ?
+        ORDER BY s.id
+    """;
 
-                stmt.setString(1, categoryName);
-                try (ResultSet rs = stmt.executeQuery()) {
-                    List<String> subcategories = new ArrayList<>();
-                    while (rs.next()) {
-                        subcategories.add(rs.getString("name"));
-                    }
+        List<String> subcategories = new ArrayList<>();
 
-                    if (subcategories.isEmpty()) {
-                        sendText(chatId, "❌ У цій категорії немає підкатегорій.");
-                        return;
-                    }
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-                    ReplyKeyboardMarkup markup = ReplyKeyboardMarkup.builder()
-                            .resizeKeyboard(true)
-                            .keyboard(buildKeyboard(subcategories, true))
-                            .build();
+            stmt.setString(1, categoryName);
 
-                    sendMessage(chatId, "\uD83E\uDDF1 Обери підкатегорію, друже!\n" +
-                            "\n" +
-                            "Митрофан уже стоїть біля стелажа — каска на місці, ліхтар увімкнений \uD83D\uDD26  \n" +
-                            "Залишилось тільки сказати, що саме шукаємо — і я миттю знайду потрібний товар \uD83D\uDE09", markup);
+            try (ResultSet rs = stmt.executeQuery()) {
+
+                while (rs.next()) {
+                    subcategories.add(rs.getString("name"));
                 }
             }
 
+            if (subcategories.isEmpty()) {
+                sendText(chatId, "❌ У цій категорії немає підкатегорій.");
+                return;
+            }
+
+            ReplyKeyboardMarkup markup = ReplyKeyboardMarkup.builder()
+                    .resizeKeyboard(true)
+                    .keyboard(buildKeyboard(subcategories, true))
+                    .build();
+
+            sendMessage(
+                    chatId,
+                    "🧱 Обери підкатегорію, друже!\n\n" +
+                            "Митрофан уже стоїть біля стелажа — каска на місці, ліхтар увімкнений 🔦\n" +
+                            "Залишилось тільки сказати, що саме шукаємо — і я миттю знайду потрібний товар 😉",
+                    markup
+            );
+
         } catch (Exception e) {
+
             e.printStackTrace();
+
             sendText(chatId, "⚠️ Помилка при отриманні підкатегорій із бази.");
         }
     }

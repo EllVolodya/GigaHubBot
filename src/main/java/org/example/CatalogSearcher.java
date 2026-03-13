@@ -518,7 +518,8 @@ public class CatalogSearcher {
         }
     }
 
-    public List<String> getFiltersBySubcategory(String subcategoryName){
+    // Показ фільтрів підкатегорії
+    public List<String> getFiltersBySubcategory(String subcategoryName) {
 
         List<String> filters = new ArrayList<>();
 
