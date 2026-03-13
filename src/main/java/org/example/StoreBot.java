@@ -5807,34 +5807,30 @@ public class StoreBot extends TelegramLongPollingBot {
 
         List<Map<String, Object>> products;
 
-        // 1️⃣ якщо вибраний підфільтр
+        // 🔹 визначаємо джерело товарів
         if (subfilter != null) {
 
             products = searcher.getProductsBySubfilter(subfilter);
 
-        }
-        // 2️⃣ якщо вибраний фільтр
-        else if (filter != null) {
+        } else if (filter != null) {
 
             products = searcher.getProductsByFilter(filter);
 
-        }
-        // 3️⃣ fallback
-        else if (subcategory != null) {
+        } else if (subcategory != null) {
 
             products = searcher.getProducts(category, subcategory);
 
-        }
-        else {
+        } else {
 
             products = searcher.getProductsByCategory(category);
         }
 
         if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ Товарів у цьому фільтрі немає.");
+            sendText(chatId, "❌ Товарів у цьому розділі немає.");
             return;
         }
 
+        // 🔹 зберігаємо список для вибору по номеру
         userProductLists.put(chatId, new ArrayList<>(products));
 
         StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
@@ -5843,8 +5839,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
             Map<String, Object> product = products.get(i);
 
-            String name = product.get("name").toString();
-            String price = product.get("price").toString();
+            String name = safeToString(product.get("name"), "Без назви");
+            String price = safeToString(product.get("price"), "0");
 
             sb.append(i + 1)
                     .append(". ")
@@ -5856,7 +5852,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         sendText(chatId, sb.toString());
 
-        // кнопки
+        // 🔹 кнопки
         KeyboardRow row1 = new KeyboardRow();
         row1.add(ADD_TO_CART_BUTTON);
         row1.add(VIEW_CART_BUTTON);
@@ -5865,7 +5861,7 @@ public class StoreBot extends TelegramLongPollingBot {
         row2.add("🔍 Пошук");
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add("⬅️ Назад");
+        row3.add(BACK_BUTTON);
 
         List<KeyboardRow> keyboard = new ArrayList<>();
         keyboard.add(row1);
