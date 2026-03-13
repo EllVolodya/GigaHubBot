@@ -5510,32 +5510,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
         /*
         ==========================================
-        ФІЛЬТРИ
-        ==========================================
-        */
-        List<String> filters = catalogSearcher.getFilters();
-
-        if (filters.contains(text)) {
-
-            currentFilter.put(chatId, text);
-
-            // якщо є підфільтри
-            if (catalogSearcher.hasSubfilters(text)) {
-
-                sendSubfilters(chatId, text, 0);
-
-            } else {
-                sendProductList(chatId);
-            }
-
-            return;
-        }
-
-        /*
-        ==========================================
         ПІДФІЛЬТРИ
         ==========================================
         */
+
         String filter = currentFilter.get(chatId);
 
         if (filter != null) {
@@ -5546,11 +5524,40 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 currentSubfilter.put(chatId, text);
 
-                // 🔹 показуємо список товарів
+                // показуємо товари
                 sendProductList(chatId);
 
                 return;
             }
+        }
+
+        /*
+        ==========================================
+        ФІЛЬТРИ
+        ==========================================
+        */
+
+        List<String> filters = catalogSearcher.getFilters();
+
+        if (filters.contains(text)) {
+
+            currentFilter.put(chatId, text);
+            currentSubfilter.remove(chatId);
+
+            if (catalogSearcher.hasProductsInFilter(text)) {
+
+                sendProductList(chatId);
+
+            } else if (catalogSearcher.hasSubfilters(text)) {
+
+                sendSubfilters(chatId, text, 0);
+
+            } else {
+
+                sendText(chatId, "❌ У цьому фільтрі немає товарів.");
+            }
+
+            return;
         }
 
         /*

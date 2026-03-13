@@ -675,6 +675,7 @@ public class CatalogSearcher {
         FROM products p
         JOIN filters f ON p.filter_id = f.id
         WHERE f.name = ?
+        AND p.subfilter_id IS NULL
     """;
 
         try(Connection conn = DatabaseManager.getConnection();
