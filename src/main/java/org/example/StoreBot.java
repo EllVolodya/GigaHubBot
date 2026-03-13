@@ -7103,11 +7103,14 @@ public class StoreBot extends TelegramLongPollingBot {
 
         List<String> filters = catalogSearcher.getFilters();
 
-        int pageSize = 8; // фільтрів на сторінку
+        int pageSize = 8;
         int totalPages = (int) Math.ceil((double) filters.size() / pageSize);
 
         if (page < 0) page = 0;
         if (page >= totalPages) page = totalPages - 1;
+
+        // 🔴 ОСЬ ЦЬОГО У ТЕБЕ НЕ БУЛО
+        filterPage.put(Long.parseLong(chatId), page);
 
         int start = page * pageSize;
         int end = Math.min(start + pageSize, filters.size());
@@ -7135,13 +7138,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow nav = new KeyboardRow();
 
-        if (page > 0) {
-            nav.add("⬅️ Попередні");
-        }
+        if (page > 0) nav.add("⬅️ Попередні");
 
-        if (page < totalPages - 1) {
-            nav.add("➡️ Продовжити");
-        }
+        if (page < totalPages - 1) nav.add("➡️ Продовжити");
 
         rows.add(nav);
 
@@ -7151,7 +7150,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         return SendMessage.builder()
                 .chatId(chatId)
-                .text("🔎 Оберіть фільтр (" + (page+1) + "/" + totalPages + ")")
+                .text("🔎 Оберіть фільтр (" + (page + 1) + "/" + totalPages + ")")
                 .replyMarkup(markup)
                 .build();
     }
