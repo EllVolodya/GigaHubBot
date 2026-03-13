@@ -7693,17 +7693,19 @@ public class StoreBot extends TelegramLongPollingBot {
         List<String> subcategories = catalogSearcher.getAllSubcategories();
 
         if (!subcategories.contains(text)) {
-            sendText(chatId, "❌ Такої підкатегорії не існує.");
+            sendText(chatId.toString(), "❌ Такої підкатегорії не існує.");
             return;
         }
 
+        // зберігаємо підкатегорію
         selectedSubcategoryForFilter.put(userId, text);
 
+        // змінюємо state
         userStates.put(userId, "choose_filter_for_subcategory");
 
         filterPage.put(userId, 0);
 
-        chooseSubcategoryForFilter(userId, Long.valueOf(chatId), text);
+        sendMessageSafely(createFilterSelectMenu(userId, chatId.toString(), 0));
     }
 
     public void addFilterToSubcategory(String subcategoryName,String filterName){
