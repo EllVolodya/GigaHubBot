@@ -3332,9 +3332,13 @@ public class StoreBot extends TelegramLongPollingBot {
             case "choose_subcategory_for_filter" -> {
 
                 try {
+
                     chooseSubcategoryForFilter(userId, Long.valueOf(chatId), text);
+
                 } catch (TelegramApiException e) {
+
                     e.printStackTrace();
+
                     sendText(chatId, "❌ Помилка при виборі підкатегорії.");
                 }
 
