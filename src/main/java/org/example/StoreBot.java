@@ -3330,12 +3330,44 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case "choose_subcategory_for_filter" -> {
+
                 try {
-                    chooseSubcategoryForFilter(Long.valueOf(chatId), text);
+                    chooseSubcategoryForFilter(userId, Long.valueOf(chatId), text);
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                     sendText(chatId, "❌ Помилка при виборі підкатегорії.");
                 }
+
+                return;
+            }
+
+            case "choose_filter_for_subcategory" -> {
+
+                List<String> filters = catalogSearcher.getFilters();
+
+                if (!filters.contains(text)) {
+                    return;
+                }
+
+                String subcategory = selectedSubcategoryForFilter.get(userId);
+
+                if (subcategory == null) {
+
+                    sendText(chatId, "❌ Підкатегорія не вибрана.");
+                    return;
+                }
+
+                addFilterToSubcategory(subcategory, text);
+
+                sendText(chatId,
+                        "✅ Фільтр '" + text +
+                                "' додано до підкатегорії '" +
+                                subcategory + "'");
+
+                userStates.remove(userId);
+                selectedSubcategoryForFilter.remove(userId);
+
+                return;
             }
 
             /*case "awaiting_filter_for_subfilter" -> {
@@ -3345,19 +3377,31 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }*/
 
-            case "awaiting_subfilter_name" -> {
+            case "awaiting_filter_for_subfilter" -> {
 
-                createSubfilter(userId, chatId, text);
+                List<String> filters = catalogSearcher.getFilters();
+
+                if (!filters.contains(text)) {
+                    return;
+                }
+
+                selectedFilterForSubfilter.put(userId, text);
+
+                userStates.put(userId, "awaiting_subfilter_name");
+
+                sendText(chatId, "✏️ Введіть назву підфільтра:");
 
                 return;
             }
 
-            case "awaiting_filter_for_subfilter" -> {
+            case "awaiting_subfilter_name" -> {
 
-                // 🔹 викликаємо перевірку фільтра
-                chooseFilterForSubfilter(userId, chatId, text);
+                createSubfilter(userId, chatId, text);
+                userStates.remove(userId);
+            }
 
-                // 🔹 отримуємо підкатегорію
+            case "awaiting_filter_for_subcategory" -> {
+
                 String subcategory = selectedSubcategoryForFilter.get(chatId);
 
                 if (subcategory == null) {
@@ -3366,9 +3410,12 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                System.out.println("DEBUG SUBCATEGORY: " + subcategory);
+                List<String> filters = catalogSearcher.getFilters();
 
-                // 🔹 додаємо фільтр
+                if (!filters.contains(text)) {
+                    return;
+                }
+
                 addFilterToSubcategory(subcategory, text);
 
                 sendText(chatId,
@@ -4704,13 +4751,16 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "➕ Додати фільтр у підкатегорію" -> {
 
-                userStates.put(userId,"choose_subcategory_for_filter");
+                userStates.put(userId, "choose_subcategory_for_filter");
 
                 try {
                     sendSubcategoriesForFilter(Long.valueOf(chatId));
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при відкритті списку підкатегорій.");
                 }
+
+                return;
             }
 
             case "✏️ Змінити назву категорії" -> {
@@ -7634,7 +7684,7 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessage(chatId,"📂 Обери підкатегорію:",markup);
     }
 
-    private void chooseSubcategoryForFilter(Long chatId, String text) throws TelegramApiException {
+    private void chooseSubcategoryForFilter(Long userId, Long chatId, String text) throws TelegramApiException {
 
         List<String> subcategories = catalogSearcher.getAllSubcategories();
 
@@ -7643,15 +7693,13 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 ЗБЕРІГАЄМО ПІДКАТЕГОРІЮ
-        selectedSubcategoryForFilter.put(chatId, text);
+        selectedSubcategoryForFilter.put(userId, text);
 
-        // 🔹 СТАН (ВАЖЛИВО)
-        userStates.put(chatId, "awaiting_filter_for_subfilter");
+        userStates.put(userId, "choose_filter_for_subcategory");
 
-        filterPage.put(chatId, 0);
+        filterPage.put(userId, 0);
 
-        sendMessageSafely(createFilterSelectMenu(chatId, chatId.toString(), 0));
+        chooseSubcategoryForFilter(userId, Long.valueOf(chatId), text);
     }
 
     public void addFilterToSubcategory(String subcategoryName,String filterName){
