@@ -667,4 +667,31 @@ public class CatalogSearcher {
 
         return products;
     }
+
+    public boolean hasProductsInFilter(String filterName) {
+
+        String sql = """
+        SELECT COUNT(*)
+        FROM products p
+        JOIN filters f ON p.filter_id = f.id
+        WHERE f.name = ?
+    """;
+
+        try(Connection conn = DatabaseManager.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)){
+
+            ps.setString(1, filterName);
+
+            ResultSet rs = ps.executeQuery();
+
+            if(rs.next()){
+                return rs.getInt(1) > 0;
+            }
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return false;
+    }
 }

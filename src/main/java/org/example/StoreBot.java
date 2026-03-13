@@ -5517,13 +5517,18 @@ public class StoreBot extends TelegramLongPollingBot {
 
             currentFilter.put(chatId, text);
 
-            if (catalogSearcher.hasSubfilters(text)) {
+            // 🔹 якщо є товари без підфільтра — показуємо їх
+            if (catalogSearcher.hasProductsInFilter(text)) {
+
+                sendProductsByFilter(chatId, text);
+
+            } else if (catalogSearcher.hasSubfilters(text)) {
 
                 sendSubfilters(chatId, text, 0);
 
             } else {
 
-                sendProductsByFilter(chatId, text);
+                sendText(chatId, "❌ У цьому фільтрі немає товарів.");
             }
 
             return;
