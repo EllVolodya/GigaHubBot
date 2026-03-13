@@ -51,6 +51,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, String> currentCategory = new HashMap<>();
     private final Map<Long, String> currentSubcategory = new HashMap<>();
     private Map<Long, String> currentFilter = new HashMap<>();
+    private Map<Long, String> currentSubfilter = new HashMap<>();
+
     private final Map<Long, Integer> productIndex = new HashMap<>();
     protected Map<Long, Map<String, Object>> lastShownProduct = new HashMap<>();
     private final Map<Long, String> userStates = new HashMap<>();
@@ -5517,18 +5519,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
             currentFilter.put(chatId, text);
 
-            // 🔹 якщо є товари без підфільтра — показуємо їх
-            if (catalogSearcher.hasProductsInFilter(text)) {
-
-                sendProductsByFilter(chatId, text);
-
-            } else if (catalogSearcher.hasSubfilters(text)) {
+            // якщо є підфільтри
+            if (catalogSearcher.hasSubfilters(text)) {
 
                 sendSubfilters(chatId, text, 0);
 
             } else {
-
-                sendText(chatId, "❌ У цьому фільтрі немає товарів.");
+                sendProductList(chatId);
             }
 
             return;
@@ -5539,22 +5536,21 @@ public class StoreBot extends TelegramLongPollingBot {
         ПІДФІЛЬТРИ
         ==========================================
         */
-        List<String> filterList = catalogSearcher.getFilters();
+        String filter = currentFilter.get(chatId);
 
-        if (filterList.contains(text)) {
+        if (filter != null) {
 
-            currentFilter.put(chatId, text);
+            List<String> subfilters = catalogSearcher.getSubfilters(filter);
 
-            if (catalogSearcher.hasSubfilters(text)) {
+            if (subfilters.contains(text)) {
 
-                sendSubfilters(chatId, text, 0);
+                currentSubfilter.put(chatId, text);
 
-            } else {
+                // 🔹 показуємо список товарів
+                sendProductList(chatId);
 
-                sendProductsByFilter(chatId, text);
+                return;
             }
-
-            return;
         }
 
         /*
@@ -5766,7 +5762,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    ///🔸 Показ товару по списку
+    /// 🔸 Показ товару по списку
     private void sendProductList(Long chatId) throws TelegramApiException {
 
         String category = currentCategory.get(chatId);
@@ -5796,11 +5792,22 @@ public class StoreBot extends TelegramLongPollingBot {
 
         for (int i = 0; i < products.size(); i++) {
 
-            String name = escapeTelegram(products.get(i).get("name").toString());
+            Map<String, Object> product = products.get(i);
 
-            String line = (i + 1) + ". " + name + "\n";
+            String name = escapeTelegram(product.get("name").toString());
 
-            // 🔴 якщо повідомлення стає занадто великим
+            String price = product.get("price") == null
+                    ? "0"
+                    : product.get("price").toString();
+
+            String line =
+                    (i + 1) + ". " +
+                            name +
+                            " — " +
+                            price +
+                            " грн\n";
+
+            // якщо повідомлення занадто велике
             if (sb.length() + line.length() > 3500) {
                 sendText(chatId, sb.toString());
                 sb = new StringBuilder();
@@ -5833,7 +5840,7 @@ public class StoreBot extends TelegramLongPollingBot {
         markup.setKeyboard(keyboard);
         markup.setResizeKeyboard(true);
 
-        sendTextWithMarkup(chatId, "👇 Обери номер товару:", markup);
+        sendTextWithMarkup(chatId, "👇 Введи номер товару:", markup);
     }
 
     private void showRemainingProductList(Long chatId)
