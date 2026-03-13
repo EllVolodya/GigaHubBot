@@ -5534,18 +5534,22 @@ public class StoreBot extends TelegramLongPollingBot {
         ПІДФІЛЬТРИ
         ==========================================
         */
-        String filter = currentFilter.get(chatId);
+        List<String> filterList = catalogSearcher.getFilters();
 
-        if (filter != null) {
+        if (filterList.contains(text)) {
 
-            List<String> subfilters = catalogSearcher.getSubfilters(filter);
+            currentFilter.put(chatId, text);
 
-            if (subfilters.contains(text)) {
+            if (catalogSearcher.hasSubfilters(text)) {
 
-                sendProductsBySubfilter(chatId, text);
+                sendSubfilters(chatId, text, 0);
 
-                return;
+            } else {
+
+                sendProductsByFilter(chatId, text);
             }
+
+            return;
         }
 
         /*
@@ -7636,31 +7640,49 @@ public class StoreBot extends TelegramLongPollingBot {
         return false;
     }
 
-    private void sendProductsByFilter(Long chatId,String filterName) throws TelegramApiException {
+    private void sendProductsByFilter(Long chatId, String filterName) {
 
-        CatalogSearcher searcher = new CatalogSearcher();
+        String sql = """
+        SELECT p.name, p.price
+        FROM products p
+        JOIN filters f ON p.filter_id = f.id
+        WHERE f.name = ?
+    """;
 
-        List<Map<String,Object>> products =
-                searcher.getProductsByFilter(filterName);
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
-        if(products.isEmpty()){
-            sendText(chatId,"❌ У цьому фільтрі немає товарів.");
-            return;
+            ps.setString(1, filterName);
+
+            ResultSet rs = ps.executeQuery();
+
+            StringBuilder message = new StringBuilder("📦 Товари:\n\n");
+
+            boolean found = false;
+
+            while (rs.next()) {
+
+                found = true;
+
+                message.append("🔹 ")
+                        .append(rs.getString("name"))
+                        .append(" — ")
+                        .append(rs.getDouble("price"))
+                        .append(" грн\n");
+            }
+
+            if (!found) {
+                sendText(chatId, "❌ У цьому фільтрі немає товарів.");
+                return;
+            }
+
+            sendText(chatId, message.toString());
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+            sendText(chatId, "⚠️ Помилка при отриманні товарів.");
         }
-
-        StringBuilder sb = new StringBuilder("📦 Товари у фільтрі:\n\n");
-
-        for(int i=0;i<products.size();i++){
-
-            sb.append(i+1)
-                    .append(". ")
-                    .append(products.get(i).get("name"))
-                    .append("\n");
-        }
-
-        sendText(chatId,sb.toString());
-
-        userProductLists.put(chatId,products);
     }
 
     private void sendSubcategoriesForFilter(Long chatId) throws TelegramApiException {
@@ -7820,30 +7842,5 @@ public class StoreBot extends TelegramLongPollingBot {
 
         userStates.remove(userId);
         selectedFilterForSubfilter.remove(userId);
-    }
-
-    private void sendProductsBySubfilter(Long chatId, String subfilterName) {
-
-        CatalogSearcher searcher = new CatalogSearcher();
-
-        List<Map<String,Object>> products =
-                searcher.getProductsBySubfilter(subfilterName);
-
-        if(products == null || products.isEmpty()){
-            sendText(chatId,"❌ У цьому підфільтрі немає товарів.");
-            return;
-        }
-
-        // зберігаємо список товарів
-        userProductLists.put(chatId, products);
-
-        // починаємо з першого
-        productIndex.put(chatId, 0);
-
-        try {
-            showNextProduct(chatId);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
     }
 }
