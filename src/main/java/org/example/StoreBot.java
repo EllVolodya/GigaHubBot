@@ -7191,11 +7191,11 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow nav = new KeyboardRow();
 
         if (page > 0) {
-            nav.add("⬅️ Попередні");
+            nav.add("Попередні");
         }
 
         if (page < totalPages - 1) {
-            nav.add("➡️ Продовжити");
+            nav.add("Продовжити");
         }
 
         if (!nav.isEmpty()) {
@@ -7396,11 +7396,11 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow nav = new KeyboardRow();
 
         if (page > 0) {
-            nav.add("⬅️ Попередні");
+            nav.add("Попередні");
         }
 
         if (page < totalPages - 1) {
-            nav.add("➡️ Продовжити");
+            nav.add("Продовжити");
         }
 
         if (!nav.isEmpty()) {
@@ -7485,11 +7485,11 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow nav = new KeyboardRow();
 
         if(page > 0){
-            nav.add("⬅️ Попередні");
+            nav.add("Попередні");
         }
 
         if(page < totalPages-1){
-            nav.add("➡️ Продовжити");
+            nav.add("Продовжити");
         }
 
         if(!nav.isEmpty()){
@@ -7664,8 +7664,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private void chooseFilterForSubfilter(Long userId, String chatId, String filterName){
 
         // 🔹 ІГНОРУЄМО кнопки пагінації
-        if(filterName.equals("➡️ Продовжити") ||
-                filterName.equals("⬅️ Назад")){
+        if(filterName.equals("Продовжити") ||
+                filterName.equals("Назад")){
             return;
         }
 
