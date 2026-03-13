@@ -7103,14 +7103,21 @@ public class StoreBot extends TelegramLongPollingBot {
 
         List<String> filters = catalogSearcher.getFilters();
 
+        if (filters == null || filters.isEmpty()) {
+            return SendMessage.builder()
+                    .chatId(chatId)
+                    .text("❌ Фільтрів немає.")
+                    .build();
+        }
+
         int pageSize = 8;
         int totalPages = (int) Math.ceil((double) filters.size() / pageSize);
 
         if (page < 0) page = 0;
         if (page >= totalPages) page = totalPages - 1;
 
-        // 🔴 ОСЬ ЦЬОГО У ТЕБЕ НЕ БУЛО
-        filterPage.put(Long.parseLong(chatId), page);
+        // зберігаємо сторінку
+        filterPage.put(Long.valueOf(chatId), page);
 
         int start = page * pageSize;
         int end = Math.min(start + pageSize, filters.size());
@@ -7138,11 +7145,17 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow nav = new KeyboardRow();
 
-        if (page > 0) nav.add("⬅️ Попередні");
+        if (page > 0) {
+            nav.add("⬅️ Попередні");
+        }
 
-        if (page < totalPages - 1) nav.add("➡️ Продовжити");
+        if (page < totalPages - 1) {
+            nav.add("➡️ Продовжити");
+        }
 
-        rows.add(nav);
+        if (!nav.isEmpty()) {
+            rows.add(nav);
+        }
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(rows);
