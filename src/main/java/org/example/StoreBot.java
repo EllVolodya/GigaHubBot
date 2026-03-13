@@ -5314,23 +5314,23 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(chatId);
 
-    /*
-    ==========================================
-    НАЗАД
-    ==========================================
-    */
+        /* НАЗАД */
+        if (text.equals("⬅️ Назад") || text.equals("Назад")) {
 
-        if (text.contains("Назад")) {
-            handleBack(chatId, chatId.toString());
+            // очищаємо стан
+            userStates.remove(chatId);
+
+            // повертаємось у меню керування фільтрами
+            sendMessageSafely(createFiltersAdminMenu(chatId.toString()));
+
             return;
         }
 
-    /*
-    ==========================================
-    ПАГІНАЦІЯ ФІЛЬТРІВ
-    ==========================================
-    */
-
+        /*
+        ==========================================
+        ПАГІНАЦІЯ ФІЛЬТРІВ
+        ==========================================
+        */
         if ("awaiting_filter_for_subfilter".equals(state)) {
 
             int page = filterPage.getOrDefault(chatId, 0);
@@ -5374,12 +5374,11 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-    /*
-    ==========================================
-    КОШИК
-    ==========================================
-    */
-
+        /*
+        ==========================================
+        КОШИК
+        ==========================================
+        */
         if (text.contains("Перейти в кошик")) {
             userStates.remove(chatId);
             showCart(chatId);
@@ -5396,13 +5395,11 @@ public class StoreBot extends TelegramLongPollingBot {
             addToCart(chatId);
             return;
         }
-
-    /*
-    ==========================================
-    КАТЕГОРІЇ
-    ==========================================
-    */
-
+        /*
+        ==========================================
+        КАТЕГОРІЇ
+        ==========================================
+        */
         List<String> categories = catalogSearcher.getCategories();
 
         if (categories.contains(text)) {
@@ -5416,12 +5413,11 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-    /*
-    ==========================================
-    ПІДКАТЕГОРІЇ
-    ==========================================
-    */
-
+        /*
+        ==========================================
+        ПІДКАТЕГОРІЇ
+        ==========================================
+        */
         if (currentCategory.containsKey(chatId)) {
 
             String category = currentCategory.get(chatId);
@@ -5440,12 +5436,11 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-    /*
-    ==========================================
-    ФІЛЬТРИ
-    ==========================================
-    */
-
+        /*
+        ==========================================
+        ФІЛЬТРИ
+        ==========================================
+        */
         List<String> filters = catalogSearcher.getFilters();
 
         if (filters.contains(text)) {
@@ -5464,12 +5459,11 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-    /*
-    ==========================================
-    ПІДФІЛЬТРИ
-    ==========================================
-    */
-
+        /*
+        ==========================================
+        ПІДФІЛЬТРИ
+        ==========================================
+        */
         String filter = currentFilter.get(chatId);
 
         if (filter != null) {
@@ -5484,12 +5478,11 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-    /*
-    ==========================================
-    НЕВІДОМА КОМАНДА
-    ==========================================
-    */
-
+        /*
+        ==========================================
+        НЕВІДОМА КОМАНДА
+        ==========================================
+        */
         sendText(chatId, "Невідома команда 😅 Натисніть /start або виберіть із меню.");
     }
 
