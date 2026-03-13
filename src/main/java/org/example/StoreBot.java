@@ -5562,6 +5562,32 @@ public class StoreBot extends TelegramLongPollingBot {
 
         /*
         ==========================================
+        ВИБІР ТОВАРУ ПО НОМЕРУ
+        ==========================================
+        */
+        if (userProductLists.containsKey(chatId)) {
+
+            List<Map<String, Object>> list = userProductLists.get(chatId);
+
+            try {
+
+                int index = Integer.parseInt(text) - 1;
+
+                if (index >= 0 && index < list.size()) {
+
+                    Map<String, Object> product = list.get(index);
+
+                    sendProductFromMap(chatId, product);
+
+                    return;
+                }
+
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        /*
+        ==========================================
         НЕВІДОМА КОМАНДА
         ==========================================
         */
