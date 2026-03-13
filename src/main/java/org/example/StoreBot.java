@@ -3356,6 +3356,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 String subcategory = selectedSubcategoryForFilter.get(chatId);
 
+                if (subcategory == null) {
+
+                    sendText(chatId, "❌ Підкатегорія не вибрана.");
+                    return;
+                }
+
                 System.out.println("DEBUG SUBCATEGORY: " + subcategory);
 
                 addFilterToSubcategory(subcategory, text);
@@ -3366,6 +3372,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 subcategory + "'");
 
                 userStates.remove(chatId);
+                selectedSubcategoryForFilter.remove(chatId);
             }
 
             /// 🚚 Обробка вибору доставки
@@ -7624,21 +7631,16 @@ public class StoreBot extends TelegramLongPollingBot {
 
         List<String> subcategories = catalogSearcher.getAllSubcategories();
 
-        if (subcategories == null || !subcategories.contains(text)) {
+        if (!subcategories.contains(text)) {
             sendText(chatId, "❌ Такої підкатегорії не існує.");
             return;
         }
 
-        // 🔹 зберігаємо підкатегорію
+        // 🔹 ОСЬ ЦЕ ГОЛОВНЕ
         selectedSubcategoryForFilter.put(chatId, text);
 
-        // 🔹 стан
         userStates.put(chatId, "choose_filter_for_subcategory");
 
-        // 🔹 сторінка
-        filterPage.put(chatId, 0);
-
-        // 🔹 показуємо фільтри
         sendMessageSafely(createFilterSelectMenu(chatId, chatId.toString(), 0));
     }
 
