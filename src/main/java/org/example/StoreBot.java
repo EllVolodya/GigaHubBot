@@ -226,6 +226,35 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
+        // 🔹 ПАГІНАЦІЯ ФІЛЬТРІВ
+        if (text.equals("Продовжити")) {
+
+            int page = filterPage.getOrDefault(userId, 0);
+
+            page++;
+
+            filterPage.put(userId, page);
+
+            sendMessageSafely(createFilterSelectMenu(userId, chatId, page));
+
+            return;
+        }
+
+        if (text.equals("Попередні")) {
+
+            int page = filterPage.getOrDefault(userId, 0);
+
+            page--;
+
+            if (page < 0) page = 0;
+
+            filterPage.put(userId, page);
+
+            sendMessageSafely(createFilterSelectMenu(userId, chatId, page));
+
+            return;
+        }
+
         // 🗑 Видалення товару з кошика
         if ("awaiting_remove_item".equals(userStates.get(userId))) {
 
