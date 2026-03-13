@@ -1052,19 +1052,19 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     filterPage.put(userId, 0);
 
-                    sendMessageSafely(createFilterSelectMenu(chatId, 0));
+                    sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
 
                     return;
                 }
 
                 case "✏️ Редагувати фільтр" -> {
                     userStates.put(userId, "awaiting_filter_edit");
-                    sendMessageSafely(createFilterSelectMenu(chatId, 0));
+                    sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
                 }
 
                 case "🗑 Видалити фільтр" -> {
                     userStates.put(userId, "awaiting_filter_delete");
-                    sendMessageSafely(createFilterSelectMenu(chatId, 0));
+                    sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
                 }
 
                 case "📋 Список фільтрів" -> {
@@ -1073,12 +1073,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "📦 Товари у фільтрі" -> {
                     userStates.put(userId, "awaiting_filter_products");
-                    sendMessageSafely(createFilterSelectMenu(chatId, 0));
+                    sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
                 }
 
                 case "🧹 Очистити фільтр" -> {
                     userStates.put(userId, "awaiting_filter_clear");
-                    sendMessageSafely(createFilterSelectMenu(chatId, 0));
+                    sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
                 }
 
                 case "🛒 Замовити товар" -> {
@@ -4436,7 +4436,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 userStates.put(userId, "awaiting_filter_select");
 
-                sendMessageSafely(createFilterSelectMenu(chatId, 0));
+                sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
 
                 return;
 
@@ -5312,7 +5312,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 filterPage.put(chatId, page);
 
-                sendMessageSafely(createFilterSelectMenu(chatId.toString(), page));
+                sendMessageSafely(createFilterSelectMenu(chatId, chatId.toString(), page));
 
                 return;
             }
@@ -5325,7 +5325,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 filterPage.put(chatId, page);
 
-                sendMessageSafely(createFilterSelectMenu(chatId.toString(), page));
+                sendMessageSafely(createFilterSelectMenu(chatId, chatId.toString(), page));
 
                 return;
             }
@@ -7144,7 +7144,7 @@ public class StoreBot extends TelegramLongPollingBot {
         return filters;
     }
 
-    private SendMessage createFilterSelectMenu(String chatId, int page) {
+    private SendMessage createFilterSelectMenu(Long userId, String chatId, int page) {
 
         List<String> filters = catalogSearcher.getFilters();
 
@@ -7161,8 +7161,7 @@ public class StoreBot extends TelegramLongPollingBot {
         if (page < 0) page = 0;
         if (page >= totalPages) page = totalPages - 1;
 
-        // зберігаємо сторінку
-        filterPage.put(Long.valueOf(chatId), page);
+        filterPage.put(userId, page);
 
         int start = page * pageSize;
         int end = Math.min(start + pageSize, filters.size());
@@ -7184,23 +7183,14 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        if (!row.isEmpty()) {
-            rows.add(row);
-        }
+        if (!row.isEmpty()) rows.add(row);
 
         KeyboardRow nav = new KeyboardRow();
 
-        if (page > 0) {
-            nav.add("Попередні");
-        }
+        if (page > 0) nav.add("Попередні");
+        if (page < totalPages - 1) nav.add("Продовжити");
 
-        if (page < totalPages - 1) {
-            nav.add("Продовжити");
-        }
-
-        if (!nav.isEmpty()) {
-            rows.add(nav);
-        }
+        if (!nav.isEmpty()) rows.add(nav);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(rows);
@@ -7611,17 +7601,17 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 Зберігаємо вибрану підкатегорію
+        // 🔹 зберігаємо підкатегорію
         selectedSubcategoryForFilter.put(chatId, text);
 
-        // 🔹 Стан користувача
+        // 🔹 стан
         userStates.put(chatId, "choose_filter_for_subcategory");
 
-        // 🔹 Початкова сторінка фільтрів
+        // 🔹 сторінка
         filterPage.put(chatId, 0);
 
-        // 🔹 Показуємо список фільтрів
-        sendMessageSafely(createFilterSelectMenu(chatId.toString(), 0));
+        // 🔹 показуємо фільтри
+        sendMessageSafely(createFilterSelectMenu(chatId, chatId.toString(), 0));
     }
 
     public void addFilterToSubcategory(String subcategoryName,String filterName){
