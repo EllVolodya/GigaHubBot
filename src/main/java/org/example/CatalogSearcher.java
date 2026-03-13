@@ -418,40 +418,6 @@ public class CatalogSearcher {
         return filters;
     }
 
-    public List<Map<String,Object>> getProductsByFilter(String filterName){
-
-        List<Map<String,Object>> products = new ArrayList<>();
-
-        try(Connection conn = DatabaseManager.getConnection()){
-
-            PreparedStatement ps = conn.prepareStatement(
-
-                    "SELECT p.* FROM products p " +
-                            "JOIN filters f ON p.filter_id = f.id " +
-                            "WHERE f.name=?");
-
-            ps.setString(1,filterName);
-
-            ResultSet rs = ps.executeQuery();
-
-            while(rs.next()){
-
-                Map<String,Object> p = new HashMap<>();
-
-                p.put("id",rs.getInt("id"));
-                p.put("name",rs.getString("name"));
-                p.put("price",rs.getDouble("price"));
-
-                products.add(p);
-            }
-
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-
-        return products;
-    }
-
     public void insertFilter(String filterName, String subcategoryName){
 
         String sql = """
@@ -641,7 +607,7 @@ public class CatalogSearcher {
             SELECT p.*
             FROM products p
             JOIN subfilters sf ON p.subfilter_id = sf.id
-            WHERE sf.name=?
+            WHERE sf.name = ?
         """);
 
             ps.setString(1, subfilterName);
@@ -652,11 +618,54 @@ public class CatalogSearcher {
 
                 Map<String,Object> product = new HashMap<>();
 
+                product.put("id", rs.getInt("id"));
                 product.put("name", rs.getString("name"));
                 product.put("price", rs.getDouble("price"));
                 product.put("description", rs.getString("description"));
                 product.put("photo", rs.getString("photo"));
+                product.put("manufacturer", rs.getString("manufacturer"));
                 product.put("quantity", rs.getInt("quantity"));
+
+                products.add(product);
+            }
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return products;
+    }
+
+    public List<Map<String,Object>> getProductsByFilter(String filterName){
+
+        List<Map<String,Object>> products = new ArrayList<>();
+
+        try(Connection conn = DatabaseManager.getConnection()){
+
+            PreparedStatement ps = conn.prepareStatement("""
+            SELECT p.*
+            FROM products p
+            JOIN filters f ON p.filter_id = f.id
+            WHERE f.name = ?
+            AND p.subfilter_id IS NULL
+        """);
+
+            ps.setString(1, filterName);
+
+            ResultSet rs = ps.executeQuery();
+
+            while(rs.next()){
+
+                Map<String,Object> product = new HashMap<>();
+
+                product.put("id", rs.getInt("id"));
+                product.put("name", rs.getString("name"));
+                product.put("price", rs.getDouble("price"));
+                product.put("description", rs.getString("description"));
+                product.put("photo", rs.getString("photo"));
+                product.put("manufacturer", rs.getString("manufacturer"));
+                product.put("quantity", rs.getInt("quantity"));
+                product.put("unit", rs.getString("unit"));
 
                 products.add(product);
             }
