@@ -3338,12 +3338,12 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            case "awaiting_filter_for_subfilter" -> {
+            /*case "awaiting_filter_for_subfilter" -> {
 
                 chooseFilterForSubfilter(userId, chatId, text);
 
                 return;
-            }
+            }*/
 
             case "awaiting_subfilter_name" -> {
 
@@ -3352,8 +3352,12 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            case "choose_filter_for_subcategory" -> {
+            case "awaiting_filter_for_subfilter" -> {
 
+                // 🔹 викликаємо перевірку фільтра
+                chooseFilterForSubfilter(userId, chatId, text);
+
+                // 🔹 отримуємо підкатегорію
                 String subcategory = selectedSubcategoryForFilter.get(chatId);
 
                 if (subcategory == null) {
@@ -3364,6 +3368,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 System.out.println("DEBUG SUBCATEGORY: " + subcategory);
 
+                // 🔹 додаємо фільтр
                 addFilterToSubcategory(subcategory, text);
 
                 sendText(chatId,
@@ -3373,6 +3378,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 userStates.remove(chatId);
                 selectedSubcategoryForFilter.remove(chatId);
+
+                return;
             }
 
             /// 🚚 Обробка вибору доставки
@@ -7636,10 +7643,13 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 ОСЬ ЦЕ ГОЛОВНЕ
+        // 🔹 ЗБЕРІГАЄМО ПІДКАТЕГОРІЮ
         selectedSubcategoryForFilter.put(chatId, text);
 
-        userStates.put(chatId, "choose_filter_for_subcategory");
+        // 🔹 СТАН (ВАЖЛИВО)
+        userStates.put(chatId, "awaiting_filter_for_subfilter");
+
+        filterPage.put(chatId, 0);
 
         sendMessageSafely(createFilterSelectMenu(chatId, chatId.toString(), 0));
     }
