@@ -3406,7 +3406,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "awaiting_filter_for_subcategory" -> {
 
-                String subcategory = selectedSubcategoryForFilter.get(chatId);
+                String subcategory = selectedSubcategoryForFilter.get(userId);
 
                 if (subcategory == null) {
 
@@ -3427,8 +3427,8 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "' додано до підкатегорії '" +
                                 subcategory + "'");
 
-                userStates.remove(chatId);
-                selectedSubcategoryForFilter.remove(chatId);
+                userStates.remove(userId);
+                selectedSubcategoryForFilter.remove(userId);
 
                 return;
             }
