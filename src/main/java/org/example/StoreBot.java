@@ -7217,7 +7217,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // 🔹 КНОПКА НАЗАД
         KeyboardRow back = new KeyboardRow();
-        back.add("⬅️ Назад");
+        back.add(BACK_BUTTON);
         rows.add(back);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
