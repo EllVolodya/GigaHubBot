@@ -7214,12 +7214,18 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (!row.isEmpty()) rows.add(row);
 
+        // 🔹 КНОПКИ ПАГІНАЦІЇ
         KeyboardRow nav = new KeyboardRow();
 
         if (page > 0) nav.add("Попередні");
         if (page < totalPages - 1) nav.add("Продовжити");
 
         if (!nav.isEmpty()) rows.add(nav);
+
+        // 🔹 КНОПКА НАЗАД
+        KeyboardRow back = new KeyboardRow();
+        back.add("⬅️ Назад");
+        rows.add(back);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(rows);
