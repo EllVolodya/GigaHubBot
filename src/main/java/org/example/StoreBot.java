@@ -5774,24 +5774,40 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String category = currentCategory.get(chatId);
         String subcategory = currentSubcategory.get(chatId);
+        String filter = currentFilter.get(chatId);
+        String subfilter = currentSubfilter.get(chatId);
 
         CatalogSearcher searcher = new CatalogSearcher();
 
         List<Map<String, Object>> products;
 
-        if (subcategory == null) {
-            products = searcher.getProductsByCategory(category);
-        } else {
+        // 1️⃣ якщо вибраний підфільтр
+        if (subfilter != null) {
+
+            products = searcher.getProductsBySubfilter(subfilter);
+
+        }
+        // 2️⃣ якщо вибраний фільтр
+        else if (filter != null) {
+
+            products = searcher.getProductsByFilter(filter);
+
+        }
+        // 3️⃣ fallback
+        else if (subcategory != null) {
+
             products = searcher.getProducts(category, subcategory);
+
+        }
+        else {
+
+            products = searcher.getProductsByCategory(category);
         }
 
         if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ Товарів немає.");
+            sendText(chatId, "❌ Товарів у цьому фільтрі немає.");
             return;
         }
-
-        products.sort(Comparator.comparingInt(
-                p -> ((Number) p.get("id")).intValue()));
 
         userProductLists.put(chatId, new ArrayList<>(products));
 
@@ -5801,33 +5817,20 @@ public class StoreBot extends TelegramLongPollingBot {
 
             Map<String, Object> product = products.get(i);
 
-            String name = escapeTelegram(product.get("name").toString());
+            String name = product.get("name").toString();
+            String price = product.get("price").toString();
 
-            String price = product.get("price") == null
-                    ? "0"
-                    : product.get("price").toString();
-
-            String line =
-                    (i + 1) + ". " +
-                            name +
-                            " — " +
-                            price +
-                            " грн\n";
-
-            // якщо повідомлення занадто велике
-            if (sb.length() + line.length() > 3500) {
-                sendText(chatId, sb.toString());
-                sb = new StringBuilder();
-            }
-
-            sb.append(line);
+            sb.append(i + 1)
+                    .append(". ")
+                    .append(name)
+                    .append(" — ")
+                    .append(price)
+                    .append(" грн\n");
         }
 
-        if (sb.length() > 0) {
-            sendText(chatId, sb.toString());
-        }
+        sendText(chatId, sb.toString());
 
-        // 🔹 КНОПКИ
+        // кнопки
         KeyboardRow row1 = new KeyboardRow();
         row1.add(ADD_TO_CART_BUTTON);
         row1.add(VIEW_CART_BUTTON);
