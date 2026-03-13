@@ -1052,7 +1052,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     filterPage.put(userId, 0);
 
-                    sendMessageSafely(createFilterSelectMenu(chatId.toString(), 0));
+                    sendMessageSafely(createFilterSelectMenu(chatId, 0));
 
                     return;
                 }
@@ -5290,10 +5290,10 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 ПАГІНАЦІЯ ФІЛЬТРІВ (важливо: обробляємо раніше всього)
+        // 🔹 ПАГІНАЦІЯ ФІЛЬТРІВ
         if ("awaiting_filter_for_subfilter".equals(state)) {
 
-            if(text.equals("➡️ Продовжити")){
+            if (text.equals("➡️ Продовжити")) {
 
                 int page = filterPage.getOrDefault(chatId, 0);
 
@@ -5306,13 +5306,13 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            if(text.equals("⬅️ Попередні")){
+            if (text.equals("⬅️ Попередні")) {
 
                 int page = filterPage.getOrDefault(chatId, 0);
 
                 page--;
 
-                if(page < 0) page = 0;
+                if (page < 0) page = 0;
 
                 filterPage.put(chatId, page);
 
@@ -5321,15 +5321,17 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔹 якщо це фільтр
+            // 🔹 якщо вибрали фільтр
             List<String> filters = catalogSearcher.getFilters();
 
             if (filters.contains(text)) {
 
                 selectedFilterForSubfilter.put(chatId, text);
+
                 userStates.put(chatId, "awaiting_subfilter_name");
 
                 sendText(chatId, "✏️ Введіть назву підфільтра:");
+
                 return;
             }
         }
