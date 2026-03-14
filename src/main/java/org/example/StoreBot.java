@@ -804,8 +804,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 // 🚚 ВИБІР ДОСТАВКИ (важливо)
                 if (text.equals("🏬 Самовивіз")
-                        || text.equals("📦 Доставка по місту")
-                        || text.equals("📮 Доставка Новою поштою")) {
+                        || text.equals("📦 Доставка по місту")) {
+                        //|| text.equals("📮 Доставка Новою поштою")) {
 
                     userStates.remove(userId); // виходимо з пошуку
                     return;
@@ -1128,7 +1128,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     KeyboardRow deliveryRow = new KeyboardRow();
                     deliveryRow.add(new KeyboardButton("🏬 Самовивіз"));
                     deliveryRow.add(new KeyboardButton("📦 Доставка по місту"));
-                    deliveryRow.add(new KeyboardButton("📮 Доставка Новою поштою"));
+                    //deliveryRow.add(new KeyboardButton("📮 Доставка Новою поштою"));
 
                     KeyboardRow backRow = new KeyboardRow();
                     backRow.add(new KeyboardButton(BACK_BUTTON));
@@ -1139,7 +1139,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             "🚚 Оберіть спосіб доставки:\n\n" +
                                     "🏬 Самовивіз\n" +
                                     "📦 Доставка по місту\n" +
-                                    "📮 Нова Пошта\n\n" +
+                                    //"📮 Нова Пошта\n\n" +
                                     "Митрофан усе підготує та передасть замовлення максимально швидко 😉",
                             markup);
 
@@ -2224,7 +2224,7 @@ public class StoreBot extends TelegramLongPollingBot {
         if ("awaiting_delivery_choice".equals(state) ||
                 "order_pickup".equals(state) ||
                 "awaiting_city_delivery".equals(state) ||
-                "awaiting_post_delivery".equals(state) ||
+                //"awaiting_post_delivery".equals(state) ||
                 "awaiting_payment_method".equals(state)) {
 
             // очищаємо дані замовлення
@@ -6051,9 +6051,10 @@ public class StoreBot extends TelegramLongPollingBot {
             sb.append("Місто: ").append(freshOrder.getOrDefault("city", "-")).append("\n");
         } else if ("Доставка по місту".equals(deliveryType)) {
             sb.append("Адреса: ").append(freshOrder.getOrDefault("address", "-")).append("\n");
-        } else if ("Нова пошта".equals(deliveryType)) {
-            sb.append("Відділення НП: ").append(freshOrder.getOrDefault("postOffice", "-")).append("\n");
         }
+        /*} else if ("Нова пошта".equals(deliveryType)) {
+            sb.append("Відділення НП: ").append(freshOrder.getOrDefault("postOffice", "-")).append("\n");
+        }*/
 
         sb.append("П.І.: ").append(freshOrder.getOrDefault("fullName", "-")).append("\n")
                 .append("Телефон: ").append(freshOrder.getOrDefault("phone", "-")).append("\n")
@@ -6971,7 +6972,7 @@ public class StoreBot extends TelegramLongPollingBot {
             switch (deliveryType) {
                 case "Самовивіз" -> city = addressOrCityOrPost;
                 case "Доставка по місту" -> address = addressOrCityOrPost;
-                case "Нова пошта" -> postOffice = addressOrCityOrPost;
+                //case "Нова пошта" -> postOffice = addressOrCityOrPost;
             }
 
             stmt.setString(4, city);
