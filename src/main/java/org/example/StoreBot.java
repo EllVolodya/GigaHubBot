@@ -3433,8 +3433,6 @@ public class StoreBot extends TelegramLongPollingBot {
             /// 🚚 Обробка вибору доставки
             case "awaiting_delivery_choice" -> {
 
-                System.out.println("DEBUG DELIVERY TEXT = " + text);
-
                 if (text.contains("Самовивіз")) {
 
                     userStates.put(userId, "order_pickup");
@@ -3445,7 +3443,8 @@ public class StoreBot extends TelegramLongPollingBot {
                                     "🏙 Місто\n" +
                                     "👤 Ім'я Прізвище\n" +
                                     "📞 Телефон\n\n" +
-                                    "Приклад:\n" +
+                                    "Можна вводити у будь-якому форматі\n" +
+                                    "Наприклад:\n" +
                                     "Казанка Іван Петренко +380501234567");
 
                     return;
@@ -3461,7 +3460,8 @@ public class StoreBot extends TelegramLongPollingBot {
                                     "🏙 Місто\n" +
                                     "👤 Ім'я Прізвище\n" +
                                     "📞 Телефон\n\n" +
-                                    "Приклад:\n" +
+                                    "Можна вводити у будь-якому форматі\n" +
+                                    "Наприклад:\n" +
                                     "Казанка Іван Петренко +380501234567");
 
                     return;
@@ -3479,206 +3479,106 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "❌ Оберіть спосіб доставки кнопкою.");
             }
 
+            //Самовивіз
             case "order_pickup" -> {
 
-                if (text.equals("⬅️ Назад")) {
+                if (text.equals(BACK_BUTTON)) {
 
                     userStates.remove(userId);
-                    sendText(chatId,"↩️ Повертаємось у кошик.");
 
                     try {
                         showCart(userId);
                     } catch (TelegramApiException e) {
                         e.printStackTrace();
+                        sendText(chatId, "❌ Помилка при відкритті кошика.");
                     }
 
                     return;
                 }
 
-                List<Map<String, Object>> cart = userCart.get(userId);
-                if (cart == null || cart.isEmpty()) {
-                    sendText(chatId, "🛒 Ваш кошик порожній.");
+                List<Map<String,Object>> cart = userCart.get(userId);
+
+                if(cart == null || cart.isEmpty()){
+                    sendText(chatId,"🛒 Ваш кошик порожній.");
                     userStates.remove(userId);
                     return;
                 }
 
-                // 🔹 шукаємо телефон
-                Pattern phonePattern = Pattern.compile("(\\+?\\d{10,13})");
-                Matcher phoneMatcher = phonePattern.matcher(text);
+                Map<String,String> data = parseDeliveryData(text);
 
-                if (!phoneMatcher.find()) {
+                if(data == null){
                     sendText(chatId,
-                            "❌ Вкажіть телефон.\n\n" +
-                                    "Приклад:\n" +
+                            "❌ Не вдалося розпізнати дані.\n\n"+
+                                    "Спробуйте:\n"+
                                     "Казанка Іван Петренко +380501234567");
                     return;
                 }
 
-                String phone = phoneMatcher.group(1);
+                String city = data.get("city");
+                String fullName = data.get("name");
+                String phone = data.get("phone");
 
-                // 🔹 шукаємо бонусну картку
-                Pattern cardPattern = Pattern.compile("\\b\\d{4,}\\b");
-                Matcher cardMatcher = cardPattern.matcher(text);
+                tempDeliveryType.put(userId,"Самовивіз");
+                tempAddress.put(userId,city);
+                tempFullname.put(userId,fullName);
+                tempPhone.put(userId,phone);
+                tempCard.put(userId,"0000");
 
-                String card = "0000";
-                if (cardMatcher.find()) {
-                    card = cardMatcher.group();
-                }
+                createTempOrder(userId,cart);
 
-                // 🔹 очищаємо текст
-                String cleaned = text
-                        .replace(phone, "")
-                        .replace(card, "")
-                        .replaceAll("[^\\p{L}\\s]", " ")
-                        .trim();
-
-                String[] words = cleaned.split("\\s+");
-
-                if (words.length < 2) {
-                    sendText(chatId,
-                            "❌ Вкажіть місто та ім'я.\n\n" +
-                                    "Приклад:\n" +
-                                    "Казанка Іван Петренко +380501234567");
-                    return;
-                }
-
-                String city = words[0];
-                String fullName = words.length > 2 ? words[1] + " " + words[2] : words[1];
-
-                tempDeliveryType.put(userId, "Самовивіз");
-                tempAddress.put(userId, city);
-                tempFullname.put(userId, fullName);
-                tempPhone.put(userId, phone);
-                tempCard.put(userId, card);
-
-                String orderCode = String.format("%04d", new Random().nextInt(10000));
-                tempOrderCode.put(userId, orderCode);
-
-                StringBuilder items = new StringBuilder();
-                double total = 0;
-
-                for (Map<String, Object> item : cart) {
-
-                    String name = item.get("name").toString();
-                    double price = Double.parseDouble(item.get("price").toString());
-                    int qty = item.get("quantity") == null ? 1 :
-                            Integer.parseInt(item.get("quantity").toString());
-
-                    total += price * qty;
-
-                    items.append(name)
-                            .append(":")
-                            .append(price)
-                            .append(":")
-                            .append(qty)
-                            .append(";");
-                }
-
-                tempOrderItems.put(userId, items.toString());
-                tempTotal.put(userId, total);
-
-                askPaymentMethod(userId, Long.parseLong(chatId));
-
-                userStates.put(userId, "awaiting_payment_method");
+                askPaymentMethod(userId,Long.parseLong(chatId));
+                userStates.put(userId,"awaiting_payment_method");
             }
 
+            //Доставка по місту
             case "awaiting_city_delivery" -> {
 
-                if (text.equals("⬅️ Назад")) {
+                if (text.equals(BACK_BUTTON)) {
 
                     userStates.remove(userId);
-                    sendText(chatId,"↩️ Повертаємось у кошик.");
 
                     try {
                         showCart(userId);
                     } catch (TelegramApiException e) {
                         e.printStackTrace();
+                        sendText(chatId, "❌ Помилка при відкритті кошика.");
                     }
 
                     return;
                 }
 
-                List<Map<String, Object>> cart = userCart.get(userId);
-                if (cart == null || cart.isEmpty()) {
-                    sendText(chatId, "🛒 Ваш кошик порожній.");
+                List<Map<String,Object>> cart = userCart.get(userId);
+
+                if(cart == null || cart.isEmpty()){
+                    sendText(chatId,"🛒 Ваш кошик порожній.");
                     userStates.remove(userId);
                     return;
                 }
 
-                Pattern phonePattern = Pattern.compile("(\\+?\\d{10,13})");
-                Matcher phoneMatcher = phonePattern.matcher(text);
+                Map<String,String> data = parseDeliveryData(text);
 
-                if (!phoneMatcher.find()) {
+                if(data == null){
                     sendText(chatId,
-                            "❌ Вкажіть телефон.\n\n" +
-                                    "Приклад:\n" +
+                            "❌ Не вдалося розпізнати дані.\n\n"+
+                                    "Спробуйте:\n"+
                                     "Казанка Іван Петренко +380501234567");
                     return;
                 }
 
-                String phone = phoneMatcher.group(1);
+                String address = data.get("city");
+                String fullName = data.get("name");
+                String phone = data.get("phone");
 
-                Pattern cardPattern = Pattern.compile("\\b\\d{4,}\\b");
-                Matcher cardMatcher = cardPattern.matcher(text);
+                tempDeliveryType.put(userId,"Доставка по місту");
+                tempAddress.put(userId,address);
+                tempFullname.put(userId,fullName);
+                tempPhone.put(userId,phone);
+                tempCard.put(userId,"0000");
 
-                String card = "0000";
-                if (cardMatcher.find()) {
-                    card = cardMatcher.group();
-                }
+                createTempOrder(userId,cart);
 
-                String cleaned = text
-                        .replace(phone, "")
-                        .replace(card, "")
-                        .replaceAll("[^\\p{L}\\s]", " ")
-                        .trim();
-
-                String[] words = cleaned.split("\\s+");
-
-                if (words.length < 2) {
-                    sendText(chatId,
-                            "❌ Вкажіть місто та ім'я.\n\n" +
-                                    "Приклад:\n" +
-                                    "Казанка Іван Петренко +380501234567");
-                    return;
-                }
-
-                String address = words[0];
-                String fullName = words.length > 2 ? words[1] + " " + words[2] : words[1];
-
-                tempDeliveryType.put(userId, "Доставка по місту");
-                tempAddress.put(userId, address);
-                tempFullname.put(userId, fullName);
-                tempPhone.put(userId, phone);
-                tempCard.put(userId, card);
-
-                String orderCode = String.format("%04d", new Random().nextInt(10000));
-                tempOrderCode.put(userId, orderCode);
-
-                StringBuilder items = new StringBuilder();
-                double total = 0;
-
-                for (Map<String, Object> item : cart) {
-
-                    String name = item.get("name").toString();
-                    double price = Double.parseDouble(item.get("price").toString());
-                    int qty = item.get("quantity") == null ? 1 :
-                            Integer.parseInt(item.get("quantity").toString());
-
-                    total += price * qty;
-
-                    items.append(name)
-                            .append(":")
-                            .append(price)
-                            .append(":")
-                            .append(qty)
-                            .append(";");
-                }
-
-                tempOrderItems.put(userId, items.toString());
-                tempTotal.put(userId, total);
-
-                askPaymentMethod(userId, Long.valueOf(chatId));
-                userStates.put(userId, "awaiting_payment_method");
+                askPaymentMethod(userId,Long.parseLong(chatId));
+                userStates.put(userId,"awaiting_payment_method");
             }
 
             case "awaiting_payment_method" -> {
@@ -7848,5 +7748,86 @@ public class StoreBot extends TelegramLongPollingBot {
 
         userStates.remove(userId);
         selectedFilterForSubfilter.remove(userId);
+    }
+
+    private Map<String,String> parseDeliveryData(String text){
+
+        Map<String,String> data = new HashMap<>();
+
+        // вставляємо пробіли між буквами і цифрами
+        text = text.replaceAll("([\\p{L}])([0-9])", "$1 $2");
+        text = text.replaceAll("([0-9])([\\p{L}])", "$1 $2");
+
+        // шукаємо телефон
+        Pattern phonePattern = Pattern.compile("(\\+?\\d{10,13})");
+        Matcher phoneMatcher = phonePattern.matcher(text);
+
+        if(!phoneMatcher.find()) return null;
+
+        String phone = phoneMatcher.group(1);
+
+        text = text.replace(phone,"");
+
+        // прибираємо коми
+        text = text.replaceAll("[,;]", " ");
+
+        // нормалізуємо пробіли
+        text = text.trim().replaceAll("\\s+"," ");
+
+        String[] words = text.split(" ");
+
+        if(words.length == 0) return null;
+
+        String city = words[0];
+
+        StringBuilder nameBuilder = new StringBuilder();
+
+        for(int i=1;i<words.length;i++){
+            nameBuilder.append(words[i]).append(" ");
+        }
+
+        String name = nameBuilder.toString().trim();
+
+        if(name.isEmpty()) name = "Клієнт";
+
+        data.put("city",city);
+        data.put("name",name);
+        data.put("phone",phone);
+
+        return data;
+    }
+
+    private void createTempOrder(Long userId, List<Map<String, Object>> cart) {
+
+        String orderCode = String.format("%04d", new Random().nextInt(10000));
+        tempOrderCode.put(userId, orderCode);
+
+        StringBuilder items = new StringBuilder();
+        double total = 0;
+
+        for (Map<String, Object> item : cart) {
+
+            String name = item.get("name").toString();
+
+            double price = Double.parseDouble(
+                    item.get("price").toString()
+            );
+
+            int qty = item.get("quantity") == null
+                    ? 1
+                    : Integer.parseInt(item.get("quantity").toString());
+
+            total += price * qty;
+
+            items.append(name)
+                    .append(":")
+                    .append(price)
+                    .append(":")
+                    .append(qty)
+                    .append(";");
+        }
+
+        tempOrderItems.put(userId, items.toString());
+        tempTotal.put(userId, total);
     }
 }
