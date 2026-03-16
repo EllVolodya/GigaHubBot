@@ -3441,13 +3441,12 @@ public class StoreBot extends TelegramLongPollingBot {
                     tempStorage.put(userId + "_deliveryType", "Самовивіз");
 
                     sendText(chatId,
-                            "✏️ Введіть, будь-ласка, свої дані для самовивозу:\n\n" +
+                            "✏️ Введіть дані для самовивозу:\n\n" +
                                     "🏙 Місто\n" +
-                                    "👤 П.І.\n" +
-                                    "📞 Телефон\n" +
-                                    "💳 Бонусна картка\n\n" +
-                                    "📌 Приклад:\n" +
-                                    "Казанка, Сидоренко Олена Олексіївна, +380631234567, 4444");
+                                    "👤 Ім'я Прізвище\n" +
+                                    "📞 Телефон\n\n" +
+                                    "Приклад:\n" +
+                                    "Казанка Іван Петренко +380501234567");
 
                     return;
                 }
@@ -3459,23 +3458,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     sendText(chatId,
                             "📝 Введіть дані для доставки:\n\n" +
-                                    "📍 Адреса, 👤 П.І., 📞 Телефон, 💳 Бонусна картка\n\n" +
-                                    "📌 Приклад:\n" +
-                                    "вул. Шевченка 10, Казанка, Петров Петро Петрович, +380671234567, 4444");
-
-                    return;
-                }
-
-                if (text.contains("Нова пошта")) {
-
-                    userStates.put(userId, "awaiting_post_delivery");
-                    tempStorage.put(userId + "_deliveryType", "Нова Пошта");
-
-                    sendText(chatId,
-                            "📝 Введіть дані для доставки Новою Поштою:\n\n" +
-                                    "📮 Відділення НП, 👤 П.І., 📞 Телефон, 💳 Бонусна картка\n\n" +
-                                    "📌 Приклад:\n" +
-                                    "№12, Іваненко Іван Іванович, +380501234567, 4444");
+                                    "🏙 Місто\n" +
+                                    "👤 Ім'я Прізвище\n" +
+                                    "📞 Телефон\n\n" +
+                                    "Приклад:\n" +
+                                    "Казанка Іван Петренко +380501234567");
 
                     return;
                 }
@@ -3492,7 +3479,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "❌ Оберіть спосіб доставки кнопкою.");
             }
 
-            // 🔹 Самовивіз доставка
             case "order_pickup" -> {
 
                 if (text.equals("⬅️ Назад")) {
@@ -3504,7 +3490,6 @@ public class StoreBot extends TelegramLongPollingBot {
                         showCart(userId);
                     } catch (TelegramApiException e) {
                         e.printStackTrace();
-                        sendText(chatId,"❌ Помилка при відкритті кошика.");
                     }
 
                     return;
@@ -3517,7 +3502,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // 🔹 Пошук телефону
+                // 🔹 шукаємо телефон
                 Pattern phonePattern = Pattern.compile("(\\+?\\d{10,13})");
                 Matcher phoneMatcher = phonePattern.matcher(text);
 
@@ -3525,13 +3510,13 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendText(chatId,
                             "❌ Вкажіть телефон.\n\n" +
                                     "Приклад:\n" +
-                                    "Іван Петренко +380501234567");
+                                    "Казанка Іван Петренко +380501234567");
                     return;
                 }
 
                 String phone = phoneMatcher.group(1);
 
-                // 🔹 Пошук бонусної картки
+                // 🔹 шукаємо бонусну картку
                 Pattern cardPattern = Pattern.compile("\\b\\d{4,}\\b");
                 Matcher cardMatcher = cardPattern.matcher(text);
 
@@ -3540,35 +3525,25 @@ public class StoreBot extends TelegramLongPollingBot {
                     card = cardMatcher.group();
                 }
 
-                // 🔹 Очищаємо текст
+                // 🔹 очищаємо текст
                 String cleaned = text
                         .replace(phone, "")
                         .replace(card, "")
+                        .replaceAll("[^\\p{L}\\s]", " ")
                         .trim();
 
                 String[] words = cleaned.split("\\s+");
 
                 if (words.length < 2) {
                     sendText(chatId,
-                            "❌ Вкажіть ім'я і прізвище.\n\n" +
+                            "❌ Вкажіть місто та ім'я.\n\n" +
                                     "Приклад:\n" +
-                                    "Іван Петренко +380501234567");
+                                    "Казанка Іван Петренко +380501234567");
                     return;
                 }
 
-                String fullName = words[0] + " " + words[1];
-
-                String city = "";
-                if (words.length > 2) {
-
-                    StringBuilder addr = new StringBuilder();
-
-                    for (int i = 2; i < words.length; i++) {
-                        addr.append(words[i]).append(" ");
-                    }
-
-                    city = addr.toString().trim();
-                }
+                String city = words[0];
+                String fullName = words.length > 2 ? words[1] + " " + words[2] : words[1];
 
                 tempDeliveryType.put(userId, "Самовивіз");
                 tempAddress.put(userId, city);
@@ -3607,7 +3582,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 userStates.put(userId, "awaiting_payment_method");
             }
 
-            // 🔹 City Delivery
             case "awaiting_city_delivery" -> {
 
                 if (text.equals("⬅️ Назад")) {
@@ -3619,8 +3593,8 @@ public class StoreBot extends TelegramLongPollingBot {
                         showCart(userId);
                     } catch (TelegramApiException e) {
                         e.printStackTrace();
-                        sendText(chatId,"❌ Помилка при відкритті кошика.");
                     }
+
                     return;
                 }
 
@@ -3638,7 +3612,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendText(chatId,
                             "❌ Вкажіть телефон.\n\n" +
                                     "Приклад:\n" +
-                                    "Іван Петренко +380501234567");
+                                    "Казанка Іван Петренко +380501234567");
                     return;
                 }
 
@@ -3655,31 +3629,21 @@ public class StoreBot extends TelegramLongPollingBot {
                 String cleaned = text
                         .replace(phone, "")
                         .replace(card, "")
+                        .replaceAll("[^\\p{L}\\s]", " ")
                         .trim();
 
                 String[] words = cleaned.split("\\s+");
 
                 if (words.length < 2) {
                     sendText(chatId,
-                            "❌ Вкажіть ім'я і прізвище.\n\n" +
+                            "❌ Вкажіть місто та ім'я.\n\n" +
                                     "Приклад:\n" +
-                                    "Іван Петренко +380501234567");
+                                    "Казанка Іван Петренко +380501234567");
                     return;
                 }
 
-                String fullName = words[0] + " " + words[1];
-
-                String address = "";
-                if (words.length > 2) {
-
-                    StringBuilder addr = new StringBuilder();
-
-                    for (int i = 2; i < words.length; i++) {
-                        addr.append(words[i]).append(" ");
-                    }
-
-                    address = addr.toString().trim();
-                }
+                String address = words[0];
+                String fullName = words.length > 2 ? words[1] + " " + words[2] : words[1];
 
                 tempDeliveryType.put(userId, "Доставка по місту");
                 tempAddress.put(userId, address);
@@ -3708,74 +3672,6 @@ public class StoreBot extends TelegramLongPollingBot {
                             .append(":")
                             .append(qty)
                             .append(";");
-                }
-
-                tempOrderItems.put(userId, items.toString());
-                tempTotal.put(userId, total);
-
-                askPaymentMethod(userId, Long.valueOf(chatId));
-                userStates.put(userId, "awaiting_payment_method");
-            }
-
-            // 🔹 Nova Poshta Delivery
-            case "awaiting_post_delivery" -> {
-
-                if (text.equals("⬅️ Назад")) {
-
-                    userStates.remove(userId);
-                    sendText(chatId,"↩️ Повертаємось у кошик.");
-
-                    try {
-                        showCart(userId);
-                    } catch (TelegramApiException e) {
-                        e.printStackTrace();
-                        sendText(chatId,"❌ Помилка при відкритті кошика.");
-                    }
-                    return;
-                }
-
-                List<Map<String, Object>> cart = userCart.get(userId);
-                if (cart == null || cart.isEmpty()) {
-                    sendText(chatId, "🛒 Ваш кошик порожній.");
-                    userStates.remove(userId);
-                    return;
-                }
-
-                String[] parts = text.split(",", 4); // Місто, П.І., Телефон, Картка
-
-                // 🔴 перевірка правильності введення
-                if (parts.length < 3) {
-                    sendText(chatId,
-                            "❌ Дані введені неправильно.\n\n" +
-                                    "📌 Приклад:\n" +
-                                    "Казанка, Іваненко Іван Іванович, +380501234567, 4444");
-                    return;
-                }
-
-                String postOffice = parts[0].trim();
-                String fullName = parts[1].trim();
-                String phone = parts[2].trim();
-                String card = parts.length > 3 ? parts[3].trim() : "0000";
-
-                tempDeliveryType.put(userId, "Нова пошта");
-                tempAddress.put(userId, postOffice);
-                tempFullname.put(userId, fullName);
-                tempPhone.put(userId, phone);
-                tempCard.put(userId, card);
-
-                String orderCode = String.format("%04d", new Random().nextInt(10000));
-                tempOrderCode.put(userId, orderCode);
-
-                StringBuilder items = new StringBuilder();
-                double total = 0;
-
-                for (Map<String, Object> item : cart) {
-                    String name = item.get("name").toString();
-                    double price = Double.parseDouble(item.get("price").toString());
-                    int qty = item.get("quantity") == null ? 1 : Integer.parseInt(item.get("quantity").toString());
-
-                    total += price * qty;
-                    items.append(name).append(":").append(price).append(":").append(qty).append(";");
                 }
 
                 tempOrderItems.put(userId, items.toString());
