@@ -2365,13 +2365,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
         Map<String, Object> product = products.get(choice - 1);
 
-        // 🔥 ОБОВʼЯЗКОВО зберігаємо
+        // 🔥 зберігаємо товар
         lastShownProduct.put(chatId, product);
 
+        // видаляємо його зі списку
         products.remove(choice - 1);
 
-        sendProductFromMap(chatId, product);
-
+        // 🔹 СПОЧАТКУ список
         if (!products.isEmpty()) {
 
             StringBuilder sb = new StringBuilder("\n📦 Інші товари:\n\n");
@@ -2385,6 +2385,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
             sendText(chatId, sb.toString());
         }
+
+        // 🔹 ПОТІМ товар
+        sendProductFromMap(chatId, product);
     }
 
     private void showNextProduct(Long chatId) throws TelegramApiException {
