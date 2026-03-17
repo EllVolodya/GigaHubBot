@@ -379,10 +379,36 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔹 зберігаємо фільтр
+            CatalogSearcher searcher = new CatalogSearcher();
+
+            // 🔹 перевіряємо чи є підфільтри
+            boolean hasSubfilters = searcher.hasSubfilters(text);
+
+            Map<String, Object> product = lastShownProduct.get(userId);
+
+            if (product == null) {
+                sendText(chatId, "❌ Товар не знайдено.");
+                return;
+            }
+
+            // 🔥 ЯКЩО НЕМАЄ ПІДФІЛЬТРІВ
+            if (!hasSubfilters) {
+
+                // 👉 просто додаємо у фільтр
+                addProductToFilter(userId, chatId, text);
+
+                userStates.remove(userId);
+
+                sendText(chatId, "✅ Товар додано у фільтр: " + text);
+
+                sendMessageSafely(createEditMenu(chatId, userId));
+
+                return;
+            }
+
+            // 🔥 ЯКЩО Є ПІДФІЛЬТРИ
             selectedFilter.put(userId, text);
 
-            // 🔹 міняємо стан
             userStates.put(userId, "awaiting_subfilter_select");
 
             sendText(chatId, "🔽 Оберіть підфільтр:");
