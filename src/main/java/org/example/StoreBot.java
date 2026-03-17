@@ -16,7 +16,6 @@ import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.example.ExcelToMySqlImporter;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -8049,13 +8048,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            String name = product.get("name").toString();
+            String name = product.get("name").toString().trim();
 
-            // 🔹 1. шукаємо
-            String findSql = "SELECT id FROM products WHERE name = ? LIMIT 1";
+            // 🔥 1. шукаємо НЕ по точному співпадінню
+            String findSql = "SELECT id FROM products WHERE LOWER(name) LIKE ? LIMIT 1";
 
             try (PreparedStatement ps = conn.prepareStatement(findSql)) {
-                ps.setString(1, name);
+                ps.setString(1, "%" + name.toLowerCase() + "%");
 
                 ResultSet rs = ps.executeQuery();
 
@@ -8064,7 +8063,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // 🔹 2. якщо нема — створюємо
+            // 🔥 2. якщо нема — створюємо
             String insertSql = """
             INSERT INTO products(name, price, unit)
             VALUES (?, ?, ?)
