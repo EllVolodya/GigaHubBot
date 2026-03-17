@@ -4407,22 +4407,22 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try {
 
-            // 🔹 діапазон
+            // 🔹 ДІАПАЗОН (1-10)
             if (text.contains("-")) {
 
                 String[] parts = text.split("-");
                 int start = Integer.parseInt(parts[0].trim()) - 1;
                 int end = Integer.parseInt(parts[1].trim()) - 1;
 
-                if (start < 0) start = 0;
-                if (end >= matches.size()) end = matches.size() - 1;
+                start = Math.max(start, 0);
+                end = Math.min(end, matches.size() - 1);
 
                 for (int i = start; i <= end; i++) {
                     selectedProducts.add(matches.get(i));
                 }
 
             }
-            // 🔹 список
+            // 🔹 СПИСОК (1,3,5)
             else if (text.contains(",")) {
 
                 String[] parts = text.split(",");
@@ -4435,7 +4435,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
                 }
             }
-            // 🔹 один товар
+            // 🔹 ОДИН ТОВАР
             else {
 
                 int index = Integer.parseInt(text) - 1;
@@ -4450,23 +4450,29 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // ✅ ПРАВИЛЬНЕ ЗБЕРЕЖЕННЯ
+            // 🔥 ЗБЕРЕЖЕННЯ (КЛЮЧОВИЙ МОМЕНТ)
 
-            // список
+            // список товарів
             adminSelectedProducts.put(userId, selectedProducts);
 
-            // поточний товар
-            adminSelectedProduct.put(userId, selectedProducts.get(0));
+            // поточний товар (обʼєкт)
+            Map<String, Object> currentProduct = selectedProducts.get(0);
+            adminSelectedProduct.put(userId, currentProduct);
+
+            // 🔥 ВАЖЛИВО — для UI
+            adminEditingProduct.put(userId,
+                    currentProduct.get("name").toString());
 
             userStates.put(userId, "editing");
 
+            // очищаємо пошук
             adminMatchList.remove(userId);
 
-            // текст
+            // 🔥 ВИВІД
             StringBuilder sb = new StringBuilder();
-            sb.append("Редагуємо ").append(selectedProducts.size()).append(" товар(ів)\n");
+            sb.append("Редагуємо ").append(selectedProducts.size()).append(" товар(ів)\n\n");
             sb.append("Поточний:\n")
-                    .append(selectedProducts.get(0).get("name"));
+                    .append(currentProduct.get("name"));
 
             sendText(chatId, sb.toString());
 
