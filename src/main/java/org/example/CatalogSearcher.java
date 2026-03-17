@@ -742,4 +742,38 @@ public class CatalogSearcher {
             e.printStackTrace();
         }
     }
+
+    public void addProductToFilter(Map<String, Object> product, String filterName) {
+
+        if (product == null) return;
+
+        int productId = Integer.parseInt(product.get("id").toString());
+
+        String sql = """
+        UPDATE products
+        SET filter_id = (
+            SELECT id FROM filters WHERE name = ? LIMIT 1
+        ),
+        subfilter_id = NULL
+        WHERE id = ?
+    """;
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, filterName);
+            ps.setInt(2, productId);
+
+            int updated = ps.executeUpdate();
+
+            if (updated > 0) {
+                System.out.println("✅ Product added to filter: " + filterName);
+            } else {
+                System.out.println("⚠️ Product NOT updated");
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }

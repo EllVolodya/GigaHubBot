@@ -7478,16 +7478,20 @@ public class StoreBot extends TelegramLongPollingBot {
     // Додати товар у фільтр
     private void addProductToFilter(Long userId, String chatId, String filterName) {
 
-        String productName = adminEditingProduct.get(userId);
+        // 🔥 беремо ОБʼЄКТ товару
+        Map<String, Object> product = adminSelectedProduct.get(userId);
 
-        if (productName == null) {
+        if (product == null) {
             sendText(chatId, "❌ Товар не вибрано.");
             return;
         }
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            // 1️⃣ Отримуємо id фільтра
+            // 1️⃣ ID товару
+            int productId = Integer.parseInt(product.get("id").toString());
+
+            // 2️⃣ ID фільтра
             String filterSql = "SELECT id FROM filters WHERE name=?";
 
             try (PreparedStatement getFilter = conn.prepareStatement(filterSql)) {
@@ -7503,13 +7507,17 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     int filterId = rs.getInt("id");
 
-                    // 2️⃣ Оновлюємо товар
-                    String updateSql = "UPDATE products SET filter_id=? WHERE name=?";
+                    // 🔥 3️⃣ UPDATE ПО ID (а не по name)
+                    String updateSql = """
+                    UPDATE products
+                    SET filter_id = ?, subfilter_id = NULL
+                    WHERE id = ?
+                """;
 
                     try (PreparedStatement update = conn.prepareStatement(updateSql)) {
 
                         update.setInt(1, filterId);
-                        update.setString(2, productName);
+                        update.setInt(2, productId);
 
                         int rows = update.executeUpdate();
 
@@ -7524,7 +7532,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         } catch (Exception e) {
             e.printStackTrace();
-            sendText(chatId, "❌ Помилка при додаванні товару у фільтр.");
+            sendText(chatId, "❌ Помилка при додаванні у фільтр.");
         }
     }
 
