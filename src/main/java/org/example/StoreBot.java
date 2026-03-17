@@ -7464,30 +7464,67 @@ public class StoreBot extends TelegramLongPollingBot {
 
         Map<String, Object> product = adminSelectedProduct.get(userId);
 
-        if (product == null) return false;
+        System.out.println("==== ADD PRODUCT TO FILTER ====");
+        System.out.println("USER: " + userId);
+        System.out.println("FILTER: " + filterName);
+        System.out.println("SUBFILTER: " + subfilterName);
+        System.out.println("PRODUCT: " + product);
+
+        if (product == null) {
+            System.out.println("❌ PRODUCT IS NULL");
+            return false;
+        }
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            // 🔥 1. отримуємо або створюємо товар
-            int productId = getOrCreateProductId(product);
+            // 🔹 1. ID товару
+            Integer productId = null;
 
-            if (productId == -1) return false;
+            if (product.containsKey("id") && product.get("id") != null) {
+                productId = Integer.parseInt(product.get("id").toString());
+                System.out.println("✔ Product ID from map: " + productId);
+            } else {
+                System.out.println("⚠ No ID, searching by name...");
 
-            // 🔹 filter_id
-            int filterId = -1;
+                String name = product.get("name").toString();
 
-            String filterSql = "SELECT id FROM filters WHERE name=?";
+                String findSql = "SELECT id FROM products WHERE LOWER(name) LIKE ? LIMIT 1";
+
+                try (PreparedStatement ps = conn.prepareStatement(findSql)) {
+                    ps.setString(1, "%" + name.toLowerCase() + "%");
+
+                    ResultSet rs = ps.executeQuery();
+
+                    if (rs.next()) {
+                        productId = rs.getInt("id");
+                        System.out.println("✔ Found product in DB: " + productId);
+                    } else {
+                        System.out.println("❌ Product not found in DB");
+                        return false;
+                    }
+                }
+            }
+
+            // 🔹 2. filter_id
+            Integer filterId = null;
+
+            String filterSql = "SELECT id FROM filters WHERE LOWER(name) LIKE ? LIMIT 1";
 
             try (PreparedStatement ps = conn.prepareStatement(filterSql)) {
-                ps.setString(1, filterName);
+                ps.setString(1, "%" + filterName.toLowerCase() + "%");
 
                 ResultSet rs = ps.executeQuery();
 
                 if (rs.next()) {
                     filterId = rs.getInt("id");
-                } else return false;
+                    System.out.println("✔ Filter ID: " + filterId);
+                } else {
+                    System.out.println("❌ Filter NOT found: " + filterName);
+                    return false;
+                }
             }
 
+            // 🔹 3. subfilter_id (опціонально)
             Integer subfilterId = null;
 
             if (subfilterName != null) {
@@ -7496,22 +7533,25 @@ public class StoreBot extends TelegramLongPollingBot {
                 SELECT sf.id
                 FROM subfilters sf
                 JOIN filters f ON sf.filter_id = f.id
-                WHERE sf.name=? AND f.name=?
+                WHERE LOWER(sf.name) LIKE ? AND LOWER(f.name) LIKE ?
             """;
 
                 try (PreparedStatement ps = conn.prepareStatement(subSql)) {
-                    ps.setString(1, subfilterName);
-                    ps.setString(2, filterName);
+                    ps.setString(1, "%" + subfilterName.toLowerCase() + "%");
+                    ps.setString(2, "%" + filterName.toLowerCase() + "%");
 
                     ResultSet rs = ps.executeQuery();
 
                     if (rs.next()) {
                         subfilterId = rs.getInt("id");
+                        System.out.println("✔ Subfilter ID: " + subfilterId);
+                    } else {
+                        System.out.println("⚠ No subfilter found");
                     }
                 }
             }
 
-            // 🔥 UPDATE
+            // 🔥 4. UPDATE
             String updateSql = """
             UPDATE products
             SET filter_id=?, subfilter_id=?
@@ -7525,15 +7565,26 @@ public class StoreBot extends TelegramLongPollingBot {
                 if (subfilterId != null) {
                     ps.setInt(2, subfilterId);
                 } else {
-                    ps.setNull(2, Types.INTEGER);
+                    ps.setNull(2, java.sql.Types.INTEGER);
                 }
 
                 ps.setInt(3, productId);
 
-                return ps.executeUpdate() > 0;
+                int updated = ps.executeUpdate();
+
+                System.out.println("UPDATE RESULT: " + updated);
+
+                if (updated == 0) {
+                    System.out.println("❌ UPDATE = 0 (нічого не оновилось)");
+                    return false;
+                }
+
+                System.out.println("✅ SUCCESS");
+                return true;
             }
 
         } catch (Exception e) {
+            System.out.println("❌ EXCEPTION:");
             e.printStackTrace();
             return false;
         }
