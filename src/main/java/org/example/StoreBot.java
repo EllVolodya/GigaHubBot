@@ -7455,64 +7455,58 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // Додати товар у фільтр
-    private void addProductToFilter(Long userId, String chatId, String filterName) {
+    /// 🔹 Додати товар у фільтр
+    private boolean addProductToFilter(Long userId, String filterName) {
 
-        // 🔥 беремо ОБʼЄКТ товару
         Map<String, Object> product = adminSelectedProduct.get(userId);
 
-        if (product == null) {
-            sendText(chatId, "❌ Товар не вибрано.");
-            return;
+        if (product == null || product.get("id") == null) {
+            System.out.println("❌ Product is null or has no ID");
+            return false;
         }
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            // 1️⃣ ID товару
             int productId = Integer.parseInt(product.get("id").toString());
 
-            // 2️⃣ ID фільтра
-            String filterSql = "SELECT id FROM filters WHERE name=?";
+            // 🔹 отримуємо filter_id
+            int filterId = -1;
 
-            try (PreparedStatement getFilter = conn.prepareStatement(filterSql)) {
+            String filterSql = "SELECT id FROM filters WHERE name = ? LIMIT 1";
 
-                getFilter.setString(1, filterName);
+            try (PreparedStatement ps = conn.prepareStatement(filterSql)) {
+                ps.setString(1, filterName);
 
-                try (ResultSet rs = getFilter.executeQuery()) {
-
-                    if (!rs.next()) {
-                        sendText(chatId, "❌ Фільтр не знайдено.");
-                        return;
-                    }
-
-                    int filterId = rs.getInt("id");
-
-                    // 🔥 3️⃣ UPDATE ПО ID (а не по name)
-                    String updateSql = """
-                    UPDATE products
-                    SET filter_id = ?, subfilter_id = NULL
-                    WHERE id = ?
-                """;
-
-                    try (PreparedStatement update = conn.prepareStatement(updateSql)) {
-
-                        update.setInt(1, filterId);
-                        update.setInt(2, productId);
-
-                        int rows = update.executeUpdate();
-
-                        if (rows > 0) {
-                            sendText(chatId, "✅ Товар додано у фільтр: " + filterName);
-                        } else {
-                            sendText(chatId, "❌ Товар не знайдено.");
-                        }
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (rs.next()) {
+                        filterId = rs.getInt("id");
+                    } else {
+                        System.out.println("❌ Filter not found: " + filterName);
+                        return false;
                     }
                 }
             }
 
+            // 🔹 оновлюємо товар
+            String updateSql = """
+            UPDATE products
+            SET filter_id = ?, subfilter_id = NULL
+            WHERE id = ?
+        """;
+
+            try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
+
+                ps.setInt(1, filterId);
+                ps.setInt(2, productId);
+
+                int updated = ps.executeUpdate();
+
+                return updated > 0;
+            }
+
         } catch (Exception e) {
             e.printStackTrace();
-            sendText(chatId, "❌ Помилка при додаванні у фільтр.");
+            return false;
         }
     }
 
