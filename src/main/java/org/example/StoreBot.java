@@ -401,6 +401,28 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if ("awaiting_filter_select".equals(state)) {
+
+            if (text.equals(BACK_BUTTON)) {
+                userStates.remove(userId);
+                sendMessageSafely(createEditMenu(chatId, userId));
+                return;
+            }
+
+            boolean success = addProductToFilter(userId, text, null);
+
+            userStates.remove(userId);
+
+            if (success) {
+                sendText(chatId, "✅ Додано у фільтр: " + text);
+            } else {
+                sendText(chatId, "❌ Помилка.");
+            }
+
+            sendMessageSafely(createEditMenu(chatId, userId));
+            return;
+        }
+
         // 🔹 Вибір підфільтра
         if ("awaiting_subfilter_select".equals(state)) {
 
