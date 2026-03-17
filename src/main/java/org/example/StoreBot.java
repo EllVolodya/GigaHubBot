@@ -345,26 +345,6 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 Додавання товару у фільтр
-        if ("awaiting_filter_select".equals(state)) {
-
-            if (text.equals("⬅️ Назад")) {
-                userStates.remove(userId);
-                sendMessageSafely(createEditMenu(chatId, userId));
-                return;
-            }
-
-            addProductToFilter(userId, chatId, text);
-
-            userStates.remove(userId);
-
-            sendText(chatId, "✅ Товар додано у фільтр: " + text);
-
-            sendMessageSafely(createEditMenu(chatId, userId));
-
-            return;
-        }
-
         // 🔹 Вибір фільтра для підфільтра
         if ("awaiting_filter_for_subfilter".equals(state)) {
 
