@@ -7458,7 +7458,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    /// 🔹 Додати товар у фільтр
+    // 🔹 Додати товар у фільтр
     private boolean addProductToFilter(Long userId, String filterName) {
 
         Map<String, Object> product = adminSelectedProduct.get(userId);
