@@ -5060,11 +5060,10 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow row3 = new KeyboardRow();
         row3.add("🔗 Запрошувальні посилання");
         row3.add("📜 Логирування");
-        row3.add("📝 Список онови");
+        row3.add("💬 Відгуки користувачів");
         keyboard.add(row3);
 
         KeyboardRow row4 = new KeyboardRow();
-        row4.add("💬 Відгуки користувачів");
         row4.add(new KeyboardButton(BACK_BUTTON));
         keyboard.add(row4);
 
