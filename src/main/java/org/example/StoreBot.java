@@ -363,7 +363,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             boolean hasSubfilters = searcher.hasSubfilters(text);
 
-            // 🔥 беремо товар з адмінки
             Map<String, Object> product = adminSelectedProduct.get(userId);
 
             if (product == null) {
@@ -374,11 +373,15 @@ public class StoreBot extends TelegramLongPollingBot {
             // 🔥 якщо немає підфільтрів
             if (!hasSubfilters) {
 
-                addProductToFilter(userId, chatId, text);
+                boolean success = addProductToFilter(userId, text);
 
                 userStates.remove(userId);
 
-                sendText(chatId, "✅ Товар додано у фільтр: " + text);
+                if (success) {
+                    sendText(chatId, "✅ Товар додано у фільтр: " + text);
+                } else {
+                    sendText(chatId, "❌ Помилка при додаванні у фільтр.");
+                }
 
                 sendMessageSafely(createEditMenu(chatId, userId));
 
