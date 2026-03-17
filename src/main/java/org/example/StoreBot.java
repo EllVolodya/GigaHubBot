@@ -110,7 +110,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, String> adminSearchKeyword = new HashMap<>(); // ключове слово для пошуку
     private final Map<String, Object> tempStorage = new HashMap<>();
     private Map<Long, Integer> filterPage = new HashMap<>();
-    private Map<Long, Map<String, Object>> adminSelectedProduct = new HashMap<>();
+    private Map<Long, Map<String, Object>> adminSelectedProduct = new HashMap<>(); // 🔹 один товар
+    private Map<Long, List<Map<String, Object>>> adminSelectedProducts = new HashMap<>(); // 🔹 список товарів
 
     private final CatalogSearcher catalogSearcher = new CatalogSearcher();
     protected Map<Long, List<Map<String, Object>>> searchResults = new HashMap<>();
@@ -4391,7 +4392,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // Вибір товару по списку
     private void handleChooseProduct(Long userId, String chatId, String text) {
+
         List<Map<String, Object>> matches = adminMatchList.get(userId);
+
         if (matches == null || matches.isEmpty()) {
             sendText(chatId, "❌ Список товарів порожній.");
             userStates.remove(userId);
@@ -4399,11 +4402,14 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         text = text.trim();
-        List<String> selectedProducts = new ArrayList<>();
+
+        List<Map<String, Object>> selectedProducts = new ArrayList<>();
 
         try {
-            // Діапазон 1-10
+
+            // 🔹 діапазон
             if (text.contains("-")) {
+
                 String[] parts = text.split("-");
                 int start = Integer.parseInt(parts[0].trim()) - 1;
                 int end = Integer.parseInt(parts[1].trim()) - 1;
@@ -4412,41 +4418,63 @@ public class StoreBot extends TelegramLongPollingBot {
                 if (end >= matches.size()) end = matches.size() - 1;
 
                 for (int i = start; i <= end; i++) {
-                    selectedProducts.add((String) matches.get(i).get("name"));
+                    selectedProducts.add(matches.get(i));
                 }
-            } else if (text.contains(",")) { // список 1,3,5
+
+            }
+            // 🔹 список
+            else if (text.contains(",")) {
+
                 String[] parts = text.split(",");
+
                 for (String part : parts) {
                     int index = Integer.parseInt(part.trim()) - 1;
+
                     if (index >= 0 && index < matches.size()) {
-                        selectedProducts.add((String) matches.get(index).get("name"));
+                        selectedProducts.add(matches.get(index));
                     }
                 }
-            } else { // один товар
+            }
+            // 🔹 один товар
+            else {
+
                 int index = Integer.parseInt(text) - 1;
+
                 if (index >= 0 && index < matches.size()) {
-                    selectedProducts.add((String) matches.get(index).get("name"));
+                    selectedProducts.add(matches.get(index));
                 }
             }
 
             if (selectedProducts.isEmpty()) {
-                sendText(chatId, "❌ Немає валідних номерів для редагування.");
+                sendText(chatId, "❌ Немає валідних номерів.");
                 return;
             }
 
-            // Зберігаємо вибрані товари
-            adminSelectedProductsRange.put(userId, selectedProducts);
-            adminEditingProduct.put(userId, selectedProducts.get(0));
+            // ✅ ПРАВИЛЬНЕ ЗБЕРЕЖЕННЯ
+
+            // список
+            adminSelectedProducts.put(userId, selectedProducts);
+
+            // поточний товар
+            adminSelectedProduct.put(userId, selectedProducts.get(0));
+
             userStates.put(userId, "editing");
 
-            // Чистимо список пошуку
             adminMatchList.remove(userId);
 
-            // Показуємо меню редагування **тільки один раз**
+            // текст
+            StringBuilder sb = new StringBuilder();
+            sb.append("Редагуємо ").append(selectedProducts.size()).append(" товар(ів)\n");
+            sb.append("Поточний:\n")
+                    .append(selectedProducts.get(0).get("name"));
+
+            sendText(chatId, sb.toString());
+
             showEditMenuOnce(userId, chatId);
 
         } catch (NumberFormatException e) {
-            sendText(chatId, "❌ Введіть правильні номери або діапазон у форматі '1-10' або '1,3,5'.");
+            sendText(chatId,
+                    "❌ Введіть номер, діапазон (1-10) або список (1,3,5)");
         }
     }
 
