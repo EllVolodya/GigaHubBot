@@ -53,6 +53,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private Map<Long, String> currentFilter = new HashMap<>();
     private Map<Long, String> currentSubfilter = new HashMap<>();
 
+    private Map<Long, String> selectedFilter = new HashMap<>();
+
     private final Map<Long, Integer> productIndex = new HashMap<>();
     protected Map<Long, Map<String, Object>> lastShownProduct = new HashMap<>();
     private final Map<Long, String> userStates = new HashMap<>();
@@ -355,6 +357,72 @@ public class StoreBot extends TelegramLongPollingBot {
             userStates.remove(userId);
 
             sendText(chatId, "✅ Товар додано у фільтр: " + text);
+
+            sendMessageSafely(createEditMenu(chatId, userId));
+
+            return;
+        }
+
+        // 🔹 Вибір фільтра для підфільтра
+        if ("awaiting_filter_for_subfilter".equals(state)) {
+
+            // 🔙 Назад
+            if (text.equals(BACK_BUTTON)) {
+                userStates.remove(userId);
+                sendMessageSafely(createEditMenu(chatId, userId));
+                return;
+            }
+
+            // ❗ перевірка
+            if (text == null || text.isBlank()) {
+                sendText(chatId, "❌ Оберіть фільтр.");
+                return;
+            }
+
+            // 🔹 зберігаємо фільтр
+            selectedFilter.put(userId, text);
+
+            // 🔹 міняємо стан
+            userStates.put(userId, "awaiting_subfilter_select");
+
+            sendText(chatId, "🔽 Оберіть підфільтр:");
+
+            sendMessageSafely(createSubfilterMenu(text, chatId));
+
+            return;
+        }
+
+        // 🔹 Вибір підфільтра
+        if ("awaiting_subfilter_select".equals(state)) {
+
+            if (text.equals(BACK_BUTTON)) {
+                userStates.put(userId, "awaiting_filter_for_subfilter");
+                sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
+                return;
+            }
+
+            String filter = selectedFilter.get(userId);
+
+            if (filter == null) {
+                sendText(chatId, "❌ Помилка. Спробуйте ще раз.");
+                userStates.remove(userId);
+                return;
+            }
+
+            Map<String, Object> product = lastShownProduct.get(userId);
+
+            if (product == null) {
+                sendText(chatId, "❌ Товар не знайдено.");
+                return;
+            }
+
+            CatalogSearcher searcher = new CatalogSearcher();
+            searcher.addSubfilterToProduct(product, filter, text);
+
+            userStates.remove(userId);
+            selectedFilter.remove(userId);
+
+            sendText(chatId, "✅ Підфільтр додано!");
 
             sendMessageSafely(createEditMenu(chatId, userId));
 
@@ -4435,6 +4503,26 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 return;
 
+            case "🧩 Додати в підфільтр":
+
+                if (productsToEdit != null && productsToEdit.size() > 1) {
+                    sendText(chatId, "⚠️ Масове додавання у підфільтр не підтримується.");
+                    break;
+                }
+
+                if (singleProduct == null) {
+                    sendText(chatId, "⚠️ Спочатку виберіть товар.");
+                    break;
+                }
+
+                userStates.put(userId, "awaiting_filter_for_subfilter");
+
+                sendText(chatId, "🔽 Оберіть фільтр для підфільтра:");
+
+                sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
+
+                return;
+
             case BACK_BUTTON:
                 // 🔹 Очищаємо тимчасові стани редагування
                 adminEditingField.remove(userId);
@@ -5026,9 +5114,12 @@ public class StoreBot extends TelegramLongPollingBot {
         r4.add(new KeyboardButton("⚙️ Додати в фільтр"));
 
         KeyboardRow r5 = new KeyboardRow();
-        r5.add(new KeyboardButton("⬅️ Назад"));
+        r5.add(new KeyboardButton("🧩 Додати в підфільтр"));
 
-        kb.setKeyboard(List.of(r1, r2, r3, r4, r5));
+        KeyboardRow r6 = new KeyboardRow();
+        r6.add(new KeyboardButton("⬅️ Назад"));
+
+        kb.setKeyboard(List.of(r1, r2, r3, r4, r5, r6));
         msg.setReplyMarkup(kb);
 
         return msg;
@@ -7854,5 +7945,33 @@ public class StoreBot extends TelegramLongPollingBot {
 
         tempOrderItems.put(userId, items.toString());
         tempTotal.put(userId, total);
+    }
+
+    private SendMessage createSubfilterMenu(String filter, String chatId) {
+
+        SendMessage msg = new SendMessage(chatId, "Оберіть підфільтр:");
+
+        ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
+        kb.setResizeKeyboard(true);
+
+        CatalogSearcher searcher = new CatalogSearcher();
+        List<String> subfilters = searcher.getSubfilters(filter);
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        for (String sub : subfilters) {
+            KeyboardRow row = new KeyboardRow();
+            row.add(new KeyboardButton(sub));
+            keyboard.add(row);
+        }
+
+        KeyboardRow back = new KeyboardRow();
+        back.add(new KeyboardButton("⬅️ Назад"));
+        keyboard.add(back);
+
+        kb.setKeyboard(keyboard);
+        msg.setReplyMarkup(kb);
+
+        return msg;
     }
 }

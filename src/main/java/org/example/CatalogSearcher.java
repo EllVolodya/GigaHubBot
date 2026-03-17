@@ -704,4 +704,42 @@ public class CatalogSearcher {
 
         return false;
     }
+
+    public void addSubfilterToProduct(Map<String, Object> product, String filterName, String subfilterName) {
+
+        if (product == null) return;
+
+        int productId = (int) product.get("id");
+
+        String sql = """
+        UPDATE products
+        SET subfilter_id = (
+            SELECT sf.id
+            FROM subfilters sf
+            JOIN filters f ON sf.filter_id = f.id
+            WHERE sf.name = ? AND f.name = ?
+            LIMIT 1
+        )
+        WHERE id = ?
+    """;
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, subfilterName);
+            ps.setString(2, filterName);
+            ps.setInt(3, productId);
+
+            int updated = ps.executeUpdate();
+
+            if (updated > 0) {
+                System.out.println("✅ Subfilter added to product ID: " + productId);
+            } else {
+                System.out.println("⚠️ Product not updated ID: " + productId);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
