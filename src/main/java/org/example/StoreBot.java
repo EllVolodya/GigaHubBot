@@ -408,7 +408,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendMessageSafely(createEditMenu(chatId, userId));
                 return;
             }
-
+            
             boolean success = addProductToFilter(userId, text, null);
 
             userStates.remove(userId);
@@ -4551,17 +4551,14 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "⚙️ Додати в фільтр":
 
-                if (productsToEdit != null && productsToEdit.size() > 1) {
-                    sendText(chatId, "⚠️ Масове додавання у фільтр не підтримується. Виберіть один товар.");
-                    break;
-                }
-
-                if (singleProduct == null) {
+                if (adminSelectedProduct.get(userId) == null) {
                     sendText(chatId, "⚠️ Спочатку виберіть товар.");
                     break;
                 }
 
                 userStates.put(userId, "awaiting_filter_select");
+
+                sendText(chatId, "🔽 Оберіть фільтр:");
 
                 sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
 
