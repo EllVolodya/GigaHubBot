@@ -7463,34 +7463,59 @@ public class StoreBot extends TelegramLongPollingBot {
 
         Map<String, Object> product = adminSelectedProduct.get(userId);
 
-        if (product == null || product.get("id") == null) {
-            System.out.println("❌ Product is null or has no ID");
+        if (product == null) {
             return false;
         }
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            int productId = Integer.parseInt(product.get("id").toString());
+            Integer productId = null;
 
-            // 🔹 отримуємо filter_id
-            int filterId = -1;
+            // 🔥 1. якщо є id — беремо його
+            if (product.containsKey("id") && product.get("id") != null) {
+                productId = Integer.parseInt(product.get("id").toString());
+            }
+            // 🔥 2. якщо нема id — шукаємо по name
+            else if (product.containsKey("name")) {
+
+                String name = product.get("name").toString();
+
+                String findSql = "SELECT id FROM products WHERE name = ? LIMIT 1";
+
+                try (PreparedStatement ps = conn.prepareStatement(findSql)) {
+                    ps.setString(1, name);
+
+                    ResultSet rs = ps.executeQuery();
+
+                    if (rs.next()) {
+                        productId = rs.getInt("id");
+                    } else {
+                        System.out.println("❌ Product not found in DB: " + name);
+                        return false;
+                    }
+                }
+            }
+
+            if (productId == null) {
+                return false;
+            }
+
+            // 🔥 filter_id
+            int filterId;
 
             String filterSql = "SELECT id FROM filters WHERE name = ? LIMIT 1";
 
             try (PreparedStatement ps = conn.prepareStatement(filterSql)) {
                 ps.setString(1, filterName);
 
-                try (ResultSet rs = ps.executeQuery()) {
-                    if (rs.next()) {
-                        filterId = rs.getInt("id");
-                    } else {
-                        System.out.println("❌ Filter not found: " + filterName);
-                        return false;
-                    }
-                }
+                ResultSet rs = ps.executeQuery();
+
+                if (!rs.next()) return false;
+
+                filterId = rs.getInt("id");
             }
 
-            // 🔹 оновлюємо товар
+            // 🔥 UPDATE
             String updateSql = """
             UPDATE products
             SET filter_id = ?, subfilter_id = NULL
@@ -7502,9 +7527,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 ps.setInt(1, filterId);
                 ps.setInt(2, productId);
 
-                int updated = ps.executeUpdate();
-
-                return updated > 0;
+                return ps.executeUpdate() > 0;
             }
 
         } catch (Exception e) {
