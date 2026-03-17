@@ -40,6 +40,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.ResultSet;
+import java.sql.Statement;
+import java.sql.Types;
 
 import java.time.LocalDateTime;
 
@@ -373,7 +375,7 @@ public class StoreBot extends TelegramLongPollingBot {
             // 🔥 якщо немає підфільтрів
             if (!hasSubfilters) {
 
-                boolean success = addProductToFilter(userId, text);
+                boolean success = addProductToFilter(userId, text, null);
 
                 userStates.remove(userId);
 
@@ -7459,73 +7461,75 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔹 Додати товар у фільтр
-    private boolean addProductToFilter(Long userId, String filterName) {
+    private boolean addProductToFilter(Long userId, String filterName, String subfilterName) {
 
         Map<String, Object> product = adminSelectedProduct.get(userId);
 
-        if (product == null) {
-            return false;
-        }
+        if (product == null) return false;
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            Integer productId = null;
+            // 🔥 1. отримуємо або створюємо товар
+            int productId = getOrCreateProductId(product);
 
-            // 🔥 1. якщо є id — беремо його
-            if (product.containsKey("id") && product.get("id") != null) {
-                productId = Integer.parseInt(product.get("id").toString());
-            }
-            // 🔥 2. якщо нема id — шукаємо по name
-            else if (product.containsKey("name")) {
+            if (productId == -1) return false;
 
-                String name = product.get("name").toString();
+            // 🔹 filter_id
+            int filterId = -1;
 
-                String findSql = "SELECT id FROM products WHERE name = ? LIMIT 1";
-
-                try (PreparedStatement ps = conn.prepareStatement(findSql)) {
-                    ps.setString(1, name);
-
-                    ResultSet rs = ps.executeQuery();
-
-                    if (rs.next()) {
-                        productId = rs.getInt("id");
-                    } else {
-                        System.out.println("❌ Product not found in DB: " + name);
-                        return false;
-                    }
-                }
-            }
-
-            if (productId == null) {
-                return false;
-            }
-
-            // 🔥 filter_id
-            int filterId;
-
-            String filterSql = "SELECT id FROM filters WHERE name = ? LIMIT 1";
+            String filterSql = "SELECT id FROM filters WHERE name=?";
 
             try (PreparedStatement ps = conn.prepareStatement(filterSql)) {
                 ps.setString(1, filterName);
 
                 ResultSet rs = ps.executeQuery();
 
-                if (!rs.next()) return false;
+                if (rs.next()) {
+                    filterId = rs.getInt("id");
+                } else return false;
+            }
 
-                filterId = rs.getInt("id");
+            Integer subfilterId = null;
+
+            if (subfilterName != null) {
+
+                String subSql = """
+                SELECT sf.id
+                FROM subfilters sf
+                JOIN filters f ON sf.filter_id = f.id
+                WHERE sf.name=? AND f.name=?
+            """;
+
+                try (PreparedStatement ps = conn.prepareStatement(subSql)) {
+                    ps.setString(1, subfilterName);
+                    ps.setString(2, filterName);
+
+                    ResultSet rs = ps.executeQuery();
+
+                    if (rs.next()) {
+                        subfilterId = rs.getInt("id");
+                    }
+                }
             }
 
             // 🔥 UPDATE
             String updateSql = """
             UPDATE products
-            SET filter_id = ?, subfilter_id = NULL
-            WHERE id = ?
+            SET filter_id=?, subfilter_id=?
+            WHERE id=?
         """;
 
             try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
 
                 ps.setInt(1, filterId);
-                ps.setInt(2, productId);
+
+                if (subfilterId != null) {
+                    ps.setInt(2, subfilterId);
+                } else {
+                    ps.setNull(2, Types.INTEGER);
+                }
+
+                ps.setInt(3, productId);
 
                 return ps.executeUpdate() > 0;
             }
@@ -8039,5 +8043,52 @@ public class StoreBot extends TelegramLongPollingBot {
         msg.setReplyMarkup(kb);
 
         return msg;
+    }
+
+    private int getOrCreateProductId(Map<String, Object> product) {
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            String name = product.get("name").toString();
+
+            // 🔹 1. шукаємо
+            String findSql = "SELECT id FROM products WHERE name = ? LIMIT 1";
+
+            try (PreparedStatement ps = conn.prepareStatement(findSql)) {
+                ps.setString(1, name);
+
+                ResultSet rs = ps.executeQuery();
+
+                if (rs.next()) {
+                    return rs.getInt("id");
+                }
+            }
+
+            // 🔹 2. якщо нема — створюємо
+            String insertSql = """
+            INSERT INTO products(name, price, unit)
+            VALUES (?, ?, ?)
+        """;
+
+            try (PreparedStatement ps = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
+
+                ps.setString(1, name);
+                ps.setObject(2, product.getOrDefault("price", 0));
+                ps.setString(3, product.getOrDefault("unit", "шт").toString());
+
+                ps.executeUpdate();
+
+                ResultSet rs = ps.getGeneratedKeys();
+
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return -1;
     }
 }
