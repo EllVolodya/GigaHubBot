@@ -408,7 +408,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendMessageSafely(createEditMenu(chatId, userId));
                 return;
             }
-            
+
             boolean success = addProductToFilter(userId, text, null);
 
             userStates.remove(userId);
@@ -4975,20 +4975,22 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row1 = new KeyboardRow();
         row1.add("🧱 Каталог товарів");
-        row1.add("🔍 Пошук товару");
-        row1.add("\uD83D\uDED2 Кошик");
+        row1.add("🎥 Відеоінструкція");
+        row1.add("💬 Допомога");
+        //row1.add("🔍 Пошук товару");
+        //row1.add("\uD83D\uDED2 Кошик");
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("🎯 Хіт продажу");
+        //row2.add("🎯 Хіт продажу");
         row2.add("📍 Адреси та Контакти");
         row2.add("\uD83C\uDF10 Соц-мережі");
         keyboard.add(row2);
 
-        KeyboardRow row3 = new KeyboardRow();
+        /*KeyboardRow row3 = new KeyboardRow();
         row3.add("🎥 Відеоінструкція");
         row3.add("💬 Допомога");
-        keyboard.add(row3);
+        keyboard.add(row3);*/
 
         if (ADMINS.contains(userId)) {
             KeyboardRow adminRow = new KeyboardRow();
