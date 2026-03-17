@@ -4829,7 +4829,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case BACK_BUTTON -> {
                 userStates.remove(userId);
-                sendMessage(createAdminMenu(chatId));
+                sendMessage(createDeveloperMenu(chatId));
             }
 
             default -> sendText(chatId, "🤖 Не зрозумів команду. Спробуйте ще раз.");
