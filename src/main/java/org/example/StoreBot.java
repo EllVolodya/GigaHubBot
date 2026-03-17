@@ -972,6 +972,42 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
+                case "🛒 Замовити товар" -> {
+
+                    // зберігаємо вибраний товар як 1 замовлення
+                    Map<String, Object> product = lastShownProduct.get(userId);
+
+                    if (product == null) {
+                        sendText(chatId, "❌ Товар не знайдено.");
+                        return;
+                    }
+
+                    // створюємо "тимчасовий кошик" з 1 товаром
+                    List<Map<String, Object>> cart = new ArrayList<>();
+                    cart.add(product);
+
+                    userCart.put(userId, cart);
+
+                    // переходимо одразу до доставки
+                    userStates.put(userId, "awaiting_delivery_choice");
+
+                    ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+                    markup.setResizeKeyboard(true);
+
+                    KeyboardRow row1 = new KeyboardRow();
+                    row1.add("🏬 Самовивіз");
+                    row1.add("📦 Доставка по місту");
+
+                    KeyboardRow row2 = new KeyboardRow();
+                    row2.add(BACK_BUTTON);
+
+                    markup.setKeyboard(List.of(row1, row2));
+
+                    sendMessage(chatId,
+                            "🚚 Оберіть спосіб доставки:",
+                            markup);
+                }
+
                 case "➡ Далі" -> showNextProduct(userId);
                 case "⬅ Назад" -> showPreviousProduct(userId);
                 case "Назад" -> {
@@ -1106,7 +1142,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
                 }
 
-                case "🛒 Замовити товар" -> {
+                /*case "🛒 Замовити товар" -> {
 
                     userStates.remove(userId); // 🔥 ОЧИЩАЄМО СТАН ПОШУКУ
 
@@ -1136,7 +1172,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             markup);
 
                     userStates.put(userId, "awaiting_delivery_choice");
-                }
+                }*/
 
                 case "❌ Видалити товар" -> {
 
@@ -3370,13 +3406,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 return;
             }
-
-            /*case "awaiting_filter_for_subfilter" -> {
-
-                chooseFilterForSubfilter(userId, chatId, text);
-
-                return;
-            }*/
 
             case "awaiting_filter_for_subfilter" -> {
 
@@ -5761,6 +5790,7 @@ public class StoreBot extends TelegramLongPollingBot {
         sendText(chatId, sb.toString());
     }
 
+    /// Показ товару після списку
     public void sendProductFromMap(Long chatId, Map<String, Object> product) throws TelegramApiException {
 
         String name = safeToString(product.get("name"), "Без назви");
@@ -5785,24 +5815,19 @@ public class StoreBot extends TelegramLongPollingBot {
             sb.append("\n📖 ").append(description);
         }
 
-        // 🔥 НОВА КЛАВІАТУРА
         List<KeyboardRow> keyboard = new ArrayList<>();
 
         KeyboardRow row1 = new KeyboardRow();
         if (!isCustomOrder) {
-            row1.add("🛒 Додати в кошик");
+            row1.add("🛒 Замовити товар");
         } else {
             row1.add("Написати консультанту");
         }
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add(VIEW_CART_BUTTON);
+        row2.add(BACK_BUTTON);
         keyboard.add(row2);
-
-        KeyboardRow row3 = new KeyboardRow();
-        row3.add(BACK_BUTTON);
-        keyboard.add(row3);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(keyboard);
