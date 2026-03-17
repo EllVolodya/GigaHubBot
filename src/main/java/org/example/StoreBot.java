@@ -110,6 +110,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, String> adminSearchKeyword = new HashMap<>(); // ключове слово для пошуку
     private final Map<String, Object> tempStorage = new HashMap<>();
     private Map<Long, Integer> filterPage = new HashMap<>();
+    private Map<Long, Map<String, Object>> adminSelectedProduct = new HashMap<>();
 
     private final CatalogSearcher catalogSearcher = new CatalogSearcher();
     protected Map<Long, List<Map<String, Object>>> searchResults = new HashMap<>();
@@ -366,14 +367,12 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔹 Вибір фільтра для підфільтра
         if ("awaiting_filter_for_subfilter".equals(state)) {
 
-            // 🔙 Назад
             if (text.equals(BACK_BUTTON)) {
                 userStates.remove(userId);
                 sendMessageSafely(createEditMenu(chatId, userId));
                 return;
             }
 
-            // ❗ перевірка
             if (text == null || text.isBlank()) {
                 sendText(chatId, "❌ Оберіть фільтр.");
                 return;
@@ -381,20 +380,19 @@ public class StoreBot extends TelegramLongPollingBot {
 
             CatalogSearcher searcher = new CatalogSearcher();
 
-            // 🔹 перевіряємо чи є підфільтри
             boolean hasSubfilters = searcher.hasSubfilters(text);
 
-            Map<String, Object> product = lastShownProduct.get(userId);
+            // 🔥 беремо товар з адмінки
+            Map<String, Object> product = adminSelectedProduct.get(userId);
 
             if (product == null) {
                 sendText(chatId, "❌ Товар не знайдено.");
                 return;
             }
 
-            // 🔥 ЯКЩО НЕМАЄ ПІДФІЛЬТРІВ
+            // 🔥 якщо немає підфільтрів
             if (!hasSubfilters) {
 
-                // 👉 просто додаємо у фільтр
                 addProductToFilter(userId, chatId, text);
 
                 userStates.remove(userId);
@@ -406,7 +404,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 ЯКЩО Є ПІДФІЛЬТРИ
+            // 🔥 якщо є підфільтри
             selectedFilter.put(userId, text);
 
             userStates.put(userId, "awaiting_subfilter_select");
