@@ -286,13 +286,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
             userCart.put(userId, cart);
 
-            // 🔥 повідомлення
             sendText(chatId,
                     "✅ Додано в кошик: " +
                             product.get("name") +
                             " (" + qty + " шт)");
 
-            // 🔥 показ кошика (safe)
+            // 🔥 показ кошика
             try {
                 showCartNice(userId, chatId);
             } catch (Exception e) {
@@ -300,7 +299,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "❌ Помилка при показі кошика.");
             }
 
-            // 🔥 повернення до категорій (safe)
+            // 🔥 повернення до категорій
             String category = userLastCategory.get(userId);
 
             try {
