@@ -286,33 +286,31 @@ public class StoreBot extends TelegramLongPollingBot {
 
             userCart.put(userId, cart);
 
-            // 🔥 повідомлення
+            // ✅ повідомлення
             sendText(chatId,
                     "✅ Додано в кошик: " +
                             product.get("name") +
                             " (" + qty + " шт)");
 
-            // 🔥 показ кошика
-            try {
-                showCartNice(userId, chatId);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            // ✅ показ кошика
+            showCartNice(userId, chatId);
 
-            // 🔥 ПРОСТЕ ПОВЕРНЕННЯ
-            String category = userLastCategory.get(userId);
+            // 🔥 СТАВИМО СТАН КОШИКА
+            userStates.put(userId, "in_cart");
 
-            try {
-                if (category != null) {
-                    sendSubcategories(Long.valueOf(chatId), category);
-                } else {
-                    sendCategories(Long.valueOf(chatId));
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            // 🔥 КНОПКИ
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+            markup.setResizeKeyboard(true);
 
-            userStates.put(userId, "browsing");
+            KeyboardRow row1 = new KeyboardRow();
+            row1.add("🚚 Оформити замовлення");
+
+            KeyboardRow row2 = new KeyboardRow();
+            row2.add(BACK_BUTTON);
+
+            markup.setKeyboard(List.of(row1, row2));
+
+            sendMessage(chatId, "📦 Ви в кошику:", markup);
 
             return;
         }
