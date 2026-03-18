@@ -2434,18 +2434,17 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void handleBack(Long userId, String chatId) throws TelegramApiException {
+
         System.out.println("[handleBack] User " + userId + " pressed Back.");
 
         String state = userStates.get(userId);
 
-        // ❗ 0. Блокування кнопки Назад під час оформлення замовлення
+        // ❗ 0. Блокування "Назад" під час оформлення замовлення
         if ("awaiting_delivery_choice".equals(state) ||
                 "order_pickup".equals(state) ||
                 "awaiting_city_delivery".equals(state) ||
-                //"awaiting_post_delivery".equals(state) ||
                 "awaiting_payment_method".equals(state)) {
 
-            // очищаємо дані замовлення
             tempDeliveryType.remove(userId);
             tempAddress.remove(userId);
             tempFullname.remove(userId);
@@ -2457,13 +2456,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
             userStates.remove(userId);
 
-            sendText(chatId,"↩️ Повертаємо вас у головне меню.");
-
+            sendText(chatId, "↩️ Повертаємо вас у головне меню.");
             sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
-        // ❗ 0.2 Повернення назад з КАЛЬКУЛЯТОРА МАТЕРІАЛІВ
+        // ❗ 0.2 Калькулятор
         Set<String> MATERIAL_STATES = Set.of(
                 "material_calc_menu",
                 "paint_length", "paint_width",
@@ -2476,28 +2474,34 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (state != null && MATERIAL_STATES.contains(state)) {
 
-            // очищаємо тимчасові дані калькулятора
             tempLength.remove(userId);
             tempWidth.remove(userId);
             paintTemp.remove(userId);
             paintLayers.remove(userId);
 
-            // ставимо стан null
             userStates.remove(userId);
 
-            // повернення в ГОЛОВНЕ МЕНЮ
             sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
-        // 1. Очищаємо стани
-        userStates.remove(userId);
-        lastShownProduct.remove(userId);
-        adminMatchList.remove(userId);
-        productIndex.remove(userId);
+        // 🔥 1. ПОВЕРНЕННЯ З КОШИКА
+        if ("in_cart".equals(state) || "cart_view".equals(state)) {
 
-        // 2. Повернення з підкатегорії
+            userStates.remove(userId);
+
+            if (currentCategory.containsKey(userId)) {
+                sendSubcategories(userId, currentCategory.get(userId));
+            } else {
+                sendCategories(userId);
+            }
+
+            return;
+        }
+
+        // 🔥 2. ПОВЕРНЕННЯ З ПІДКАТЕГОРІЇ
         if (currentSubcategory.containsKey(userId)) {
+
             currentSubcategory.remove(userId);
 
             if (currentCategory.containsKey(userId)) {
@@ -2505,37 +2509,36 @@ public class StoreBot extends TelegramLongPollingBot {
             } else {
                 sendCategories(userId);
             }
+
             return;
         }
 
-        // 3. Повернення з категорії
+        // 🔥 3. ПОВЕРНЕННЯ З КАТЕГОРІЇ
         if (currentCategory.containsKey(userId)) {
+
             currentCategory.remove(userId);
             sendMessage(createUserMenu(chatId, userId));
             return;
         }
 
-        // 4. Повернення з перегляду кошика
-        if ("cart_view".equals(state)) {
-            sendMessage(createUserMenu(chatId, userId));
-            return;
-        }
-
-        // 5. Повернення з адмін-меню
+        // 🔥 4. АДМІН МЕНЮ
         if (adminOrderIndex.containsKey(userId)) {
+
             adminOrderIndex.remove(userId);
             sendMessage(createAdminMenu(chatId));
             return;
         }
 
-        // 6. Повернення з меню розробника
+        // 🔥 5. МЕНЮ РОЗРОБНИКА
         if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
+
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
 
-        // 7. Повернення після редагування товару
-        if (adminEditingProduct.containsKey(userId) || adminSelectedProductsRange.containsKey(userId)) {
+        // 🔥 6. РЕДАГУВАННЯ ТОВАРУ
+        if (adminEditingProduct.containsKey(userId) ||
+                adminSelectedProductsRange.containsKey(userId)) {
 
             adminEditingProduct.remove(userId);
             adminSelectedProductsRange.remove(userId);
@@ -2547,22 +2550,12 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 8. Повернення назад з редагування товара
-        if ("editing_product".equals(userStates.get(userId))) {
+        // 🔥 7. FALLBACK (останній рівень)
+        userStates.remove(userId);
+        lastShownProduct.remove(userId);
+        adminMatchList.remove(userId);
+        productIndex.remove(userId);
 
-            adminEditingProduct.remove(userId);
-            adminEditingField.remove(userId);
-            adminSelectedProductsRange.remove(userId);
-            adminExcelResults.remove(userId);
-            adminSearchSource.remove(userId);
-            userStates.remove(userId);
-
-            sendText(chatId, "↩️ Ви повернулися до меню розробника.");
-            sendMessage(createDeveloperMenu(chatId));
-            return;
-        }
-
-        // 9. Головне меню (fallback)
         sendMessage(createUserMenu(chatId, userId));
     }
 
