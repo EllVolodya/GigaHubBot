@@ -238,7 +238,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             int qty;
 
-            // 🔹 Парсинг
             try {
                 qty = Integer.parseInt(text.trim());
 
@@ -252,7 +251,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔹 Отримуємо товар
             Map<String, Object> product =
                     (Map<String, Object>) tempStorage.get(userId + "_product");
 
@@ -261,17 +259,14 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔹 Копія товару
             Map<String, Object> cartItem = new HashMap<>(product);
             cartItem.put("quantity", qty);
 
-            // 🔹 Кошик
             List<Map<String, Object>> cart =
                     userCart.getOrDefault(userId, new ArrayList<>());
 
             boolean found = false;
 
-            // 🔥 Якщо товар вже є — збільшуємо кількість
             for (Map<String, Object> item : cart) {
 
                 if (item.get("id") != null &&
@@ -285,29 +280,42 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // 🔹 Якщо новий
             if (!found) {
                 cart.add(cartItem);
             }
 
             userCart.put(userId, cart);
 
-            // 🔹 Чистимо state
-            userStates.remove(userId);
-
-            // 🔹 Коротке повідомлення
+            // 🔥 повідомлення
             sendText(chatId,
                     "✅ Додано в кошик: " +
                             product.get("name") +
                             " (" + qty + " шт)");
 
-            // 🔥 ПОКАЗ КОШИКА (БЕЗ КНОПОК)
-            showCartNice(userId, chatId);
+            // 🔥 показ кошика (safe)
+            try {
+                showCartNice(userId, chatId);
+            } catch (Exception e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Помилка при показі кошика.");
+            }
 
-            userLastCategory.put(userId, text);
+            // 🔥 повернення до категорій (safe)
+            String category = userLastCategory.get(userId);
 
-            // 🔥 ВАЖЛИВО: Long.valueOf
-            sendSubcategories(Long.valueOf(chatId), text);
+            try {
+                if (category != null) {
+                    sendSubcategories(Long.valueOf(chatId), category);
+                } else {
+                    sendCategories(Long.valueOf(chatId));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Помилка при поверненні до категорій.");
+            }
+
+            // 🔥 стан
+            userStates.put(userId, "browsing");
 
             return;
         }
@@ -1152,16 +1160,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "🛒 Замовити товар" -> {
 
-                    //String state = userStates.get(userId);
-
-                    // 🔥 1. Якщо вже є товари в кошику → відкриваємо кошик
                     List<Map<String, Object>> cart = userCart.get(userId);
 
+                    // 🔥 якщо вже є товари → відкриваємо кошик
                     if (cart != null && !cart.isEmpty()) {
 
                         showCartNice(userId, chatId);
 
-                        // 👉 тепер це вже оформлення
                         userStates.put(userId, "in_cart");
 
                         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
@@ -1176,16 +1181,14 @@ public class StoreBot extends TelegramLongPollingBot {
                         markup.setKeyboard(List.of(row1, row2));
 
                         sendMessage(chatId, "📦 Ваше замовлення:", markup);
-
                         return;
                     }
 
-                    // 🔥 2. Якщо кошик пустий → починаємо додавання
-
+                    // 🔥 якщо кошик пустий → ввод кількості
                     Map<String, Object> product = lastShownProduct.get(userId);
 
                     if (product == null) {
-                        sendText(chatId, "❌ Товар не знайдено.");
+                        sendText(chatId, "❌ Спочатку відкрийте товар.");
                         return;
                     }
 
@@ -1193,9 +1196,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     userStates.put(userId, "awaiting_quantity");
 
-                    sendText(chatId,
-                            "🔢 Введіть кількість товару:\n\nНаприклад: 1, 2, 5");
-
+                    sendText(chatId, "🔢 Введіть кількість:");
                 }
 
                 case "➡ Далі" -> showNextProduct(userId);
