@@ -5544,33 +5544,18 @@ public class StoreBot extends TelegramLongPollingBot {
             int page = filterPage.getOrDefault(chatId, 0);
 
             if (text.contains("Продовжити")) {
-
-                page++;
-
-                filterPage.put(chatId, page);
-
-                sendMessageSafely(createFilterSelectMenu(chatId, chatId.toString(), page));
-
+                sendFilters(chatId, page + 1);
                 return;
             }
 
             if (text.contains("Попередні")) {
-
-                page--;
-
-                if (page < 0) page = 0;
-
-                filterPage.put(chatId, page);
-
-                sendMessageSafely(createFilterSelectMenu(chatId, chatId.toString(), page));
-
+                sendFilters(chatId, page - 1);
                 return;
             }
 
-            // якщо вибрали фільтр
-            List<String> filters = catalogSearcher.getFilters();
+            List<String> filters = userFilters.get(chatId);
 
-            if (filters.contains(text)) {
+            if (filters != null && filters.contains(text)) {
 
                 selectedFilterForSubfilter.put(chatId, text);
 
@@ -5582,27 +5567,6 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        /*
-        ==========================================
-        КОШИК
-        ==========================================
-        */
-        if (text.contains("Перейти в кошик")) {
-            userStates.remove(chatId);
-            showCart(chatId);
-            return;
-        }
-
-        if (text.contains("Очистити кошик")) {
-            userStates.remove(chatId);
-            clearCart(chatId);
-            return;
-        }
-
-        if (text.contains("Додати в кошик")) {
-            addToCart(chatId);
-            return;
-        }
         /*
         ==========================================
         КАТЕГОРІЇ
@@ -5634,13 +5598,24 @@ public class StoreBot extends TelegramLongPollingBot {
 
             if (subcats.contains(text)) {
 
-                // зберігаємо підкатегорію
+                // 🔥 зберігаємо підкатегорію
                 currentSubcategory.put(chatId, text);
 
+                // 🔥 скидаємо індекс товарів
                 productIndex.put(chatId, 0);
 
-                // 🔹 показуємо фільтри тільки цієї підкатегорії
-                sendFilters(chatId, text, 0);
+                // 🔥 отримуємо фільтри по підкатегорії
+                CatalogSearcher searcher = new CatalogSearcher();
+                List<String> filters = searcher.getFiltersBySubcategory(text);
+
+                // 🔥 зберігаємо фільтри (ДУЖЕ ВАЖЛИВО)
+                userFilters.put(chatId, filters);
+
+                // 🔥 сторінка = 0
+                filterPage.put(chatId, 0);
+
+                // 🔥 показуємо фільтри
+                sendFilters(chatId, 0);
 
                 return;
             }
