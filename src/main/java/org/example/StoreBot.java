@@ -286,6 +286,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             userCart.put(userId, cart);
 
+            // 🔥 повідомлення
             sendText(chatId,
                     "✅ Додано в кошик: " +
                             product.get("name") +
@@ -296,10 +297,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 showCartNice(userId, chatId);
             } catch (Exception e) {
                 e.printStackTrace();
-                sendText(chatId, "❌ Помилка при показі кошика.");
             }
 
-            // 🔥 повернення до категорій
+            // 🔥 ПРОСТЕ ПОВЕРНЕННЯ
             String category = userLastCategory.get(userId);
 
             try {
@@ -310,10 +310,8 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             } catch (Exception e) {
                 e.printStackTrace();
-                sendText(chatId, "❌ Помилка при поверненні до категорій.");
             }
 
-            // 🔥 стан
             userStates.put(userId, "browsing");
 
             return;
