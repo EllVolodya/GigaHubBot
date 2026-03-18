@@ -217,7 +217,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 e.printStackTrace();
             }
 
-            return; // ⛔ обовʼязково
+            return;
         }
 
         Long userId = update.getMessage().getFrom().getId();
@@ -789,6 +789,44 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if ("awaiting_quantity".equals(state)) {
+
+            int qty;
+
+            try {
+                qty = Integer.parseInt(text);
+                if (qty <= 0) throw new Exception();
+            } catch (Exception e) {
+                sendText(chatId, "❌ Введіть правильне число (1,2,3...)");
+                return;
+            }
+
+            Map<String, Object> product =
+                    (Map<String, Object>) tempStorage.get(userId + "_product");
+
+            if (product == null) {
+                sendText(chatId, "❌ Помилка. Спробуйте ще раз.");
+                return;
+            }
+
+            product.put("quantity", qty);
+
+            List<Map<String, Object>> cart = new ArrayList<>();
+            cart.add(product);
+
+            userCart.put(userId, cart);
+
+            // 🔥 ПОКАЗ КОШИКА
+            showCartNice(userId, chatId);
+
+            // 👉 далі доставка
+            userStates.put(userId, "awaiting_delivery_choice");
+
+            askDelivery(chatId);
+
+            return;
+        }
+
         if ("consultant_reply".equals(userStates.get(CONSULTANT_CHAT_ID))
                 && text != null && !text.isBlank()) {
 
@@ -1072,7 +1110,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "🛒 Замовити товар" -> {
 
-                    // зберігаємо вибраний товар як 1 замовлення
                     Map<String, Object> product = lastShownProduct.get(userId);
 
                     if (product == null) {
@@ -1080,30 +1117,14 @@ public class StoreBot extends TelegramLongPollingBot {
                         return;
                     }
 
-                    // створюємо "тимчасовий кошик" з 1 товаром
-                    List<Map<String, Object>> cart = new ArrayList<>();
-                    cart.add(product);
+                    // зберігаємо товар тимчасово
+                    tempStorage.put(userId + "_product", product);
 
-                    userCart.put(userId, cart);
+                    userStates.put(userId, "awaiting_quantity");
 
-                    // переходимо одразу до доставки
-                    userStates.put(userId, "awaiting_delivery_choice");
-
-                    ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
-                    markup.setResizeKeyboard(true);
-
-                    KeyboardRow row1 = new KeyboardRow();
-                    row1.add("🏬 Самовивіз");
-                    row1.add("📦 Доставка по місту");
-
-                    KeyboardRow row2 = new KeyboardRow();
-                    row2.add(BACK_BUTTON);
-
-                    markup.setKeyboard(List.of(row1, row2));
-
-                    sendMessage(chatId,
-                            "🚚 Оберіть спосіб доставки:",
-                            markup);
+                    sendText(chatId,
+                            "🔢 Введіть кількість товару:\n\n" +
+                                    "Наприклад: 1, 2, 5");
                 }
 
                 case "➡ Далі" -> showNextProduct(userId);
@@ -8159,5 +8180,61 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         return -1;
+    }
+
+    private void showCartNice(Long userId, String chatId) {
+
+        List<Map<String, Object>> cart = userCart.get(userId);
+
+        if (cart == null || cart.isEmpty()) {
+            sendText(chatId, "🛒 Кошик порожній.");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("🧺 Ваш кошик, друже!\n");
+        sb.append("Митрофан перевірив полички і зібрав усе, що ви додали 👇\n\n");
+
+        double total = 0;
+        int i = 1;
+
+        for (Map<String, Object> item : cart) {
+
+            String name = item.get("name").toString();
+            double price = Double.parseDouble(item.get("price").toString());
+            int qty = Integer.parseInt(item.get("quantity").toString());
+
+            double sum = price * qty;
+            total += sum;
+
+            sb.append("🔸 ").append(i++).append(". ").append(name).append("\n");
+            sb.append("   🔢 Кількість: ").append(qty).append("\n");
+            sb.append("   💵 Ціна за 1: ").append(price).append(" грн\n");
+            sb.append("   💰 Сума: ").append(sum).append(" грн\n\n");
+        }
+
+        sb.append("━━━━━━━━━━━━━━\n");
+        sb.append("💳 Всього до оплати: ").append(total).append(" грн\n");
+        sb.append("🧱 Митрофан каже: «Готовий оформити замовлення!» 🤖");
+
+        sendText(chatId, sb.toString());
+    }
+
+    private void askDelivery(String chatId) {
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setResizeKeyboard(true);
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("🏬 Самовивіз");
+        row1.add("📦 Доставка по місту");
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add(BACK_BUTTON);
+
+        markup.setKeyboard(List.of(row1, row2));
+
+        sendMessage(chatId, "🚚 Оберіть спосіб доставки:", markup);
     }
 }
