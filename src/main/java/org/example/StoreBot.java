@@ -7696,23 +7696,12 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    private void sendFilters(Long chatId, String subcategory, int page) throws TelegramApiException {
+    private void sendFilters(Long chatId, int page) throws TelegramApiException {
 
-        List<String> filters;
-
-        // 🔥 якщо вже є збережені — беремо їх
-        if (userFilters.containsKey(chatId)) {
-            filters = userFilters.get(chatId);
-        } else {
-            CatalogSearcher searcher = new CatalogSearcher();
-            filters = searcher.getFiltersBySubcategory(subcategory);
-
-            // 🔥 зберігаємо
-            userFilters.put(chatId, filters);
-        }
+        List<String> filters = userFilters.get(chatId);
 
         if (filters == null || filters.isEmpty()) {
-            sendText(chatId, "❌ У цій підкатегорії немає фільтрів.");
+            sendText(chatId, "❌ Фільтри не знайдено.");
             return;
         }
 
@@ -7734,8 +7723,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             String filter = filters.get(i);
 
-            if (filter == null) continue;
-
             if (filter.length() > 25) {
                 filter = filter.substring(0, 25);
             }
@@ -7754,17 +7741,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow nav = new KeyboardRow();
 
-        if (page > 0) {
-            nav.add("Попередні");
-        }
+        if (page > 0) nav.add("Попередні");
+        if (page < totalPages - 1) nav.add("Продовжити");
 
-        if (page < totalPages - 1) {
-            nav.add("Продовжити");
-        }
-
-        if (!nav.isEmpty()) {
-            rows.add(nav);
-        }
+        if (!nav.isEmpty()) rows.add(nav);
 
         KeyboardRow back = new KeyboardRow();
         back.add(BACK_BUTTON);
@@ -7774,11 +7754,9 @@ public class StoreBot extends TelegramLongPollingBot {
         markup.setKeyboard(rows);
         markup.setResizeKeyboard(true);
 
-        sendMessage(
-                chatId,
+        sendMessage(chatId,
                 "🔎 Обери фільтр (" + (page + 1) + "/" + totalPages + "):",
-                markup
-        );
+                markup);
     }
 
     private void sendSubfilters(Long chatId, String filterName, int page) throws TelegramApiException {
