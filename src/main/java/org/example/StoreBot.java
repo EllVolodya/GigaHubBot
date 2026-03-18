@@ -2486,9 +2486,9 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // 🔥 1. ПОВЕРНЕННЯ З КОШИКА
-        if ("in_cart".equals(state) || "cart_view".equals(state)) {
+        if (userCart.containsKey(userId) && !userCart.get(userId).isEmpty()) {
 
-            userStates.remove(userId);
+            System.out.println("[BACK] User in cart → return to subcategories");
 
             if (currentCategory.containsKey(userId)) {
                 sendSubcategories(userId, currentCategory.get(userId));
