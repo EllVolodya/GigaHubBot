@@ -63,6 +63,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, List<Map<String, Object>>> userCart = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userOrders = new HashMap<>();
     private Map<Long, String> userLastCategory = new HashMap<>();
+    private final Map<Long, List<String>> userFilters = new HashMap<>();
 
     private final Map<Long, String> selectedSubcategoryForFilter = new HashMap<>();
     private Map<Long,String> selectedFilterForSubfilter = new HashMap<>();
@@ -7697,9 +7698,18 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private void sendFilters(Long chatId, String subcategory, int page) throws TelegramApiException {
 
-        CatalogSearcher searcher = new CatalogSearcher();
+        List<String> filters;
 
-        List<String> filters = searcher.getFiltersBySubcategory(subcategory);
+        // 🔥 якщо вже є збережені — беремо їх
+        if (userFilters.containsKey(chatId)) {
+            filters = userFilters.get(chatId);
+        } else {
+            CatalogSearcher searcher = new CatalogSearcher();
+            filters = searcher.getFiltersBySubcategory(subcategory);
+
+            // 🔥 зберігаємо
+            userFilters.put(chatId, filters);
+        }
 
         if (filters == null || filters.isEmpty()) {
             sendText(chatId, "❌ У цій підкатегорії немає фільтрів.");
@@ -7742,7 +7752,6 @@ public class StoreBot extends TelegramLongPollingBot {
             rows.add(row);
         }
 
-        // навігація
         KeyboardRow nav = new KeyboardRow();
 
         if (page > 0) {
