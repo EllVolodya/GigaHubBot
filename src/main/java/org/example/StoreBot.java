@@ -286,20 +286,23 @@ public class StoreBot extends TelegramLongPollingBot {
 
             userCart.put(userId, cart);
 
-            // ✅ ТІЛЬКИ повідомлення (як у норм UX)
+            // ✅ повідомлення
             sendText(chatId,
                     "✅ Додано в кошик: " +
                             product.get("name") +
                             " (" + qty + " шт)");
 
-            // 🔥 ПОВЕРТАЄМО ТОВАР (НЕ КОШИК!)
+            // 🔥 ВАЖЛИВО: оновлюємо lastShownProduct
+            lastShownProduct.put(userId, product);
+
+            // 🔥 повертаємо товар
             try {
                 sendProductFromMap(Long.valueOf(chatId), product);
             } catch (Exception e) {
                 e.printStackTrace();
             }
 
-            // 🔥 СТАН назад у перегляд товару
+            // 🔥 стан
             userStates.put(userId, "browsing");
 
             return;
