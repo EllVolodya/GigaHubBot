@@ -232,6 +232,47 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
+        // 🔥 Обробка кількість
+        if ("awaiting_quantity".equals(state)) {
+
+            int qty;
+
+            try {
+                qty = Integer.parseInt(text.trim());
+
+                if (qty <= 0) throw new Exception();
+
+            } catch (Exception e) {
+                sendText(chatId, "❌ Введіть число (1,2,3...)");
+                return;
+            }
+
+            Map<String, Object> product =
+                    (Map<String, Object>) tempStorage.get(userId + "_product");
+
+            if (product == null) {
+                sendText(chatId, "❌ Товар не знайдено.");
+                return;
+            }
+
+            product.put("quantity", qty);
+
+            List<Map<String, Object>> cart = new ArrayList<>();
+            cart.add(product);
+
+            userCart.put(userId, cart);
+
+            userStates.remove(userId);
+
+            showCartNice(userId, chatId);
+
+            userStates.put(userId, "awaiting_delivery_choice");
+
+            askDelivery(chatId);
+
+            return;
+        }
+
         // 🔹 ПАГІНАЦІЯ ФІЛЬТРІВ
         if (text.equals("Продовжити")) {
 
@@ -786,44 +827,6 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             userStates.remove(userId);
-            return;
-        }
-
-        if ("awaiting_quantity".equals(state)) {
-
-            int qty;
-
-            try {
-                qty = Integer.parseInt(text);
-                if (qty <= 0) throw new Exception();
-            } catch (Exception e) {
-                sendText(chatId, "❌ Введіть правильне число (1,2,3...)");
-                return;
-            }
-
-            Map<String, Object> product =
-                    (Map<String, Object>) tempStorage.get(userId + "_product");
-
-            if (product == null) {
-                sendText(chatId, "❌ Помилка. Спробуйте ще раз.");
-                return;
-            }
-
-            product.put("quantity", qty);
-
-            List<Map<String, Object>> cart = new ArrayList<>();
-            cart.add(product);
-
-            userCart.put(userId, cart);
-
-            // 🔥 ПОКАЗ КОШИКА
-            showCartNice(userId, chatId);
-
-            // 👉 далі доставка
-            userStates.put(userId, "awaiting_delivery_choice");
-
-            askDelivery(chatId);
-
             return;
         }
 
