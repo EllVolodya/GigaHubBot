@@ -62,13 +62,14 @@ public class StoreBot extends TelegramLongPollingBot {
     private Map<Long, String> userSelectedSubcategory = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userCart = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userOrders = new HashMap<>();
+    private Map<Long, String> userLastCategory = new HashMap<>();
+
     private final Map<Long, String> selectedSubcategoryForFilter = new HashMap<>();
     private Map<Long,String> selectedFilterForSubfilter = new HashMap<>();
     private Map<Long, Integer> editItemIndex = new HashMap<>();
     private final Map<Long, Boolean> waitingForQuantity = new HashMap<>();
     private final Map<Long, Boolean> waitingForCatalogSearch = new HashMap<>();
     private final Map<Long, Integer> searchIndex = new HashMap<>();
-    private final Map<Long, Double> paintArea = new HashMap<>();
     private final Map<Long, Double> paintTemp = new HashMap<>();
     private final Map<Long, Double> paintLayers = new HashMap<>();
     private final Map<Long, String> lastUserMessage = new HashMap<>();
@@ -264,13 +265,13 @@ public class StoreBot extends TelegramLongPollingBot {
             Map<String, Object> cartItem = new HashMap<>(product);
             cartItem.put("quantity", qty);
 
-            // 🔹 Отримуємо кошик
+            // 🔹 Кошик
             List<Map<String, Object>> cart =
                     userCart.getOrDefault(userId, new ArrayList<>());
 
             boolean found = false;
 
-            // 🔥 Якщо вже є — збільшуємо кількість
+            // 🔥 Якщо товар вже є — збільшуємо кількість
             for (Map<String, Object> item : cart) {
 
                 if (item.get("id") != null &&
@@ -284,41 +285,29 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // 🔹 Якщо новий товар
+            // 🔹 Якщо новий
             if (!found) {
                 cart.add(cartItem);
             }
 
             userCart.put(userId, cart);
 
-            // 🔹 Чистимо стан
+            // 🔹 Чистимо state
             userStates.remove(userId);
 
-            // 🔹 Повідомлення
+            // 🔹 Коротке повідомлення
             sendText(chatId,
                     "✅ Додано в кошик: " +
                             product.get("name") +
                             " (" + qty + " шт)");
 
-            // 🔥 ОДРАЗУ В КОШИК
+            // 🔥 ПОКАЗ КОШИКА (БЕЗ КНОПОК)
             showCartNice(userId, chatId);
 
-            // 🔹 Стан кошика
-            userStates.put(userId, "in_cart");
+            userLastCategory.put(userId, text);
 
-            // 🔹 Клавіатура
-            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
-            markup.setResizeKeyboard(true);
-
-            KeyboardRow row1 = new KeyboardRow();
-            row1.add("🚚 Оформити замовлення");
-
-            KeyboardRow row2 = new KeyboardRow();
-            row2.add("⬅️ Назад");
-
-            markup.setKeyboard(List.of(row1, row2));
-
-            sendMessage(chatId, "📦 Ви в кошику:", markup);
+            // 🔥 ВАЖЛИВО: Long.valueOf
+            sendSubcategories(Long.valueOf(chatId), text);
 
             return;
         }
