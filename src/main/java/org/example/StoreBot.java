@@ -1149,7 +1149,36 @@ public class StoreBot extends TelegramLongPollingBot {
                     List<Map<String, Object>> cart = userCart.get(userId);
                     Map<String, Object> product = lastShownProduct.get(userId);
 
-                    // 🔥 1. Якщо зараз відкритий товар → додаємо
+                    // 🔥 1. якщо товар вже є в кошику → показуємо кошик
+                    if (product != null && cart != null) {
+
+                        boolean alreadyInCart = cart.stream().anyMatch(item ->
+                                item.get("id").toString().equals(product.get("id").toString())
+                        );
+
+                        if (alreadyInCart) {
+
+                            showCartNice(userId, chatId);
+
+                            userStates.put(userId, "in_cart");
+
+                            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+                            markup.setResizeKeyboard(true);
+
+                            KeyboardRow row1 = new KeyboardRow();
+                            row1.add("🚚 Оформити замовлення");
+
+                            KeyboardRow row2 = new KeyboardRow();
+                            row2.add(BACK_BUTTON);
+
+                            markup.setKeyboard(List.of(row1, row2));
+
+                            sendMessage(chatId, "📦 Ваш кошик:", markup);
+                            return;
+                        }
+                    }
+
+                    // 🔥 2. якщо товар є але ще не в кошику → додаємо
                     if (product != null) {
 
                         tempStorage.put(userId + "_product", product);
@@ -1159,29 +1188,14 @@ public class StoreBot extends TelegramLongPollingBot {
                         return;
                     }
 
-                    // 🔥 2. Якщо товару нема, але є кошик → показуємо кошик
+                    // 🔥 3. fallback
                     if (cart != null && !cart.isEmpty()) {
 
                         showCartNice(userId, chatId);
-
                         userStates.put(userId, "in_cart");
-
-                        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
-                        markup.setResizeKeyboard(true);
-
-                        KeyboardRow row1 = new KeyboardRow();
-                        row1.add("🚚 Оформити замовлення");
-
-                        KeyboardRow row2 = new KeyboardRow();
-                        row2.add(BACK_BUTTON);
-
-                        markup.setKeyboard(List.of(row1, row2));
-
-                        sendMessage(chatId, "📦 Ваш кошик:", markup);
                         return;
                     }
 
-                    // 🔥 3. Нічого нема
                     sendText(chatId, "❌ Спочатку відкрийте товар.");
                 }
 
