@@ -232,12 +232,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
-        // 🔥 Обробка кількість
+        // 🔥 Обробка кількості
         if ("awaiting_quantity".equals(state)) {
 
             int qty;
 
-            // 🔹 Парсинг кількості
+            // 🔹 Парсинг
             try {
                 qty = Integer.parseInt(text.trim());
 
@@ -260,17 +260,17 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔹 Копія товару (щоб не ламати оригінал)
+            // 🔹 Копія товару
             Map<String, Object> cartItem = new HashMap<>(product);
             cartItem.put("quantity", qty);
 
-            // 🔹 Кошик користувача
+            // 🔹 Отримуємо кошик
             List<Map<String, Object>> cart =
                     userCart.getOrDefault(userId, new ArrayList<>());
 
             boolean found = false;
 
-            // 🔥 Якщо товар вже є — збільшуємо кількість
+            // 🔥 Якщо вже є — збільшуємо кількість
             for (Map<String, Object> item : cart) {
 
                 if (item.get("id") != null &&
@@ -284,14 +284,14 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // 🔹 Якщо товару ще не було
+            // 🔹 Якщо новий товар
             if (!found) {
                 cart.add(cartItem);
             }
 
             userCart.put(userId, cart);
 
-            // 🔹 Чистимо state
+            // 🔹 Чистимо стан
             userStates.remove(userId);
 
             // 🔹 Повідомлення
@@ -300,13 +300,25 @@ public class StoreBot extends TelegramLongPollingBot {
                             product.get("name") +
                             " (" + qty + " шт)");
 
-            // 🔥 Безпечна відправка товару
-            try {
-                sendProductFromMap(Long.valueOf(chatId), product);
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-                sendText(chatId, "❌ Помилка при відправці товару.");
-            }
+            // 🔥 ОДРАЗУ В КОШИК
+            showCartNice(userId, chatId);
+
+            // 🔹 Стан кошика
+            userStates.put(userId, "in_cart");
+
+            // 🔹 Клавіатура
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+            markup.setResizeKeyboard(true);
+
+            KeyboardRow row1 = new KeyboardRow();
+            row1.add("🚚 Оформити замовлення");
+
+            KeyboardRow row2 = new KeyboardRow();
+            row2.add("⬅️ Назад");
+
+            markup.setKeyboard(List.of(row1, row2));
+
+            sendMessage(chatId, "📦 Ви в кошику:", markup);
 
             return;
         }
