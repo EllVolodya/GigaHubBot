@@ -7150,7 +7150,8 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // 🔹 генеруємо код замовлення
-        String orderCode = "ORD-" + System.currentTimeMillis();
+        int code = (int)(System.currentTimeMillis() % 10000);
+        String orderCode = "ORD-" + code;
 
         // 🔹 телефон
         String phone = userPhones.get(userId);
