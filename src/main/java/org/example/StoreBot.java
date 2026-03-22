@@ -7141,23 +7141,62 @@ public class StoreBot extends TelegramLongPollingBot {
                                         String method,
                                         boolean isOnline) {
 
-        String orderCode = tempOrderCode.get(userId);
-        String deliveryType = tempDeliveryType.get(userId);
-        String addressOrCityOrPost = tempAddress.get(userId);
-        String fullname = tempFullname.get(userId);
+        // 🔹 беремо кошик
+        List<Map<String, Object>> cart = userCart.get(userId);
 
-        // 🔥 ФІКС: беремо з userPhones
-        String phone = userPhones.get(userId);
-
-        String card = tempCard.get(userId);
-        String items = tempOrderItems.get(userId);
-        double total = tempTotal.getOrDefault(userId, 0.0);
-
-        if (orderCode == null || deliveryType == null || items == null) {
-            sendText(chatId, "❌ Помилка: не вдалося знайти дані замовлення.");
+        if (cart == null || cart.isEmpty()) {
+            sendText(chatId, "❌ Кошик порожній.");
             return;
         }
 
+        // 🔹 генеруємо код замовлення
+        String orderCode = "ORD-" + System.currentTimeMillis();
+
+        // 🔹 телефон
+        String phone = userPhones.get(userId);
+
+        if (phone == null || phone.isBlank()) {
+            sendText(chatId, "❌ Не знайдено номер телефону.");
+            return;
+        }
+
+        // 🔹 інші дані (можуть бути null — це ок)
+        String deliveryType = tempDeliveryType.getOrDefault(userId, "Не вказано");
+        String addressOrCityOrPost = tempAddress.get(userId);
+        String fullname = tempFullname.getOrDefault(userId, "Користувач");
+        String card = tempCard.get(userId);
+
+        // 🔹 формуємо items + total
+        StringBuilder itemsBuilder = new StringBuilder();
+        double total = 0.0;
+
+        for (Map<String, Object> item : cart) {
+
+            String name = String.valueOf(item.get("name"));
+            int qty = Integer.parseInt(item.get("quantity").toString());
+            double price = Double.parseDouble(item.get("price").toString());
+
+            itemsBuilder.append(name)
+                    .append(" x")
+                    .append(qty)
+                    .append("; ");
+
+            total += price * qty;
+        }
+
+        String items = itemsBuilder.toString();
+
+        // 🔹 розподіл доставки
+        String city = null;
+        String address = null;
+        String postOffice = null;
+
+        switch (deliveryType) {
+            case "Самовивіз" -> city = addressOrCityOrPost;
+            case "Доставка по місту" -> address = addressOrCityOrPost;
+        }
+
+        // ================= DB =================
         try (Connection conn = DatabaseManager.getConnection()) {
 
             PreparedStatement stmt = conn.prepareStatement(
@@ -7170,16 +7209,6 @@ public class StoreBot extends TelegramLongPollingBot {
             stmt.setLong(1, userId);
             stmt.setString(2, orderCode);
             stmt.setString(3, deliveryType);
-
-            String city = null;
-            String address = null;
-            String postOffice = null;
-
-            switch (deliveryType) {
-                case "Самовивіз" -> city = addressOrCityOrPost;
-                case "Доставка по місту" -> address = addressOrCityOrPost;
-            }
-
             stmt.setString(4, city);
             stmt.setString(5, address);
             stmt.setString(6, postOffice);
@@ -7207,7 +7236,11 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 ОЧИСТКА
+        // ================= ОЧИСТКА =================
+        userCart.remove(userId);
+        userStates.remove(userId);
+        userPhones.remove(userId);
+
         tempDeliveryType.remove(userId);
         tempAddress.remove(userId);
         tempFullname.remove(userId);
@@ -7215,11 +7248,8 @@ public class StoreBot extends TelegramLongPollingBot {
         tempOrderCode.remove(userId);
         tempOrderItems.remove(userId);
         tempTotal.remove(userId);
-        userCart.remove(userId);
-        userStates.remove(userId);
-        userPhones.remove(userId);
 
-        // ======== 💳 ОНЛАЙН ОПЛАТА ==============
+        // ================= ОПЛАТА =================
         if (isOnline) {
 
             WayForPayService wfp = new WayForPayService();
@@ -7241,10 +7271,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
         } else {
 
-            // ========= 💵 ГОТІВКА (ВАЖЛИВО) ================
             sendText(chatId,
                     "✅ Замовлення оформлено!\n\n" +
-                            "🔢 Код замовлення: " + orderCode + "\n" +
+                            "🔢 Код: " + orderCode + "\n" +
                             "💵 Оплата: готівка при отриманні\n\n" +
                             "📞 Наш менеджер зателефонує вам найближчим часом\n" +
                             "для підтвердження замовлення.\n\n" +
