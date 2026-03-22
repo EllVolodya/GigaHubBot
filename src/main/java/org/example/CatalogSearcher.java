@@ -831,31 +831,35 @@ public class CatalogSearcher {
         List<Map<String, Object>> products = new ArrayList<>();
 
         StringBuilder sql = new StringBuilder("""
-        SELECT *
-        FROM products
+        SELECT p.*
+        FROM products p
+        JOIN subcategories s ON p.subcategory_id = s.id
+        JOIN categories c ON s.category_id = c.id
+        LEFT JOIN filters f ON p.filter_id = f.id
+        LEFT JOIN subfilters sf ON p.subfilter_id = sf.id
         WHERE 1=1
     """);
 
         List<Object> params = new ArrayList<>();
 
         if (category != null) {
-            sql.append(" AND LOWER(category)=LOWER(?)");
-            params.add(category.trim());
+            sql.append(" AND c.name = ?");
+            params.add(category);
         }
 
         if (subcategory != null) {
-            sql.append(" AND LOWER(subcategory)=LOWER(?)");
-            params.add(subcategory.trim());
+            sql.append(" AND s.name = ?");
+            params.add(subcategory);
         }
 
         if (filter != null) {
-            sql.append(" AND LOWER(filter)=LOWER(?)");
-            params.add(filter.trim());
+            sql.append(" AND f.name = ?");
+            params.add(filter);
         }
 
         if (subfilter != null) {
-            sql.append(" AND LOWER(subfilter)=LOWER(?)");
-            params.add(subfilter.trim());
+            sql.append(" AND sf.name = ?");
+            params.add(subfilter);
         }
 
         try (Connection conn = DatabaseManager.getConnection()) {
@@ -875,10 +879,6 @@ public class CatalogSearcher {
                 product.put("id", rs.getLong("id"));
                 product.put("name", rs.getString("name"));
                 product.put("price", rs.getString("price"));
-                product.put("category", rs.getString("category"));
-                product.put("subcategory", rs.getString("subcategory"));
-                product.put("filter", rs.getString("filter"));
-                product.put("subfilter", rs.getString("subfilter"));
 
                 products.add(product);
             }
