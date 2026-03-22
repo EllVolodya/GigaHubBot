@@ -743,53 +743,82 @@ public class CatalogSearcher {
         }
     }
 
-    public void addProductToFilter(Map<String, Object> product, String filterName) {
-
-        if (product == null) return;
-
-        int productId = Integer.parseInt(product.get("id").toString());
-
-        String sql = """
-        UPDATE products
-        SET filter_id = (
-            SELECT id FROM filters WHERE name = ? LIMIT 1
-        ),
-        subfilter_id = NULL
-        WHERE id = ?
-    """;
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            ps.setString(1, filterName);
-            ps.setInt(2, productId);
-
-            int updated = ps.executeUpdate();
-
-            if (updated > 0) {
-                System.out.println("✅ Product added to filter: " + filterName);
-            } else {
-                System.out.println("⚠️ Product NOT updated");
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    public boolean addProductToFilter(Map<String, Object> product, String filter, String subfilter) {
+    public boolean addProductToFilter(Map<String, Object> product, String filterName, String subfilterName) {
 
         if (product == null) return false;
 
-        product.put("filter", filter);
+        try (Connection conn = DatabaseManager.getConnection()) {
 
-        if (subfilter != null) {
-            product.put("subfilter", subfilter);
+            int productId = ((Number) product.get("id")).intValue();
+
+            // 🔹 знайти filter_id
+            PreparedStatement psFilter = conn.prepareStatement(
+                    "SELECT id FROM filters WHERE name = ? LIMIT 1"
+            );
+            psFilter.setString(1, filterName);
+
+            ResultSet rsFilter = psFilter.executeQuery();
+
+            if (!rsFilter.next()) {
+                System.out.println("❌ Filter not found");
+                return false;
+            }
+
+            int filterId = rsFilter.getInt("id");
+
+            Integer subfilterId = null;
+
+            // 🔹 якщо є підфільтр
+            if (subfilterName != null) {
+
+                PreparedStatement psSub = conn.prepareStatement("""
+                SELECT sf.id
+                FROM subfilters sf
+                JOIN filters f ON sf.filter_id = f.id
+                WHERE sf.name = ? AND f.name = ?
+                LIMIT 1
+            """);
+
+                psSub.setString(1, subfilterName);
+                psSub.setString(2, filterName);
+
+                ResultSet rsSub = psSub.executeQuery();
+
+                if (!rsSub.next()) {
+                    System.out.println("❌ Subfilter not found");
+                    return false;
+                }
+
+                subfilterId = rsSub.getInt("id");
+            }
+
+            // 🔥 UPDATE
+            PreparedStatement psUpdate = conn.prepareStatement("""
+            UPDATE products
+            SET filter_id = ?, subfilter_id = ?
+            WHERE id = ?
+        """);
+
+            psUpdate.setInt(1, filterId);
+
+            if (subfilterId != null) {
+                psUpdate.setInt(2, subfilterId);
+            } else {
+                psUpdate.setNull(2, Types.INTEGER);
+            }
+
+            psUpdate.setInt(3, productId);
+
+            int updated = psUpdate.executeUpdate();
+
+            System.out.println("UPDATED ROWS: " + updated);
+
+            return updated > 0;
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         }
-
-        System.out.println("PRODUCT UPDATED: " + product);
-
-        return true;
     }
 
     public List<Map<String, Object>> findProducts(
