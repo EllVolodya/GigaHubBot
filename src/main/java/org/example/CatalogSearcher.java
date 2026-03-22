@@ -776,4 +776,19 @@ public class CatalogSearcher {
             e.printStackTrace();
         }
     }
+
+    public boolean addProductToFilter(Map<String, Object> product, String filter, String subfilter) {
+
+        if (product == null || filter == null) {
+            return false;
+        }
+
+        product.put("filter", filter);
+
+        if (subfilter != null) {
+            product.put("subfilter", subfilter);
+        }
+
+        return true;
+    }
 }
