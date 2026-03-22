@@ -420,7 +420,6 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 Вибір фільтра для підфільтра
         if ("awaiting_filter_for_subfilter".equals(state)) {
 
             if (BACK_BUTTON.equals(text)) {
@@ -446,7 +445,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             boolean hasSubfilters = searcher.hasSubfilters(text);
 
-            // 🔥 Якщо немає підфільтрів
+            // 🔥 Якщо немає підфільтрів → одразу додаємо
             if (!hasSubfilters) {
 
                 boolean success = searcher.addProductToFilter(product, text, null);
@@ -463,8 +462,8 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 Якщо є підфільтри
-            selectedFilter.put(userId, text);
+            // 🔥 Якщо є підфільтри → переходимо далі
+            selectedFilter.put(userId, text); // ← тут зберігається filter
             userStates.put(userId, "awaiting_subfilter_select");
 
             sendText(chatId, "🔽 Оберіть підфільтр:");

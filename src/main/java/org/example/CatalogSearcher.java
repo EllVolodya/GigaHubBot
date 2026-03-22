@@ -779,15 +779,15 @@ public class CatalogSearcher {
 
     public boolean addProductToFilter(Map<String, Object> product, String filter, String subfilter) {
 
-        if (product == null || filter == null) {
-            return false;
-        }
+        if (product == null) return false;
 
         product.put("filter", filter);
 
         if (subfilter != null) {
             product.put("subfilter", subfilter);
         }
+
+        System.out.println("PRODUCT UPDATED: " + product);
 
         return true;
     }
