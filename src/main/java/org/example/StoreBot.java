@@ -1367,7 +1367,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "➕ Додати підфільтр" -> {
 
-                    userStates.put(userId, "awaiting_filter_for_product_subfilter");
+                    userStates.put(userId, "awaiting_filter_for_subfilter");
 
                     filterPage.put(userId, 0);
 
@@ -4728,7 +4728,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     break;
                 }
 
-                userStates.put(userId, "awaiting_filter_for_subfilter");
+                userStates.put(userId, "awaiting_filter_for_product_subfilter");
 
                 sendText(chatId, "🔽 Оберіть фільтр для підфільтра:");
 
