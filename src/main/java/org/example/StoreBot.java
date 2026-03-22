@@ -58,6 +58,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Integer> productIndex = new HashMap<>();
     protected Map<Long, Map<String, Object>> lastShownProduct = new HashMap<>();
     private final Map<Long, String> userStates = new HashMap<>();
+    private final Map<Long, String> userPhones = new HashMap<>();
     private final Map<Long, String> userState = new HashMap<>();
     private Map<Long, String> userSelectedSubcategory = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userCart = new HashMap<>();
@@ -292,17 +293,11 @@ public class StoreBot extends TelegramLongPollingBot {
                             product.get("name") +
                             " (" + qty + " шт)");
 
-            // 🔥 ВАЖЛИВО
             lastShownProduct.put(userId, product);
 
-            try {
-                sendProductFromMap(Long.valueOf(chatId), product);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            tempStorage.remove(userId + "_product");
 
-            // ❌ НЕ СТАВИМО browsing
-            userStates.remove(userId); // або взагалі нічого не ставимо
+            userStates.remove(userId);
 
             return;
         }
@@ -1216,9 +1211,13 @@ public class StoreBot extends TelegramLongPollingBot {
                     List<Map<String, Object>> cart = userCart.get(userId);
                     Map<String, Object> product = lastShownProduct.get(userId);
 
-                    // 🔥 1. якщо товар вже є в кошику → показуємо кошик
-                    if (product != null && cart != null) {
+                    if (product == null) {
+                        sendText(chatId, "❌ Спочатку відкрийте товар.");
+                        return;
+                    }
 
+                    // 🔥 якщо вже є в кошику → показуємо
+                    if (cart != null) {
                         boolean alreadyInCart = cart.stream().anyMatch(item ->
                                 item.get("id").toString().equals(product.get("id").toString())
                         );
@@ -1245,25 +1244,26 @@ public class StoreBot extends TelegramLongPollingBot {
                         }
                     }
 
-                    // 🔥 2. якщо товар є але ще не в кошику → додаємо
-                    if (product != null) {
+                    // 🔥 додаємо новий товар → питаємо кількість
+                    tempStorage.put(userId + "_product", product);
+                    userStates.put(userId, "awaiting_quantity");
 
-                        tempStorage.put(userId + "_product", product);
-                        userStates.put(userId, "awaiting_quantity");
+                    sendText(chatId, "🔢 Введіть кількість:");
+                }
 
-                        sendText(chatId, "🔢 Введіть кількість:");
+                case "🚚 Оформити замовлення" -> {
+
+                    List<Map<String, Object>> cart = userCart.get(userId);
+
+                    if (cart == null || cart.isEmpty()) {
+                        sendText(chatId, "❌ Кошик порожній.");
                         return;
                     }
 
-                    // 🔥 3. fallback
-                    if (cart != null && !cart.isEmpty()) {
+                    userStates.put(userId, "awaiting_phone");
 
-                        showCartNice(userId, chatId);
-                        userStates.put(userId, "in_cart");
-                        return;
-                    }
-
-                    sendText(chatId, "❌ Спочатку відкрийте товар.");
+                    sendText(chatId,
+                            "📞 Введіть номер телефону для оформлення замовлення:");
                 }
 
                 case "➡ Далі" -> showNextProduct(userId);
@@ -3889,6 +3889,43 @@ public class StoreBot extends TelegramLongPollingBot {
                         "\n" +
                         "Митрофан тримає термінал… а ну, що вибираєш? \uD83D\uDE04");
             }
+
+            case "awaiting_phone" -> {
+
+                if (BACK_BUTTON.equals(text)) {
+                    try {
+                        handleBack(userId, chatId);
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                    }
+                    return;
+                }
+
+                if (text == null || text.length() < 8) {
+                    sendText(chatId, "❌ Введіть коректний номер телефону.");
+                    return;
+                }
+
+                // 🔥 зберігаємо телефон
+                userPhones.put(userId, text.trim());
+
+                userStates.put(userId, "awaiting_payment_method");
+
+                ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+                markup.setResizeKeyboard(true);
+
+                KeyboardRow row1 = new KeyboardRow();
+                row1.add("💵 Готівка");
+                row1.add("💳 Оплата карткою");
+
+                KeyboardRow row2 = new KeyboardRow();
+                row2.add(BACK_BUTTON);
+
+                markup.setKeyboard(List.of(row1, row2));
+
+                sendMessage(chatId, "💳 Оберіть спосіб оплати:", markup);
+            }
+
             case "invites_menu" -> {
                 // Клавіатура з кнопкою «Назад», яка працює ТІЛЬКИ в цьому меню
                 ReplyKeyboardMarkup backKeyboard = new ReplyKeyboardMarkup();
@@ -7091,13 +7128,16 @@ public class StoreBot extends TelegramLongPollingBot {
         String deliveryType = tempDeliveryType.get(userId);
         String addressOrCityOrPost = tempAddress.get(userId);
         String fullname = tempFullname.get(userId);
-        String phone = tempPhone.get(userId);
+
+        // 🔥 ФІКС: беремо з userPhones
+        String phone = userPhones.get(userId);
+
         String card = tempCard.get(userId);
         String items = tempOrderItems.get(userId);
         double total = tempTotal.getOrDefault(userId, 0.0);
 
         if (orderCode == null || deliveryType == null || items == null) {
-            sendText(chatId.toString(), "❌ Помилка: не вдалося знайти дані замовлення.");
+            sendText(chatId, "❌ Помилка: не вдалося знайти дані замовлення.");
             return;
         }
 
@@ -7114,7 +7154,6 @@ public class StoreBot extends TelegramLongPollingBot {
             stmt.setString(2, orderCode);
             stmt.setString(3, deliveryType);
 
-            // 🔹 Розподіл по полях в залежності типу доставка
             String city = null;
             String address = null;
             String postOffice = null;
@@ -7122,7 +7161,6 @@ public class StoreBot extends TelegramLongPollingBot {
             switch (deliveryType) {
                 case "Самовивіз" -> city = addressOrCityOrPost;
                 case "Доставка по місту" -> address = addressOrCityOrPost;
-                //case "Нова пошта" -> postOffice = addressOrCityOrPost;
             }
 
             stmt.setString(4, city);
@@ -7133,13 +7171,12 @@ public class StoreBot extends TelegramLongPollingBot {
             stmt.setString(9, card);
             stmt.setString(10, items);
             stmt.setDouble(11, Math.round(total * 100.0) / 100.0);
-            stmt.setString(12, method);                        // paymentmethod
+            stmt.setString(12, method);
 
-            // paymentstatus
             String paymentStatus = isOnline ? "Очікується" : "Готівка";
             stmt.setString(13, paymentStatus);
 
-            stmt.setString(14, "Нове");                        // status (замовлення)
+            stmt.setString(14, "Нове");
 
             stmt.executeUpdate();
 
@@ -7147,57 +7184,54 @@ public class StoreBot extends TelegramLongPollingBot {
             System.out.println("ORDER ERROR:");
             e.printStackTrace();
 
-            sendText(chatId.toString(),
-                    "❌ Сталася помилка при створенні замовлення.\n" +
-                            "Код: " + e.getMessage());
+            sendText(chatId,
+                    "❌ Помилка при створенні замовлення.\n" +
+                            "Спробуйте ще раз пізніше.");
             return;
         }
 
-        // 🔹 Очищаємо тимчасові дані
+        // 🔥 ОЧИСТКА
         tempDeliveryType.remove(userId);
         tempAddress.remove(userId);
         tempFullname.remove(userId);
-        tempPhone.remove(userId);
         tempCard.remove(userId);
         tempOrderCode.remove(userId);
         tempOrderItems.remove(userId);
         tempTotal.remove(userId);
         userCart.remove(userId);
         userStates.remove(userId);
+        userPhones.remove(userId);
 
+        // ======== 💳 ОНЛАЙН ОПЛАТА ==============
         if (isOnline) {
 
-            // 🟦 Створюємо WayForPay сервіс
             WayForPayService wfp = new WayForPayService();
-
-            // 🟦 Генеруємо посилання на оплату (invoiceUrl)
             String payUrl = wfp.createInvoice(orderCode, (int) total);
 
-            // 🟥 Якщо WayForPay повернув помилку — показуємо повідомлення
             if (payUrl == null || payUrl.isBlank()) {
-                sendText(chatId.toString(),
-                        "❌ Помилка створення платіжної сесії. Спробуйте пізніше.");
+                sendText(chatId,
+                        "❌ Помилка створення оплати. Спробуйте пізніше.");
                 return;
             }
 
-            // 🟩 Відправляємо кнопку на оплату
             sendPaymentButton(chatId, payUrl);
 
-            // 🟩 Сповіщення користувачу
-            sendText(chatId.toString(),
-                    "✅ Ваше замовлення сформовано!\n" +
-                            "🔢 Код замовлення: *" + orderCode + "*\n" +
-                            "💰 Сума: *" + total + " грн*\n\n" +
-                            "Натисніть кнопку нижче, щоб оплатити 👇");
+            sendText(chatId,
+                    "✅ Замовлення створено!\n\n" +
+                            "🔢 Код: " + orderCode + "\n" +
+                            "💰 Сума: " + total + " грн\n\n" +
+                            "💳 Натисніть кнопку нижче для оплати 👇");
 
         } else {
 
-            // 🟧 Оплата готівкою
-            sendText(chatId.toString(),
-                    "✅ Ваше замовлення оформлено!\n" +
-                            "🔢 Код: *" + orderCode + "*\n" +
-                            "Спосіб оплати: *Готівка при отриманні*.\n" +
-                            "Дякуємо за замовлення! 🧱");
+            // ========= 💵 ГОТІВКА (ВАЖЛИВО) ================
+            sendText(chatId,
+                    "✅ Замовлення оформлено!\n\n" +
+                            "🔢 Код замовлення: " + orderCode + "\n" +
+                            "💵 Оплата: готівка при отриманні\n\n" +
+                            "📞 Наш менеджер зателефонує вам найближчим часом\n" +
+                            "для підтвердження замовлення.\n\n" +
+                            "Дякуємо за покупку 🙌");
         }
     }
 
