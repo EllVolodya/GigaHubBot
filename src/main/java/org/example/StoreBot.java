@@ -302,6 +302,23 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if (text != null && text.contains("Оформити замовлення")) {
+
+            List<Map<String, Object>> cart = userCart.get(userId);
+
+            if (cart == null || cart.isEmpty()) {
+                sendText(chatId, "❌ Кошик порожній.");
+                return;
+            }
+
+            userStates.put(userId, "awaiting_phone");
+
+            sendText(chatId,
+                    "📞 Введіть номер телефону для оформлення замовлення:");
+
+            return;
+        }
+
         // 🔹 ПАГІНАЦІЯ ФІЛЬТРІВ
         if (text.equals("Продовжити")) {
 
