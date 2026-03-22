@@ -470,6 +470,54 @@ public class StoreBot extends TelegramLongPollingBot {
             sendMessageSafely(createSubfilterMenu(text, chatId));
         }
 
+        if ("awaiting_filter_for_product_subfilter".equals(state)) {
+
+            if (BACK_BUTTON.equals(text)) {
+                userStates.remove(userId);
+                sendMessageSafely(createEditMenu(chatId, userId));
+                return;
+            }
+
+            if (text == null || text.isBlank()) {
+                sendText(chatId, "❌ Оберіть фільтр.");
+                return;
+            }
+
+            Map<String, Object> product = adminSelectedProduct.get(userId);
+
+            if (product == null) {
+                sendText(chatId, "❌ Товар не знайдено.");
+                userStates.remove(userId);
+                return;
+            }
+
+            CatalogSearcher searcher = new CatalogSearcher();
+
+            boolean hasSubfilters = searcher.hasSubfilters(text);
+
+            if (!hasSubfilters) {
+
+                boolean success = searcher.addProductToFilter(product, text, null);
+
+                userStates.remove(userId);
+
+                sendText(chatId,
+                        success
+                                ? "✅ Товар додано у фільтр: " + text
+                                : "❌ Помилка."
+                );
+
+                sendMessageSafely(createEditMenu(chatId, userId));
+                return;
+            }
+
+            selectedFilter.put(userId, text);
+            userStates.put(userId, "awaiting_subfilter_select");
+
+            sendText(chatId, "🔽 Оберіть підфільтр:");
+            sendMessageSafely(createSubfilterMenu(text, chatId));
+        }
+
         if ("awaiting_filter_select".equals(state)) {
 
             if (BACK_BUTTON.equals(text)) {
@@ -1319,7 +1367,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "➕ Додати підфільтр" -> {
 
-                    userStates.put(userId, "awaiting_filter_for_subfilter");
+                    userStates.put(userId, "awaiting_filter_for_product_subfilter");
 
                     filterPage.put(userId, 0);
 
