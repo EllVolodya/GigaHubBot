@@ -1232,7 +1232,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             markup.setResizeKeyboard(true);
 
                             KeyboardRow row1 = new KeyboardRow();
-                            row1.add("🚚 Оформити замовлення");
+                            row1.add("🚛 Оформити замовлення");
 
                             KeyboardRow row2 = new KeyboardRow();
                             row2.add(BACK_BUTTON);
@@ -1251,7 +1251,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendText(chatId, "🔢 Введіть кількість:");
                 }
 
-                case "🚚 Оформити замовлення" -> {
+                case "🚛 Оформити замовлення" -> {
 
                     List<Map<String, Object>> cart = userCart.get(userId);
 
