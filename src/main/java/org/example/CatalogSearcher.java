@@ -791,4 +791,73 @@ public class CatalogSearcher {
 
         return true;
     }
+
+    public List<Map<String, Object>> findProducts(
+            String category,
+            String subcategory,
+            String filter,
+            String subfilter
+    ) {
+
+        List<Map<String, Object>> products = new ArrayList<>();
+
+        StringBuilder sql = new StringBuilder("""
+        SELECT *
+        FROM products
+        WHERE 1=1
+    """);
+
+        List<Object> params = new ArrayList<>();
+
+        if (category != null) {
+            sql.append(" AND LOWER(category)=LOWER(?)");
+            params.add(category.trim());
+        }
+
+        if (subcategory != null) {
+            sql.append(" AND LOWER(subcategory)=LOWER(?)");
+            params.add(subcategory.trim());
+        }
+
+        if (filter != null) {
+            sql.append(" AND LOWER(filter)=LOWER(?)");
+            params.add(filter.trim());
+        }
+
+        if (subfilter != null) {
+            sql.append(" AND LOWER(subfilter)=LOWER(?)");
+            params.add(subfilter.trim());
+        }
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement(sql.toString());
+
+            for (int i = 0; i < params.size(); i++) {
+                ps.setString(i + 1, params.get(i).toString());
+            }
+
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+
+                Map<String, Object> product = new HashMap<>();
+
+                product.put("id", rs.getLong("id"));
+                product.put("name", rs.getString("name"));
+                product.put("price", rs.getString("price"));
+                product.put("category", rs.getString("category"));
+                product.put("subcategory", rs.getString("subcategory"));
+                product.put("filter", rs.getString("filter"));
+                product.put("subfilter", rs.getString("subfilter"));
+
+                products.add(product);
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return products;
+    }
 }

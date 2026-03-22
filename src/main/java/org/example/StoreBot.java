@@ -5923,7 +5923,6 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // 🔸 Показ товару по списку
     private void sendProductList(Long chatId) throws TelegramApiException {
 
         String category = currentCategory.get(chatId);
@@ -5933,32 +5932,18 @@ public class StoreBot extends TelegramLongPollingBot {
 
         CatalogSearcher searcher = new CatalogSearcher();
 
-        List<Map<String, Object>> products;
-
-        // 🔹 визначаємо джерело товарів
-        if (subfilter != null) {
-
-            products = searcher.getProductsBySubfilter(subfilter);
-
-        } else if (filter != null) {
-
-            products = searcher.getProductsByFilter(filter);
-
-        } else if (subcategory != null) {
-
-            products = searcher.getProducts(category, subcategory);
-
-        } else {
-
-            products = searcher.getProductsByCategory(category);
-        }
+        List<Map<String, Object>> products = searcher.findProducts(
+                category,
+                subcategory,
+                filter,
+                subfilter
+        );
 
         if (products == null || products.isEmpty()) {
             sendText(chatId, "❌ Товарів у цьому розділі немає.");
             return;
         }
 
-        // 🔹 зберігаємо список для вибору по номеру
         userProductLists.put(chatId, new ArrayList<>(products));
 
         StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
@@ -5980,7 +5965,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         sendText(chatId, sb.toString());
 
-        // 🔹 Клавіатура тільки з кнопкою Назад
         KeyboardRow row = new KeyboardRow();
         row.add(BACK_BUTTON);
 
