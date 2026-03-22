@@ -523,7 +523,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 ФІКС: тільки adminSelectedProduct
             Map<String, Object> product = adminSelectedProduct.get(userId);
 
             if (product == null) {
@@ -540,9 +539,13 @@ public class StoreBot extends TelegramLongPollingBot {
             userStates.remove(userId);
             selectedFilter.remove(userId);
 
+            String productName = safeToString(product.get("name"), "Без назви");
+
             sendText(chatId,
                     success
-                            ? "✅ Підфільтр додано!"
+                            ? "✅ Товар додано:\n"
+                            + "📦 " + productName + "\n"
+                            + "📂 " + filter + " → " + text
                             : "❌ Помилка при додаванні."
             );
 
