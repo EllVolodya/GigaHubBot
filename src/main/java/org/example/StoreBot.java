@@ -56,6 +56,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private Map<Long, String> selectedFilter = new HashMap<>();
 
     private final Map<Long, Integer> productIndex = new HashMap<>();
+    private final Map<Long, List<Map<String, Object>>> productsToEdit = new HashMap<>();
     protected Map<Long, Map<String, Object>> lastShownProduct = new HashMap<>();
     private final Map<Long, String> userStates = new HashMap<>();
     private final Map<Long, String> userPhones = new HashMap<>();
