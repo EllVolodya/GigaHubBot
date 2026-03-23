@@ -583,31 +583,53 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            Map<String, Object> product = adminSelectedProduct.get(userId);
-
-            if (product == null) {
-                sendText(chatId, "❌ Товар не знайдено.");
-                userStates.remove(userId);
-                selectedFilter.remove(userId);
-                return;
-            }
-
             CatalogSearcher searcher = new CatalogSearcher();
 
-            boolean success = searcher.addProductToFilter(product, filter, text);
+            boolean success = false;
 
+            // 🔥 МАСОВЕ РЕДАГУВАННЯ
+            List<Map<String, Object>> products = productsToEdit;
+
+            if (products != null && !products.isEmpty()) {
+
+                for (Map<String, Object> p : products) {
+                    searcher.addProductToFilter(p, filter, text);
+                }
+
+                success = true;
+
+                sendText(chatId,
+                        "✅ Додано " + products.size() + " товар(ів):\n" +
+                                "📂 " + filter + " → " + text);
+
+            } else {
+
+                // 🔹 ОДИН ТОВАР
+                Map<String, Object> product = adminSelectedProduct.get(userId);
+
+                if (product == null) {
+                    sendText(chatId, "❌ Товар не знайдено.");
+                    userStates.remove(userId);
+                    selectedFilter.remove(userId);
+                    return;
+                }
+
+                success = searcher.addProductToFilter(product, filter, text);
+
+                String productName = safeToString(product.get("name"), "Без назви");
+
+                sendText(chatId,
+                        success
+                                ? "✅ Товар додано:\n"
+                                + "📦 " + productName + "\n"
+                                + "📂 " + filter + " → " + text
+                                : "❌ Помилка при додаванні."
+                );
+            }
+
+            // 🔥 очистка
             userStates.remove(userId);
             selectedFilter.remove(userId);
-
-            String productName = safeToString(product.get("name"), "Без назви");
-
-            sendText(chatId,
-                    success
-                            ? "✅ Товар додано:\n"
-                            + "📦 " + productName + "\n"
-                            + "📂 " + filter + " → " + text
-                            : "❌ Помилка при додаванні."
-            );
 
             sendMessageSafely(createEditMenu(chatId, userId));
         }
