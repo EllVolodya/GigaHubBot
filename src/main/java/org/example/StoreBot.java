@@ -4685,28 +4685,30 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 ЗБЕРЕЖЕННЯ (КЛЮЧОВИЙ МОМЕНТ)
+            // 🔥 ГОЛОВНЕ — зберігаємо список для масового редагування
+            productsToEdit.put(userId, selectedProducts);
 
-            // список товарів
-            adminSelectedProducts.put(userId, selectedProducts);
-
-            // поточний товар (обʼєкт)
+            // 🔹 перший товар (для UI)
             Map<String, Object> currentProduct = selectedProducts.get(0);
             adminSelectedProduct.put(userId, currentProduct);
 
-            // 🔥 ВАЖЛИВО — для UI
+            // 🔹 для UI (назва)
             adminEditingProduct.put(userId,
                     currentProduct.get("name").toString());
 
             userStates.put(userId, "editing");
 
-            // очищаємо пошук
+            // 🔹 очищаємо список пошуку
             adminMatchList.remove(userId);
 
             // 🔥 ВИВІД
             StringBuilder sb = new StringBuilder();
-            sb.append("Редагуємо ").append(selectedProducts.size()).append(" товар(ів)\n\n");
-            sb.append("Поточний:\n")
+
+            sb.append("✏️ Редагуємо ")
+                    .append(selectedProducts.size())
+                    .append(" товар(ів)\n\n");
+
+            sb.append("📦 Поточний:\n")
                     .append(currentProduct.get("name"));
 
             sendText(chatId, sb.toString());
