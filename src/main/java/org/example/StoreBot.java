@@ -589,7 +589,7 @@ public class StoreBot extends TelegramLongPollingBot {
             boolean success = false;
 
             // 🔥 МАСОВЕ РЕДАГУВАННЯ
-            List<Map<String, Object>> products = productsToEdit;
+            List<Map<String, Object>> products = productsToEdit.get(userId);
 
             if (products != null && !products.isEmpty()) {
 
