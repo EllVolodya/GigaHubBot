@@ -8411,7 +8411,11 @@ public class StoreBot extends TelegramLongPollingBot {
         for (Map<String, Object> item : cart) {
 
             String name = item.get("name").toString();
-            double price = Double.parseDouble(item.get("price").toString());
+
+            double price = Double.parseDouble(
+                    item.get("price").toString().replace(",", ".")
+            );
+
             int qty = Integer.parseInt(item.get("quantity").toString());
 
             double sum = price * qty;
@@ -8419,12 +8423,15 @@ public class StoreBot extends TelegramLongPollingBot {
 
             sb.append("🔸 ").append(i++).append(". ").append(name).append("\n");
             sb.append("   🔢 Кількість: ").append(qty).append("\n");
-            sb.append("   💵 Ціна за 1: ").append(price).append(" грн\n");
-            sb.append("   💰 Сума: ").append(sum).append(" грн\n\n");
+            sb.append("   💵 Ціна за 1: ").append(String.format("%.2f", price)).append(" грн\n");
+            sb.append("   💰 Сума: ").append(String.format("%.2f", sum)).append(" грн\n\n");
         }
 
         sb.append("━━━━━━━━━━━━━━\n");
-        sb.append("💳 Всього до оплати: ").append(total).append(" грн\n");
+        sb.append("💳 Всього до оплати: ")
+                .append(String.format("%.2f", total))
+                .append(" грн\n");
+
         sb.append("🧱 Митрофан каже: «Готовий оформити замовлення!» 🤖");
 
         sendText(chatId, sb.toString());
