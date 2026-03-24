@@ -2547,11 +2547,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
-        // ❗ 0. Блокування "Назад" під час оформлення замовлення
+        // Повернення назад
         if ("awaiting_delivery_choice".equals(state) ||
                 "order_pickup".equals(state) ||
                 "awaiting_city_delivery".equals(state) ||
-                "awaiting_payment_method".equals(state)) {
+                "awaiting_payment_method".equals(state) ||
+                "awaiting_phone".equals(state)) {
 
             tempDeliveryType.remove(userId);
             tempAddress.remove(userId);
@@ -2564,12 +2565,24 @@ public class StoreBot extends TelegramLongPollingBot {
 
             userStates.remove(userId);
 
-            sendText(chatId, "↩️ Повертаємо вас у головне меню.");
-            sendMessage(createUserMenu(chatId, userId));
+            sendText(chatId, "↩️ Повертаємо вас до каталогу товарів.");
+
+            // 🔥 ФІКС ТУТ
+            if (currentSubcategory.containsKey(userId)) {
+                sendProductList(Long.valueOf(chatId));
+                return;
+            }
+
+            if (currentCategory.containsKey(userId)) {
+                sendSubcategories(userId, currentCategory.get(userId));
+                return;
+            }
+
+            sendCategories(userId);
             return;
         }
 
-        // ❗ 0.2 Калькулятор
+        // ❗ 0.2 КАЛЬКУЛЯТОР
         Set<String> MATERIAL_STATES = Set.of(
                 "material_calc_menu",
                 "paint_length", "paint_width",
@@ -2593,10 +2606,8 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 1. ПОВЕРНЕННЯ З КОШИКА
+        // 🔥 1. З КОШИКА
         if (userCart.containsKey(userId) && !userCart.get(userId).isEmpty()) {
-
-            System.out.println("[BACK] User in cart → return to subcategories");
 
             if (currentCategory.containsKey(userId)) {
                 sendSubcategories(userId, currentCategory.get(userId));
@@ -2607,7 +2618,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 2. ПОВЕРНЕННЯ З ПІДКАТЕГОРІЇ
+        // 🔥 2. З ПІДКАТЕГОРІЇ
         if (currentSubcategory.containsKey(userId)) {
 
             currentSubcategory.remove(userId);
@@ -2621,7 +2632,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 3. ПОВЕРНЕННЯ З КАТЕГОРІЇ
+        // 🔥 3. З КАТЕГОРІЇ
         if (currentCategory.containsKey(userId)) {
 
             currentCategory.remove(userId);
@@ -2629,7 +2640,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 4. АДМІН МЕНЮ
+        // 🔥 4. АДМІН
         if (adminOrderIndex.containsKey(userId)) {
 
             adminOrderIndex.remove(userId);
@@ -2637,14 +2648,14 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 5. МЕНЮ РОЗРОБНИКА
+        // 🔥 5. РОЗРОБНИК
         if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
 
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
 
-        // 🔥 6. РЕДАГУВАННЯ ТОВАРУ
+        // 🔥 6. РЕДАГУВАННЯ
         if (adminEditingProduct.containsKey(userId) ||
                 adminSelectedProductsRange.containsKey(userId)) {
 
@@ -2658,7 +2669,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 7. FALLBACK (останній рівень)
+        // 🔥 7. FALLBACK
         userStates.remove(userId);
         lastShownProduct.remove(userId);
         adminMatchList.remove(userId);
@@ -4685,23 +4696,18 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 ГОЛОВНЕ — зберігаємо список для масового редагування
             productsToEdit.put(userId, selectedProducts);
 
-            // 🔹 перший товар (для UI)
             Map<String, Object> currentProduct = selectedProducts.get(0);
             adminSelectedProduct.put(userId, currentProduct);
 
-            // 🔹 для UI (назва)
             adminEditingProduct.put(userId,
                     currentProduct.get("name").toString());
 
             userStates.put(userId, "editing");
 
-            // 🔹 очищаємо список пошуку
             adminMatchList.remove(userId);
 
-            // 🔥 ВИВІД
             StringBuilder sb = new StringBuilder();
 
             sb.append("✏️ Редагуємо ")
