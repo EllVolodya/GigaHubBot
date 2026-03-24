@@ -1257,7 +1257,8 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     // 🔥 якщо вже є в кошику → показуємо
-                    if (cart != null) {
+                    if (cart != null && !cart.isEmpty()) {
+
                         boolean alreadyInCart = cart.stream().anyMatch(item ->
                                 item.get("id").toString().equals(product.get("id").toString())
                         );
