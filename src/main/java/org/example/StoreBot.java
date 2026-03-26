@@ -4808,8 +4808,15 @@ public class StoreBot extends TelegramLongPollingBot {
                 break;
 
             case "🗂️ Додати в підкатегорію":
+
+                List<Map<String, Object>> products = adminSelectedProducts.get(userId);
+                System.out.println("➡️ BEFORE SUBCATEGORY SIZE = " +
+                        (products == null ? "NULL" : products.size()));
+
                 userStates.put(userId, "awaiting_subcategory");
-                sendText(chatId, "✏️ Введіть назву підкатегорії, куди хочете додати товар:");
+
+                sendText(chatId,
+                        "✏️ Введіть назву підкатегорії, куди хочете додати товар:");
                 break;
 
             case "🖼️ Додати фотографію":
@@ -5014,12 +5021,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private void handleAddToSubcategory(Long userId, String chatId, String text) {
 
-        // 🔥 1. ОБРОБКА КНОПКИ НАЗАД
+        // 🔥 1. BACK
         if (text != null && text.equals(BACK_BUTTON)) {
 
             userStates.put(userId, "editing");
 
-            sendText(chatId, "↩️ Повертаємось до редагування товару.");
+            sendText(chatId, "↩️ Повертаємось до редагування.");
 
             sendMessageSafely(createEditMenu(chatId, userId));
             return;
@@ -5027,10 +5034,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String subcategoryName = text.trim();
 
-        // 🔥 2. ОТРИМУЄМО СПИСОК ТОВАРІВ
+        // 🔥 2. БЕРЕМО СПИСОК
         List<Map<String, Object>> products = adminSelectedProducts.get(userId);
 
-        // 🔥 fallback якщо список пропав
+        System.out.println("🔥 PRODUCTS BEFORE = " +
+                (products == null ? "NULL" : products.size()));
+
+        // 🔥 fallback (1 товар)
         if (products == null || products.isEmpty()) {
 
             Map<String, Object> single = adminSelectedProduct.get(userId);
@@ -5038,6 +5048,7 @@ public class StoreBot extends TelegramLongPollingBot {
             if (single != null) {
                 products = new ArrayList<>();
                 products.add(single);
+                System.out.println("⚠️ FALLBACK TO SINGLE PRODUCT");
             }
         }
 
@@ -5060,8 +5071,10 @@ public class StoreBot extends TelegramLongPollingBot {
         for (Map<String, Object> product : products) {
 
             try {
+
                 String name = safeToString(product.get("name"), null);
-                if (name == null) continue;
+
+                if (name == null || name.isBlank()) continue;
 
                 double price = CatalogEditor.getProductPriceFromYAML(name);
                 if (price <= 0) price = 0;
@@ -5084,7 +5097,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        // 🔥 5. ЗВІТ
+        // 🔥 5. РЕЗУЛЬТАТ
         StringBuilder sb = new StringBuilder();
         sb.append("📊 Результат:\n\n");
         sb.append("➕ Додано: ").append(added).append("\n");
@@ -5098,8 +5111,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
         sendText(chatId, sb.toString());
 
-        // 🔥 6. ПОВЕРНЕННЯ В МЕНЮ РЕДАГУВАННЯ
+        // 🔥 6. ПОВЕРНЕННЯ
         userStates.put(userId, "editing");
+
         sendMessageSafely(createEditMenu(chatId, userId));
     }
 
