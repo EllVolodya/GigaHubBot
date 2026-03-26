@@ -785,10 +785,16 @@ public class StoreBot extends TelegramLongPollingBot {
                 Long chatIdLong = update.getMessage().getChatId();
                 String chatIdStr = chatIdLong.toString();
 
+                UserManager userManager = new UserManager();
+
+                boolean isNewUser = !userManager.isUserExists(chatIdLong);
+
                 // параметр після /start
                 String inviteCode = text.replace("/start", "").trim();
 
-                if (!inviteCode.isEmpty()) {
+                // 🔥 ТІЛЬКИ ДЛЯ НОВИХ КОРИСТУВАЧІВ
+                if (isNewUser && !inviteCode.isEmpty()) {
+
                     System.out.println("🔥 inviteCode = " + inviteCode);
 
                     InviteManager inviteManager = new InviteManager();
@@ -799,19 +805,18 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 // реєстрація
-                new UserManager().registerUser(
+                userManager.registerUser(
                         chatIdLong,
                         update.getMessage().getFrom().getFirstName(),
                         chatIdStr
                 );
 
-                // меню
                 execute(createUserMenu(chatIdStr, userId));
 
             } catch (SQLException e) {
                 e.printStackTrace();
                 sendText(update.getMessage().getChatId().toString(),
-                        "❌ Сталася помилка бази даних при обробці інвайту.");
+                        "❌ Сталася помилка бази даних.");
             } catch (TelegramApiException e) {
                 e.printStackTrace();
                 sendText(update.getMessage().getChatId().toString(),
