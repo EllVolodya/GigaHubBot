@@ -4805,6 +4805,32 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "Введіть новий опис:");
                 break;
 
+            case "📁 Додати в підкатегорію":
+
+                List<Map<String, Object>> products = adminSelectedProducts.get(userId);
+
+                // 🔥 fallback для одного товару
+                if (products == null || products.isEmpty()) {
+
+                    Map<String, Object> single = adminSelectedProduct.get(userId);
+
+                    if (single != null) {
+                        products = new ArrayList<>();
+                        products.add(single);
+                    }
+                }
+
+                if (products == null || products.isEmpty()) {
+                    sendText(chatId, "❌ Немає вибраних товарів.");
+                    break;
+                }
+
+                userStates.put(userId, "awaiting_subcategory");
+
+                sendText(chatId, "📁 Введіть назву підкатегорії або оберіть:");
+
+                break;
+
             case "🧩 Додати в підфільтр":
 
                 if (productsToEdit != null && productsToEdit.size() > 1) {
