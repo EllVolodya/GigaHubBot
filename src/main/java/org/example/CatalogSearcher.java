@@ -395,23 +395,32 @@ public class CatalogSearcher {
         return product;
     }
 
-    public List<String> getFilters(){
+    public List<String> getFilters(String categoryName, String subcategoryName) {
 
         List<String> filters = new ArrayList<>();
 
-        try(Connection conn = DatabaseManager.getConnection()){
+        String sql = """
+        SELECT f.name
+        FROM filters f
+        JOIN subcategories s ON f.subcategory_id = s.id
+        JOIN categories c ON s.category_id = c.id
+        WHERE c.name = ? AND s.name = ?
+        ORDER BY f.id
+    """;
 
-            PreparedStatement ps =
-                    conn.prepareStatement("SELECT name FROM filters ORDER BY id");
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, categoryName);
+            ps.setString(2, subcategoryName);
 
             ResultSet rs = ps.executeQuery();
 
-            while(rs.next()){
-
+            while (rs.next()) {
                 filters.add(rs.getString("name"));
             }
 
-        }catch(Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
 
