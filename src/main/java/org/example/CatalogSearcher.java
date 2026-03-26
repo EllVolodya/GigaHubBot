@@ -427,6 +427,27 @@ public class CatalogSearcher {
         return filters;
     }
 
+    public List<String> getFiltersAdmin(){
+
+        List<String> filters = new ArrayList<>();
+
+        String sql = "SELECT name FROM filters ORDER BY id";
+
+        try(Connection conn = DatabaseManager.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery()){
+
+            while(rs.next()){
+                filters.add(rs.getString("name"));
+            }
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+
+        return filters;
+    }
+
     public void insertFilter(String filterName, String subcategoryName){
 
         String sql = """
