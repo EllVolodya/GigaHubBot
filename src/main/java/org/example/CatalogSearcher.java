@@ -879,6 +879,17 @@ public class CatalogSearcher {
                 product.put("id", rs.getLong("id"));
                 product.put("name", rs.getString("name"));
                 product.put("price", rs.getString("price"));
+                product.put("unit", rs.getString("unit"));
+
+                byte[] descBytes = rs.getBytes("description");
+                if (descBytes != null) {
+                    product.put("description", new String(descBytes, java.nio.charset.StandardCharsets.UTF_8));
+                } else {
+                    product.put("description", "");
+                }
+
+                // 🔥 фото
+                product.put("photo", rs.getString("photo"));
 
                 products.add(product);
             }
