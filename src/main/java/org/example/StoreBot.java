@@ -6571,12 +6571,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "🔍 Введіть ключові слова для пошуку у MySQL:");
             }
 
-            case "🔍 Пошук у YAML" -> {
-                adminSearchSource.put(userId, "yaml");
-                userStates.put(userId, "awaiting_search");
-                sendText(chatId, "🔍 Введіть ключові слова для пошуку у YAML:");
-            }
-
             case "🔍 Пошук з EXCEL" -> {
                 adminSearchSource.put(userId, "excel");
                 userStates.put(userId, "awaiting_search");
