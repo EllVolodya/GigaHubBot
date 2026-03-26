@@ -6060,6 +6060,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
+    //🔸 Показ товару по списку
     private void sendProductList(Long chatId) throws TelegramApiException {
 
         String category = currentCategory.get(chatId);
@@ -6083,25 +6084,36 @@ public class StoreBot extends TelegramLongPollingBot {
 
         userProductLists.put(chatId, new ArrayList<>(products));
 
-        StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
-
         for (int i = 0; i < products.size(); i++) {
 
             Map<String, Object> product = products.get(i);
 
             String name = safeToString(product.get("name"), "Без назви");
             String price = safeToString(product.get("price"), "0");
+            String description = safeToString(product.get("description"), "Без опису");
+            String photo = safeToString(product.get("photo"), null); // URL або file_id
 
-            sb.append(i + 1)
-                    .append(". ")
-                    .append(name)
-                    .append(" — ")
-                    .append(price)
-                    .append(" грн\n");
+            String caption =
+                    "📦 " + (i + 1) + ". " + name + "\n" +
+                            "💰 Ціна: " + price + " грн\n\n" +
+                            "📝 " + description;
+
+            if (photo != null && !photo.isBlank()) {
+
+                SendPhoto sendPhoto = new SendPhoto();
+                sendPhoto.setChatId(chatId.toString());
+                sendPhoto.setPhoto(new InputFile(photo));
+                sendPhoto.setCaption(caption);
+
+                execute(sendPhoto);
+
+            } else {
+                // якщо немає фото
+                sendText(chatId, caption);
+            }
         }
 
-        sendText(chatId, sb.toString());
-
+        // 🔥 КНОПКИ
         KeyboardRow row = new KeyboardRow();
         row.add(BACK_BUTTON);
 
