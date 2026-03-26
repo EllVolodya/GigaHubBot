@@ -4805,7 +4805,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "Введіть новий опис:");
                 break;
 
-            case "📁 Додати в підкатегорію":
+            case "🗂️ Додати в підкатегорію":
 
                 List<Map<String, Object>> products = adminSelectedProducts.get(userId);
 
