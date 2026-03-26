@@ -560,30 +560,43 @@ public class StoreBot extends TelegramLongPollingBot {
 
             List<String> filters = catalogSearcher.getFiltersAdmin();
 
-            String input = text.trim();
+            String input = text.trim().toLowerCase();
 
-            Optional<String> match = filters.stream()
-                    .filter(f -> f.equalsIgnoreCase(input))
-                    .findFirst();
+            // 🔥 ПОШУК через contains
+            List<String> found = filters.stream()
+                    .filter(f -> f.toLowerCase().contains(input))
+                    .toList();
 
-            if (match.isEmpty()) {
+            if (found.isEmpty()) {
                 sendText(chatId, "❌ Фільтр не знайдено.");
                 return;
             }
 
-            String filter = match.get();
+            // 🔥 якщо один — беремо його
+            String filter;
+
+            if (found.size() == 1) {
+                filter = found.get(0);
+            } else {
+                // 🔥 якщо багато — показуємо список
+                sendText(chatId, "🔎 Знайдено кілька фільтрів, оберіть:");
+
+                // можна одразу показати меню (або своє існуюче)
+                sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0));
+
+                return;
+            }
 
             selectedFilter.put(userId, filter);
 
-            CatalogSearcher searcher = new CatalogSearcher();
-            boolean hasSubfilters = searcher.hasSubfilters(filter);
+            boolean hasSubfilters = catalogSearcher.hasSubfilters(filter);
 
             // 🔥 НЕМА ПІДФІЛЬТРІВ → ОДРАЗУ ДОДАЄМО
             if (!hasSubfilters) {
 
                 Map<String, Object> product = adminSelectedProduct.get(userId);
 
-                boolean success = searcher.addProductToFilter(product, filter, null);
+                boolean success = catalogSearcher.addProductToFilter(product, filter, null);
 
                 userStates.put(userId, "editing");
 
@@ -597,7 +610,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 Є ПІДФІЛЬТРИ → ДАЛІ
+            // 🔥 Є ПІДФІЛЬТРИ → ПЕРЕХІД
             userStates.put(userId, "awaiting_subfilter_select");
 
             sendText(chatId, "🔽 Оберіть або введіть підфільтр:");
