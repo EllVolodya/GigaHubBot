@@ -335,6 +335,22 @@ public class UserManager {
         }
     }
 
+    public boolean isUserExists(Long userId) {
+        try (Connection conn = DatabaseManager.getConnection()) {
+            PreparedStatement stmt = conn.prepareStatement(
+                    "SELECT id FROM users WHERE userId = ?"
+            );
+            stmt.setLong(1, userId);
+
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     // Стартове повідомлення для нових пользователей
     private String getStartMessageText() {
         return "\uD83D\uDC4B Вітаю, друже!\n" +
