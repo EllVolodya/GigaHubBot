@@ -4709,7 +4709,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try {
 
-            // 🔹 ДІАПАЗОН (1-10)
+            // 🔹 ДІАПАЗОН
             if (text.contains("-")) {
 
                 String[] parts = text.split("-");
@@ -4724,7 +4724,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
             }
-            // 🔹 СПИСОК (1,3,5)
+            // 🔹 СПИСОК
             else if (text.contains(",")) {
 
                 String[] parts = text.split(",");
@@ -4737,7 +4737,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
                 }
             }
-            // 🔹 ОДИН ТОВАР
+            // 🔹 ОДИН
             else {
 
                 int index = Integer.parseInt(text) - 1;
@@ -4752,7 +4752,8 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            productsToEdit.put(userId, selectedProducts);
+            // 🔥 ВАЖЛИВО — ОСЬ ФІКС
+            adminSelectedProducts.put(userId, selectedProducts);
 
             Map<String, Object> currentProduct = selectedProducts.get(0);
             adminSelectedProduct.put(userId, currentProduct);
