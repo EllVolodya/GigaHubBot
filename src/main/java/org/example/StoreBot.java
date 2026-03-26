@@ -364,16 +364,17 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔹 ПАГІНАЦІЯ ФІЛЬТРІВ
+        // 🔹 Пагінація фільтрів
         if (text.equals("Продовжити")) {
 
             int page = filterPage.getOrDefault(userId, 0);
-
             page++;
 
             filterPage.put(userId, page);
 
-            sendMessageSafely(createFilterSelectMenu(userId, chatId, page));
+            sendMessageSafely(
+                    createFilterSelectMenu(userId, chatId, page)
+            );
 
             return;
         }
@@ -381,14 +382,15 @@ public class StoreBot extends TelegramLongPollingBot {
         if (text.equals("Попередні")) {
 
             int page = filterPage.getOrDefault(userId, 0);
-
             page--;
 
             if (page < 0) page = 0;
 
             filterPage.put(userId, page);
 
-            sendMessageSafely(createFilterSelectMenu(userId, chatId, page));
+            sendMessageSafely(
+                    createFilterSelectMenu(userId, chatId, page)
+            );
 
             return;
         }
@@ -6069,118 +6071,6 @@ public class StoreBot extends TelegramLongPollingBot {
             e.printStackTrace();
 
             sendText(chatId, "⚠️ Помилка при отриманні підкатегорій із бази.");
-        }
-    }
-
-    //🔸 Показ товару
-    private void sendProduct(Long chatId) throws TelegramApiException {
-
-        String category = currentCategory.get(chatId);
-        String subcategory = currentSubcategory.get(chatId);
-
-        if (category == null || subcategory == null) {
-            sendText(chatId, "Помилка: категорія не вибрана.");
-            return;
-        }
-
-        CatalogSearcher searcher = new CatalogSearcher();
-        List<Map<String, Object>> products = searcher.getProducts(category, subcategory);
-
-        if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ У цій підкатегорії зараз порожньо.\\n\" +\n" +
-                    "                    \"Митрофан уже перевіряє полиці \uD83D\uDE04");
-            return;
-        }
-
-        // Сортуємо по ID — гарантія порядку
-        products.sort(Comparator.comparingInt(p -> ((Number) p.get("id")).intValue()));
-
-        // Унікальний ключ для цієї підкатегорії
-        long uniqueKey = (chatId + category + subcategory).hashCode();
-        Long key = uniqueKey;
-
-        // Отримуємо збережений індекс або null
-        Integer savedIndex = productIndex.get(key);
-        int currentIndex;
-
-        if (savedIndex == null) {
-            // Перший раз у цій підкатегорії — показуємо перший товар
-            currentIndex = 0;
-        } else {
-            // Вже були — показуємо НАСТУПНИЙ після збереженого
-            currentIndex = (savedIndex + 1) % products.size();
-        }
-
-        // Зберігаємо поточний індекс (на випадок, якщо користувач вийде і зайде знову)
-        productIndex.put(key, currentIndex);
-
-        Map<String, Object> product = products.get(currentIndex);
-        lastShownProduct.put(chatId, product);
-
-        // ----- Далі твій старий код формування повідомлення (нічого не чіпаємо) -----
-        String name = safeToString(product.get("name"), "Без назви");
-        String price = safeToString(product.get("price"), "0");
-        String unit = safeToString(product.get("unit"), "шт").toLowerCase();
-        String description = safeToString(product.get("description"), "");
-        String photo = safeToString(product.get("photo"), "");
-
-        String manufacturer = "";
-        Object manufacturerObj = product.get("manufacturer");
-        try {
-            if (manufacturerObj instanceof byte[] bytes) {
-                manufacturer = new String(bytes, java.nio.charset.StandardCharsets.UTF_8);
-            } else if (manufacturerObj instanceof java.sql.Blob blob) {
-                manufacturer = new String(blob.getBytes(1, (int) blob.length()), java.nio.charset.StandardCharsets.UTF_8);
-            } else if (manufacturerObj != null) {
-                manufacturer = String.valueOf(manufacturerObj);
-            }
-        } catch (Exception ignored) {}
-
-        boolean isCustomOrder = unit.equals("під замовлення");
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("📦 ").append(name).append("\n");
-
-        if (isCustomOrder) {
-            sb.append("💬 Цей товар доступний лише під замовлення.\n")
-                    .append("📞 Якщо хочеш дізнатись ціну — натисни кнопку *“Написати консультанту”*, і я миттю передам запит! 🔧😉");
-        } else {
-            sb.append("💰 Ціна: ").append(price).append(" грн за ").append(unit);
-        }
-
-        if (!manufacturer.isEmpty() && !"null".equalsIgnoreCase(manufacturer.trim()))
-            sb.append("\n🏭 Виробник: ").append(manufacturer);
-
-        if (!description.isEmpty() && !"null".equalsIgnoreCase(description.trim()))
-            sb.append("\n📖 ").append(description);
-
-        // Кнопки
-        KeyboardRow row1 = new KeyboardRow();
-        row1.add("⬅ Назад");
-        row1.add("🔍 Пошук");
-        row1.add("➡ Далі");
-
-        KeyboardRow row2 = new KeyboardRow();
-
-        if (isCustomOrder) {
-            row2.add("Написати консультанту");
-        } else {
-            row2.add("🛒 Додати в кошик");
-        }
-
-        row2.add("🛍️ Перейти в кошик");
-
-        KeyboardRow row3 = new KeyboardRow();
-        row3.add(BACK_BUTTON);
-
-        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup(List.of(row1, row2, row3));
-        markup.setResizeKeyboard(true);
-
-        // Відправка
-        if (!photo.isEmpty() && !"null".equalsIgnoreCase(photo.trim())) {
-            sendPhotoFromResources(chatId.toString(), photo, sb.toString(), markup);
-        } else {
-            sendTextWithMarkup(chatId, sb.toString(), markup);
         }
     }
 
