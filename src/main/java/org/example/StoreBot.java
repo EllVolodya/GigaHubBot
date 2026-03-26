@@ -2596,9 +2596,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
-        // =========================
         // 🔴 1. ВИХІД З ОФОРМЛЕННЯ
-        // =========================
         if ("awaiting_delivery_choice".equals(state) ||
                 "order_pickup".equals(state) ||
                 "awaiting_city_delivery".equals(state) ||
@@ -2632,9 +2630,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // =========================
         // 🟠 2. ВИХІД З КОШИКА
-        // =========================
         if ("in_cart".equals(state)) {
 
             userStates.remove(userId);
@@ -2655,9 +2651,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // =========================
         // 🟡 3. КАЛЬКУЛЯТОР
-        // =========================
         Set<String> MATERIAL_STATES = Set.of(
                 "material_calc_menu",
                 "paint_length", "paint_width",
@@ -2681,9 +2675,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // =========================
         // 🟡 4. З ПІДКАТЕГОРІЇ
-        // =========================
         if (currentSubcategory.containsKey(userId)) {
 
             currentSubcategory.remove(userId);
@@ -2697,9 +2689,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // =========================
         // 🟢 5. З КАТЕГОРІЇ
-        // =========================
         if (currentCategory.containsKey(userId)) {
 
             currentCategory.remove(userId);
@@ -2707,9 +2697,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // =========================
         // 🔵 6. АДМІН
-        // =========================
         if (adminOrderIndex.containsKey(userId)) {
 
             adminOrderIndex.remove(userId);
@@ -2717,18 +2705,14 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // =========================
         // 🔵 7. РОЗРОБНИК
-        // =========================
         if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
 
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
 
-        // =========================
         // 🔵 8. РЕДАГУВАННЯ
-        // =========================
         if (adminEditingProduct.containsKey(userId) ||
                 adminSelectedProductsRange.containsKey(userId)) {
 
@@ -2742,9 +2726,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // =========================
         // ⚪ 9. FALLBACK
-        // =========================
         userStates.remove(userId);
         lastShownProduct.remove(userId);
         adminMatchList.remove(userId);
