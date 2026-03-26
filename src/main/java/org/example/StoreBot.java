@@ -5012,8 +5012,22 @@ public class StoreBot extends TelegramLongPollingBot {
         userStates.remove(userId);
     }
 
-    private void handleAddToSubcategory(Long userId, String chatId, String subcategoryName) {
+    private void handleAddToSubcategory(Long userId, String chatId, String text) {
 
+        // 🔥 1. ОБРОБКА КНОПКИ НАЗАД
+        if (text != null && text.equals(BACK_BUTTON)) {
+
+            userStates.put(userId, "editing");
+
+            sendText(chatId, "↩️ Повертаємось до редагування товару.");
+
+            sendMessageSafely(createEditMenu(chatId, userId));
+            return;
+        }
+
+        String subcategoryName = text.trim();
+
+        // 🔥 2. ОТРИМУЄМО СПИСОК ТОВАРІВ
         List<Map<String, Object>> products = adminSelectedProducts.get(userId);
 
         // 🔥 fallback якщо список пропав
@@ -5032,6 +5046,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🔥 3. ПЕРЕВІРКА ПІДКАТЕГОРІЇ
         if (!CatalogEditor.subcategoryExists(subcategoryName)) {
             sendText(chatId, "❌ Підкатегорія '" + subcategoryName + "' не знайдена.");
             return;
@@ -5039,26 +5054,53 @@ public class StoreBot extends TelegramLongPollingBot {
 
         int added = 0;
         int exists = 0;
+        int errors = 0;
 
+        // 🔥 4. ОБРОБКА ВСІХ ТОВАРІВ
         for (Map<String, Object> product : products) {
 
-            String name = safeToString(product.get("name"), null);
-            if (name == null) continue;
+            try {
+                String name = safeToString(product.get("name"), null);
+                if (name == null) continue;
 
-            double price = CatalogEditor.getProductPriceFromYAML(name);
+                double price = CatalogEditor.getProductPriceFromYAML(name);
+                if (price <= 0) price = 0;
 
-            boolean success = CatalogEditor.addProductToSubcategory(name, price, subcategoryName);
+                boolean success = CatalogEditor.addProductToSubcategory(
+                        name,
+                        price,
+                        subcategoryName
+                );
 
-            if (success) added++;
-            else exists++;
+                if (success) {
+                    added++;
+                } else {
+                    exists++;
+                }
+
+            } catch (Exception e) {
+                errors++;
+                e.printStackTrace();
+            }
         }
 
-        sendText(chatId,
-                "📊 Результат:\n\n" +
-                        "➕ Додано: " + added + "\n" +
-                        "⚠️ Вже існує: " + exists + "\n" +
-                        "📦 Всього: " + products.size()
-        );
+        // 🔥 5. ЗВІТ
+        StringBuilder sb = new StringBuilder();
+        sb.append("📊 Результат:\n\n");
+        sb.append("➕ Додано: ").append(added).append("\n");
+        sb.append("⚠️ Вже існує: ").append(exists).append("\n");
+
+        if (errors > 0) {
+            sb.append("❌ Помилки: ").append(errors).append("\n");
+        }
+
+        sb.append("📦 Всього: ").append(products.size());
+
+        sendText(chatId, sb.toString());
+
+        // 🔥 6. ПОВЕРНЕННЯ В МЕНЮ РЕДАГУВАННЯ
+        userStates.put(userId, "editing");
+        sendMessageSafely(createEditMenu(chatId, userId));
     }
 
     private void handleChooseCategoryForSub(Long userId, String chatId, String categoryName) {
@@ -6625,10 +6667,14 @@ public class StoreBot extends TelegramLongPollingBot {
                             ExcelToMySqlImporter.searchInExcel(text);
 
                     for (ExcelToMySqlImporter.ExcelProduct p : excelResults) {
+
                         Map<String, Object> map = new HashMap<>();
+
                         map.put("name", p.name);
                         map.put("price", p.price);
-                        map.put("_excel", p); // 🔥 зберігаємо оригінал
+                        map.put("group", p.group); // 🔥 ДОДАЛИ ГРУПУ
+                        map.put("_excel", p);
+
                         results.add(map);
                     }
 
@@ -6639,27 +6685,37 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        if (results.isEmpty()) {
+        if (results == null || results.isEmpty()) {
             sendText(chatId, "❌ Товар не знайдено: " + text);
             return;
         }
 
-        // 🔥 Зберігаємо ВСІ результати в одному місці
+        // 🔥 ЗБЕРІГАЄМО
         adminMatchList.put(userId, results);
 
-        StringBuilder sb = new StringBuilder(
-                "🔎 Знайдено товари. Введіть номер для редагування:\n\n"
-        );
+        StringBuilder sb = new StringBuilder();
+        sb.append("🔎 Знайдено товари. Введіть номер для редагування:\n\n");
 
         for (int i = 0; i < results.size(); i++) {
-            Map<String, Object> prod = results.get(i);
-            sb.append(i + 1)
-                    .append(". ")
-                    .append(prod.get("name"));
 
-            if (prod.get("price") != null) {
-                sb.append(" | Ціна: ").append(prod.get("price"));
+            Map<String, Object> prod = results.get(i);
+
+            String name = safeToString(prod.get("name"), "Без назви");
+            String price = safeToString(prod.get("price"), "");
+            String group = safeToString(prod.get("group"), "");
+
+            sb.append(i + 1).append(". ").append(name);
+
+            // 🔥 показ групи
+            if (!group.isBlank() && !"null".equalsIgnoreCase(group)) {
+                sb.append(" [").append(group).append("]");
             }
+
+            // 🔥 показ ціни
+            if (!price.isBlank()) {
+                sb.append(" | Ціна: ").append(price);
+            }
+
             sb.append("\n");
         }
 

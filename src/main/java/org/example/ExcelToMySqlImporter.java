@@ -15,6 +15,7 @@ public class ExcelToMySqlImporter {
         public Double price;
         public String unit;
         public String manufacturer;
+        public String group;
     }
 
     public static List<ExcelProduct> searchInExcel(String keyword) throws Exception {
@@ -34,22 +35,29 @@ public class ExcelToMySqlImporter {
 
             Sheet sheet = workbook.getSheetAt(0);
 
-            // 🔥 Дані починаються з 3-го рядка (index = 2)
             for (int rowIndex = 2; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
 
                 Row row = sheet.getRow(rowIndex);
                 if (row == null) continue;
 
-                String name = getString(row, 2); // C Название
+                String group = getString(row, 0); // 🔥 A ГРУПА
+                String name = getString(row, 2);  // C Назва
+
                 if (name == null) continue;
 
-                if (name.toLowerCase().contains(search)) {
+                String nameLower = name.toLowerCase();
+                String groupLower = group != null ? group.toLowerCase() : "";
+
+                // 🔥 ПОШУК ПО NAME + GROUP
+                if (nameLower.contains(search) || groupLower.contains(search)) {
 
                     ExcelProduct p = new ExcelProduct();
+
                     p.name = name;
-                    p.price = getDouble(row, 7);         // H Розничная цена
-                    p.unit = getString(row, 3);          // D Ед.
-                    p.manufacturer = getString(row, 4); // E Производитель
+                    p.group = group; // 🔥 ЗБЕРЕГЛИ
+                    p.price = getDouble(row, 7);
+                    p.unit = getString(row, 3);
+                    p.manufacturer = getString(row, 4);
 
                     results.add(p);
                 }
