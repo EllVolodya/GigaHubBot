@@ -2549,7 +2549,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
+        // =========================
         // 🔴 1. ВИХІД З ОФОРМЛЕННЯ
+        // =========================
         if ("awaiting_delivery_choice".equals(state) ||
                 "order_pickup".equals(state) ||
                 "awaiting_city_delivery".equals(state) ||
@@ -2570,7 +2572,7 @@ public class StoreBot extends TelegramLongPollingBot {
             sendText(chatId, "↩️ Повертаємо вас до каталогу товарів.");
 
             if (currentSubcategory.containsKey(userId)) {
-                sendProductList(Long.valueOf(chatId));
+                sendProductList(userId, Long.valueOf(chatId));
                 return;
             }
 
@@ -2583,7 +2585,9 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // =========================
         // 🟠 2. ВИХІД З КОШИКА
+        // =========================
         if ("in_cart".equals(state)) {
 
             userStates.remove(userId);
@@ -2591,7 +2595,7 @@ public class StoreBot extends TelegramLongPollingBot {
             sendText(chatId, "↩️ Повертаємо вас до каталогу.");
 
             if (currentSubcategory.containsKey(userId)) {
-                sendProductList(Long.valueOf(chatId));
+                sendProductList(userId, Long.valueOf(chatId));
                 return;
             }
 
@@ -2604,7 +2608,9 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // =========================
         // 🟡 3. КАЛЬКУЛЯТОР
+        // =========================
         Set<String> MATERIAL_STATES = Set.of(
                 "material_calc_menu",
                 "paint_length", "paint_width",
@@ -2628,7 +2634,9 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // =========================
         // 🟡 4. ПІДКАТЕГОРІЯ → КАТЕГОРІЯ
+        // =========================
         if (currentSubcategory.containsKey(userId)) {
 
             currentSubcategory.remove(userId);
@@ -2643,7 +2651,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // =========================
-        // 🟢 5. КАТЕГОРІЯ → ГОЛОВНЕ МЕНЮ
+        // 🟢 5. КАТЕГОРІЯ → ГОЛОВНЕ
         // =========================
         if (currentCategory.containsKey(userId)) {
 
@@ -2652,7 +2660,9 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // =========================
         // 🔵 6. АДМІН
+        // =========================
         if (adminOrderIndex.containsKey(userId)) {
 
             adminOrderIndex.remove(userId);
@@ -2660,14 +2670,18 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // =========================
         // 🔵 7. РОЗРОБНИК
+        // =========================
         if (DEVELOPERS.contains(userId) && isInDeveloperMenu(userId)) {
 
             sendMessage(createDeveloperMenu(chatId));
             return;
         }
 
+        // =========================
         // 🔵 8. РЕДАГУВАННЯ
+        // =========================
         if (adminEditingProduct.containsKey(userId) ||
                 adminSelectedProductsRange.containsKey(userId)) {
 
@@ -2681,7 +2695,9 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // =========================
         // ⚪ 9. FALLBACK
+        // =========================
         userStates.remove(userId);
         lastShownProduct.remove(userId);
         adminMatchList.remove(userId);
@@ -6074,10 +6090,12 @@ public class StoreBot extends TelegramLongPollingBot {
     // 🔸 Показ товарів списком
     private void sendProductList(Long chatId) throws TelegramApiException {
 
-        String category = currentCategory.get(chatId);
-        String subcategory = currentSubcategory.get(chatId);
-        String filter = currentFilter.get(chatId);
-        String subfilter = currentSubfilter.get(chatId);
+        Long userId = chatId;
+
+        String category = currentCategory.get(userId);
+        String subcategory = currentSubcategory.get(userId);
+        String filter = currentFilter.get(userId);
+        String subfilter = currentSubfilter.get(userId);
 
         CatalogSearcher searcher = new CatalogSearcher();
 
@@ -6089,11 +6107,11 @@ public class StoreBot extends TelegramLongPollingBot {
         );
 
         if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ Товарів у цьому розділі немає.");
+            sendText(chatId.toString(), "❌ Товарів у цьому розділі немає.");
             return;
         }
 
-        // 🔥 зберігаємо список
+        // 🔥 зберігаємо список (ключ — chatId ок для UI)
         userProductLists.put(chatId, new ArrayList<>(products));
 
         StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
@@ -6113,7 +6131,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     .append(" грн\n");
         }
 
-        sendText(chatId, sb.toString());
+        sendText(chatId.toString(), sb.toString());
 
         // 🔥 кнопка назад
         KeyboardRow row = new KeyboardRow();
