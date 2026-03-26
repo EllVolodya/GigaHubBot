@@ -2572,7 +2572,7 @@ public class StoreBot extends TelegramLongPollingBot {
             sendText(chatId, "↩️ Повертаємо вас до каталогу товарів.");
 
             if (currentSubcategory.containsKey(userId)) {
-                sendProductList(userId, Long.valueOf(chatId));
+                sendProductList(Long.valueOf(chatId));
                 return;
             }
 
@@ -2595,7 +2595,7 @@ public class StoreBot extends TelegramLongPollingBot {
             sendText(chatId, "↩️ Повертаємо вас до каталогу.");
 
             if (currentSubcategory.containsKey(userId)) {
-                sendProductList(userId, Long.valueOf(chatId));
+                sendProductList(Long.valueOf(chatId));
                 return;
             }
 
@@ -2635,7 +2635,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // =========================
-        // 🟡 4. ПІДКАТЕГОРІЯ → КАТЕГОРІЯ
+        // 🟡 4. З ПІДКАТЕГОРІЇ
         // =========================
         if (currentSubcategory.containsKey(userId)) {
 
@@ -2651,7 +2651,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // =========================
-        // 🟢 5. КАТЕГОРІЯ → ГОЛОВНЕ
+        // 🟢 5. З КАТЕГОРІЇ
         // =========================
         if (currentCategory.containsKey(userId)) {
 
