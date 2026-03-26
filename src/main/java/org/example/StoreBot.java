@@ -320,6 +320,33 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🔥 ОБРОБКА КОШИКА (ГЛОБАЛЬНО)
+        if ("in_cart".equals(state)) {
+
+            System.out.println("[STATE] in_cart TEXT=" + text);
+
+            if (text != null && text.contains("Назад")) {
+                try {
+                    handleBack(userId, chatId);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                }
+                return;
+            }
+
+            if (text.equals("🚛 Оформити замовлення")) {
+
+                userStates.put(userId, "awaiting_phone");
+
+                sendText(chatId, "📞 Введіть номер телефону для оформлення замовлення:");
+
+                return;
+            }
+
+            sendText(chatId, "📦 Ви в кошику. Оберіть дію або натисніть Назад.");
+            return;
+        }
+
         if (text != null && text.contains("Оформити замовлення")) {
 
             List<Map<String, Object>> cart = userCart.get(userId);
@@ -8043,7 +8070,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // 🔹 Назад
         KeyboardRow back = new KeyboardRow();
-        back.add("⬅️ Назад");
+        back.add(BACK_BUTTON);
         rows.add(back);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
