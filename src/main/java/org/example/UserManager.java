@@ -337,10 +337,12 @@ public class UserManager {
 
     public boolean isUserExists(Long userId) {
         try (Connection conn = DatabaseManager.getConnection()) {
+
             PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT id FROM users WHERE userId = ?"
+                    "SELECT id FROM accounts WHERE telegramid = ?"
             );
-            stmt.setLong(1, userId);
+
+            stmt.setString(1, userId.toString());
 
             ResultSet rs = stmt.executeQuery();
             return rs.next();

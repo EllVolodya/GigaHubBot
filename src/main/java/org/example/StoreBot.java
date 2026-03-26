@@ -779,21 +779,23 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (text.startsWith("/start")) {
 
+            Long chatIdLong = update.getMessage().getChatId();
+            String chatIdStr = chatIdLong.toString(); // 🔥 ВИНЕСЛИ СЮДИ
+
             try {
                 clearUserState(userId);
 
-                Long chatIdLong = update.getMessage().getChatId();
-                String chatIdStr = chatIdLong.toString();
+                String inviteCode = text.replace("/start", "").trim();
 
                 UserManager userManager = new UserManager();
 
-                boolean isNewUser = !userManager.isUserExists(chatIdLong);
+                SendMessage msg = userManager.registerUser(
+                        userId,
+                        update.getMessage().getFrom().getFirstName(),
+                        chatIdStr
+                );
 
-                // параметр після /start
-                String inviteCode = text.replace("/start", "").trim();
-
-                // 🔥 ТІЛЬКИ ДЛЯ НОВИХ КОРИСТУВАЧІВ
-                if (isNewUser && !inviteCode.isEmpty()) {
+                if (msg != null && !inviteCode.isEmpty()) {
 
                     System.out.println("🔥 inviteCode = " + inviteCode);
 
@@ -804,24 +806,16 @@ public class StoreBot extends TelegramLongPollingBot {
                     else    System.out.println("❌ Invite не знайдено");
                 }
 
-                // реєстрація
-                userManager.registerUser(
-                        chatIdLong,
-                        update.getMessage().getFrom().getFirstName(),
-                        chatIdStr
-                );
-
                 execute(createUserMenu(chatIdStr, userId));
 
             } catch (SQLException e) {
                 e.printStackTrace();
-                sendText(update.getMessage().getChatId().toString(),
-                        "❌ Сталася помилка бази даних.");
+                sendText(chatIdStr, "❌ Помилка бази даних.");
             } catch (TelegramApiException e) {
                 e.printStackTrace();
-                sendText(update.getMessage().getChatId().toString(),
-                        "❌ Помилка надсилання меню.");
+                sendText(chatIdStr, "❌ Помилка Telegram.");
             }
+
             return;
         }
 
