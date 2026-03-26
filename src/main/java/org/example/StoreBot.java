@@ -2635,7 +2635,7 @@ public class StoreBot extends TelegramLongPollingBot {
         // =========================
         // 🟠 2. ВИХІД З КОШИКА
         // =========================
-        if ("in_cart".equals(state) || userCart.containsKey(userId)) {
+        if ("in_cart".equals(state)) {
 
             userStates.remove(userId);
 
