@@ -5013,38 +5013,69 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private void handleAddToSubcategory(Long userId, String chatId, String subcategoryName) {
-        String productName = adminEditingProduct.get(userId);
-        if (productName == null) {
-            sendText(chatId, "❌ Error: No product selected to add to the subcategory.");
+
+        List<Map<String, Object>> products = adminSelectedProducts.get(userId);
+
+        if (products == null || products.isEmpty()) {
+            sendText(chatId, "❌ Немає вибраних товарів.");
             userStates.remove(userId);
             return;
         }
 
-        System.out.println("INFO: Adding product '" + productName + "' to subcategory '" + subcategoryName + "'");
+        System.out.println("INFO: Adding " + products.size() + " products to subcategory '" + subcategoryName + "'");
 
-        // --- Get price from YAML
-        double price = CatalogEditor.getProductPriceFromYAML(productName);
-        if (price <= 0.0) {
-            System.out.println("DEBUG: Price <= 0, setting default 0.0");
-            price = 0.0;
-        }
-
-        // --- Check subcategory
+        // 🔥 перевірка підкатегорії
         if (!CatalogEditor.subcategoryExists(subcategoryName)) {
-            sendText(chatId, "❌ Subcategory '" + subcategoryName + "' not found in MySQL database.");
+            sendText(chatId, "❌ Підкатегорія '" + subcategoryName + "' не знайдена.");
             userStates.remove(userId);
             return;
         }
 
-        // --- Add product
-        boolean success = CatalogEditor.addProductToSubcategory(productName, price, subcategoryName);
+        int added = 0;
+        int alreadyExists = 0;
+        int errors = 0;
 
-        if (success) {
-            sendText(chatId, "✅ Product '" + productName + "' added to subcategory '" + subcategoryName + "'!");
-        } else {
-            sendText(chatId, "❌ Failed to add product '" + productName +
-                    "' to subcategory '" + subcategoryName + "'. It might already exist.");
+        for (Map<String, Object> product : products) {
+
+            try {
+                String productName = safeToString(product.get("name"), null);
+
+                if (productName == null) continue;
+
+                double price = CatalogEditor.getProductPriceFromYAML(productName);
+                if (price <= 0.0) price = 0.0;
+
+                boolean success = CatalogEditor.addProductToSubcategory(
+                        productName,
+                        price,
+                        subcategoryName
+                );
+
+                if (success) {
+                    added++;
+                } else {
+                    alreadyExists++;
+                }
+
+            } catch (Exception e) {
+                errors++;
+                e.printStackTrace();
+            }
         }
+
+        // 🔥 ЗВІТ
+        StringBuilder result = new StringBuilder();
+        result.append("📊 Результат:\n\n");
+        result.append("➕ Додано: ").append(added).append("\n");
+        result.append("⚠️ Вже існує: ").append(alreadyExists).append("\n");
+
+        if (errors > 0) {
+            result.append("❌ Помилки: ").append(errors).append("\n");
+        }
+
+        result.append("\n📦 Всього оброблено: ").append(products.size());
+
+        sendText(chatId, result.toString());
 
         userStates.remove(userId);
     }
@@ -6499,12 +6530,9 @@ public class StoreBot extends TelegramLongPollingBot {
         row1.add("🔍 Пошук у MySQL");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("🔍 Пошук у YAML");
+        row2.add("🔍 Пошук з EXCEL");
 
-        KeyboardRow row3 = new KeyboardRow();
-        row3.add("🔍 Пошук з EXCEL");
-
-        markup.setKeyboard(List.of(row1, row2, row3));
+        markup.setKeyboard(List.of(row1, row2));
         message.setReplyMarkup(markup);
 
         return message;
