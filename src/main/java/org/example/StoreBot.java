@@ -372,9 +372,17 @@ public class StoreBot extends TelegramLongPollingBot {
 
             filterPage.put(userId, page);
 
-            sendMessageSafely(
-                    createFilterSelectMenu(userId, chatId, page)
-            );
+            if (state != null && state.contains("filter")) {
+                // 🔥 адмін режим
+                sendMessageSafely(
+                        createFilterSelectMenuAdmin(userId, chatId, page)
+                );
+            } else {
+                // 🔹 юзер режим
+                sendMessageSafely(
+                        createFilterSelectMenu(userId, chatId, page)
+                );
+            }
 
             return;
         }
@@ -388,9 +396,17 @@ public class StoreBot extends TelegramLongPollingBot {
 
             filterPage.put(userId, page);
 
-            sendMessageSafely(
-                    createFilterSelectMenu(userId, chatId, page)
-            );
+            if (state != null && state.contains("filter")) {
+                // 🔥 адмін режим
+                sendMessageSafely(
+                        createFilterSelectMenuAdmin(userId, chatId, page)
+                );
+            } else {
+                // 🔹 юзер режим
+                sendMessageSafely(
+                        createFilterSelectMenu(userId, chatId, page)
+                );
+            }
 
             return;
         }
