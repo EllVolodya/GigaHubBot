@@ -4835,12 +4835,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 if (productsToEdit != null && productsToEdit.size() > 1) {
                     sendText(chatId, "⚠️ Масове додавання у підфільтр не підтримується.");
-                    break;
+                    return;
                 }
 
                 if (adminSelectedProduct.get(userId) == null) {
                     sendText(chatId, "⚠️ Спочатку виберіть товар.");
-                    break;
+                    return;
                 }
 
                 userStates.put(userId, "awaiting_filter_for_product_subfilter");
@@ -4849,7 +4849,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0));
 
-                break;
+                return;
 
             case "🖼️ Додати фотографію":
                 if (productsToEdit != null && productsToEdit.size() > 1) {
