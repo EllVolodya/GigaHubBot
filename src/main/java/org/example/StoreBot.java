@@ -1267,6 +1267,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                             showCartNice(userId, chatId);
 
+                            // 🔥 ФІКС: обовʼязково ставимо state
                             userStates.put(userId, "in_cart");
 
                             ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
@@ -1287,9 +1288,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     // 🔥 додаємо новий товар → питаємо кількість
                     tempStorage.put(userId + "_product", product);
+
+                    // 🔥 залишаємо логіку як була
                     userStates.put(userId, "awaiting_quantity");
 
-                    sendText(chatId, "🔢 Введіть кількість:");
+                    sendText(chatId, "🔢 Введіть кількість (наприклад: 1, 2, 5):");
                 }
 
                 case "🚛 Оформити замовлення" -> {
