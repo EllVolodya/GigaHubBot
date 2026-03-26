@@ -5016,68 +5016,49 @@ public class StoreBot extends TelegramLongPollingBot {
 
         List<Map<String, Object>> products = adminSelectedProducts.get(userId);
 
+        // 🔥 fallback якщо список пропав
+        if (products == null || products.isEmpty()) {
+
+            Map<String, Object> single = adminSelectedProduct.get(userId);
+
+            if (single != null) {
+                products = new ArrayList<>();
+                products.add(single);
+            }
+        }
+
         if (products == null || products.isEmpty()) {
             sendText(chatId, "❌ Немає вибраних товарів.");
-            userStates.remove(userId);
             return;
         }
 
-        System.out.println("INFO: Adding " + products.size() + " products to subcategory '" + subcategoryName + "'");
-
-        // 🔥 перевірка підкатегорії
         if (!CatalogEditor.subcategoryExists(subcategoryName)) {
             sendText(chatId, "❌ Підкатегорія '" + subcategoryName + "' не знайдена.");
-            userStates.remove(userId);
             return;
         }
 
         int added = 0;
-        int alreadyExists = 0;
-        int errors = 0;
+        int exists = 0;
 
         for (Map<String, Object> product : products) {
 
-            try {
-                String productName = safeToString(product.get("name"), null);
+            String name = safeToString(product.get("name"), null);
+            if (name == null) continue;
 
-                if (productName == null) continue;
+            double price = CatalogEditor.getProductPriceFromYAML(name);
 
-                double price = CatalogEditor.getProductPriceFromYAML(productName);
-                if (price <= 0.0) price = 0.0;
+            boolean success = CatalogEditor.addProductToSubcategory(name, price, subcategoryName);
 
-                boolean success = CatalogEditor.addProductToSubcategory(
-                        productName,
-                        price,
-                        subcategoryName
-                );
-
-                if (success) {
-                    added++;
-                } else {
-                    alreadyExists++;
-                }
-
-            } catch (Exception e) {
-                errors++;
-                e.printStackTrace();
-            }
+            if (success) added++;
+            else exists++;
         }
 
-        // 🔥 ЗВІТ
-        StringBuilder result = new StringBuilder();
-        result.append("📊 Результат:\n\n");
-        result.append("➕ Додано: ").append(added).append("\n");
-        result.append("⚠️ Вже існує: ").append(alreadyExists).append("\n");
-
-        if (errors > 0) {
-            result.append("❌ Помилки: ").append(errors).append("\n");
-        }
-
-        result.append("\n📦 Всього оброблено: ").append(products.size());
-
-        sendText(chatId, result.toString());
-
-        userStates.remove(userId);
+        sendText(chatId,
+                "📊 Результат:\n\n" +
+                        "➕ Додано: " + added + "\n" +
+                        "⚠️ Вже існує: " + exists + "\n" +
+                        "📦 Всього: " + products.size()
+        );
     }
 
     private void handleChooseCategoryForSub(Long userId, String chatId, String categoryName) {
