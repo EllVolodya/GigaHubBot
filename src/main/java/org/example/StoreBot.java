@@ -571,16 +571,13 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 якщо один — беремо його
             String filter;
 
             if (found.size() == 1) {
                 filter = found.get(0);
             } else {
                 sendText(chatId, "🔎 Знайдено кілька фільтрів, оберіть:");
-
                 sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0));
-
                 return;
             }
 
@@ -589,20 +586,7 @@ public class StoreBot extends TelegramLongPollingBot {
             boolean hasSubfilters = catalogSearcher.hasSubfilters(filter);
 
             if (!hasSubfilters) {
-
-                Map<String, Object> product = adminSelectedProduct.get(userId);
-
-                boolean success = catalogSearcher.addProductToFilter(product, filter, null);
-
-                userStates.put(userId, "editing");
-
-                sendText(chatId,
-                        success
-                                ? "✅ Додано у фільтр: " + filter
-                                : "❌ Помилка."
-                );
-
-                sendMessageSafely(createEditMenu(chatId, userId));
+                handleAddToFilter(userId, chatId, filter, null);
                 return;
             }
 
@@ -667,31 +651,15 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            String subfilter = text.trim();
+            String subfilter = text == null ? null : text.trim();
 
-            Map<String, Object> product = adminSelectedProduct.get(userId);
-
-            if (product == null) {
-                sendText(chatId, "❌ Товар не знайдено.");
-                userStates.remove(userId);
+            if (subfilter == null || subfilter.isBlank()) {
+                sendText(chatId, "❌ Оберіть або введіть підфільтр.");
                 return;
             }
 
-            CatalogSearcher searcher = new CatalogSearcher();
-
-            boolean success = searcher.addProductToFilter(product, filter, subfilter);
-
-            sendText(chatId,
-                    success
-                            ? "✅ Додано:\n📦 " + product.get("name") +
-                            "\n📂 " + filter + " → " + subfilter
-                            : "❌ Помилка"
-            );
-
-            userStates.put(userId, "editing");
-            selectedFilter.remove(userId);
-
-            sendMessageSafely(createEditMenu(chatId, userId));
+            handleAddToFilter(userId, chatId, filter, subfilter);
+            return;
         }
 
         if ("awaiting_edit_item".equals(userStates.get(userId))) {
@@ -4857,12 +4825,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "🧩 Додати в підфільтр":
 
-                if (productsToEdit != null && productsToEdit.size() > 1) {
-                    sendText(chatId, "⚠️ Масове додавання у підфільтр не підтримується.");
-                    return;
-                }
+                List<Map<String, Object>> selectedProducts = adminSelectedProducts.get(userId);
+                //Map<String, Object> singleProduct = adminSelectedProduct.get(userId);
 
-                if (adminSelectedProduct.get(userId) == null) {
+                if ((selectedProducts == null || selectedProducts.isEmpty()) && singleProduct == null) {
                     sendText(chatId, "⚠️ Спочатку виберіть товар.");
                     return;
                 }
@@ -4870,7 +4836,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 userStates.put(userId, "awaiting_filter_for_product_subfilter");
 
                 sendText(chatId, "🔽 Оберіть або введіть фільтр:");
-
                 sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0));
 
                 return;
@@ -8548,8 +8513,7 @@ public class StoreBot extends TelegramLongPollingBot {
         int added = 0;
         int errors = 0;
 
-        // 🔥 МАСОВЕ
-        List<Map<String, Object>> products = productsToEdit.get(userId);
+        List<Map<String, Object>> products = adminSelectedProducts.get(userId);
 
         if (products != null && !products.isEmpty()) {
 
@@ -8557,6 +8521,8 @@ public class StoreBot extends TelegramLongPollingBot {
                 try {
                     if (searcher.addProductToFilter(p, filter, subfilter)) {
                         added++;
+                    } else {
+                        errors++;
                     }
                 } catch (Exception e) {
                     errors++;
@@ -8573,7 +8539,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         } else {
 
-            // 🔹 ОДИН ТОВАР
             Map<String, Object> product = adminSelectedProduct.get(userId);
 
             if (product == null) {
@@ -8595,7 +8560,6 @@ public class StoreBot extends TelegramLongPollingBot {
             );
         }
 
-        // 🔥 CLEANUP
         userStates.put(userId, "editing");
         selectedFilter.remove(userId);
 
