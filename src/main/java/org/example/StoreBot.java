@@ -562,7 +562,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             String input = text.trim().toLowerCase();
 
-            // 🔥 ПОШУК через contains
             List<String> found = filters.stream()
                     .filter(f -> f.toLowerCase().contains(input))
                     .toList();
@@ -578,10 +577,8 @@ public class StoreBot extends TelegramLongPollingBot {
             if (found.size() == 1) {
                 filter = found.get(0);
             } else {
-                // 🔥 якщо багато — показуємо список
                 sendText(chatId, "🔎 Знайдено кілька фільтрів, оберіть:");
 
-                // можна одразу показати меню (або своє існуюче)
                 sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0));
 
                 return;
@@ -591,7 +588,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             boolean hasSubfilters = catalogSearcher.hasSubfilters(filter);
 
-            // 🔥 НЕМА ПІДФІЛЬТРІВ → ОДРАЗУ ДОДАЄМО
             if (!hasSubfilters) {
 
                 Map<String, Object> product = adminSelectedProduct.get(userId);
@@ -610,7 +606,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 Є ПІДФІЛЬТРИ → ПЕРЕХІД
             userStates.put(userId, "awaiting_subfilter_select");
 
             sendText(chatId, "🔽 Оберіть або введіть підфільтр:");
