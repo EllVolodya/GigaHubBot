@@ -3720,16 +3720,16 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "choose_filter_for_subcategory" -> {
 
-                String category = currentCategory.get(userId);
                 String subcategory = currentSubcategory.get(userId);
+                if (subcategory == null) {
+                    subcategory = selectedSubcategoryForFilter.get(userId);
+                }
 
-                List<String> filters = catalogSearcher.getFilters(category, subcategory);
+                List<String> filters = catalogSearcher.getFiltersAdmin();
 
                 if (!filters.contains(text)) {
                     return;
                 }
-
-                //String subcategory = selectedSubcategoryForFilter.get(userId);
 
                 if (subcategory == null) {
 
@@ -8184,7 +8184,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         filterPage.put(userId, 0);
 
-        sendMessageSafely(createFilterSelectMenu(userId, chatId.toString(), 0));
+        sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId.toString(), 0));
     }
 
     public void addFilterToSubcategory(String subcategoryName,String filterName){
