@@ -524,23 +524,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
             String filter = match.get();
 
-            selectedFilter.put(userId, filter);
+            selectedFilterForSubfilter.put(userId, filter);
+            userStates.put(userId, "awaiting_subfilter_name");
 
-            CatalogSearcher searcher = new CatalogSearcher();
-            boolean hasSubfilters = searcher.hasSubfilters(filter);
-
-            // 🔥 ЯКЩО НЕМА ПІДФІЛЬТРІВ → ДОДАЄМО ОДРАЗУ
-            if (!hasSubfilters) {
-
-                handleAddToFilter(userId, chatId, filter, null);
-                return;
-            }
-
-            // 🔥 ЯКЩО Є → ЙДЕМО ДАЛІ
-            userStates.put(userId, "awaiting_subfilter_select");
-
-            sendText(chatId, "🔽 Оберіть або введіть підфільтр:");
-            sendMessageSafely(createSubfilterMenu(filter, chatId));
+            sendText(chatId, "✏️ Введіть назву підфільтра:");
 
             return;
         }
