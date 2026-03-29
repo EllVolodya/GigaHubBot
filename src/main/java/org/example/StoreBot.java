@@ -8548,30 +8548,20 @@ public class StoreBot extends TelegramLongPollingBot {
         try {
             Long targetUserId = Long.parseLong(text);
 
-            if (!lastUserMessage.containsKey(targetUserId)) {
-                sendText(userId.toString(), "❌ Користувача не знайдено.");
-                return;
-            }
-
+            // 🔥 просто зберігаємо без перевірок
             consultantReplyTarget.put(userId, targetUserId);
-
-            String lastMsg = lastUserMessage.getOrDefault(
-                    targetUserId,
-                    "— (немає повідомлення)"
-            );
 
             sendText(
                     userId.toString(),
-                    "✅ Обрано покупця:\n" +
-                            "🆔 ID: " + targetUserId + "\n" +
-                            "💬 Повідомлення: " + lastMsg + "\n\n" +
-                            "✏️ Напишіть відповідь"
+                    "✅ Ви обрали користувача:\n" +
+                            "🆔 ID: " + targetUserId + "\n\n" +
+                            "✏️ Напишіть повідомлення — я відправлю його навіть якщо він зараз не онлайн."
             );
 
             userStates.put(userId, "consultant_reply");
 
         } catch (NumberFormatException e) {
-            sendText(userId.toString(), "❌ Невірний ID");
+            sendText(userId.toString(), "❌ Введіть правильний ID (число).");
         }
     }
 }
