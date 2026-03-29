@@ -320,6 +320,11 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if ("awaiting_user_id".equals(userStates.get(chatId))) {
+            handleAwaitingUserId(chatId, text);
+            return;
+        }
+
         // 🔥 ОБРОБКА КОШИКА (ГЛОБАЛЬНО)
         if ("in_cart".equals(state)) {
 
@@ -1808,6 +1813,11 @@ public class StoreBot extends TelegramLongPollingBot {
                     // Переводимо продавця в режим відповіді
                     userStates.put(CONSULTANT_CHAT_ID, "consultant_reply");
                     break;
+                }
+
+                case "🆔 Відповісти по ID" -> {
+                    sendText(CONSULTANT_CHAT_ID, "✏️ Введіть User ID покупця:");
+                    userStates.put(CONSULTANT_CHAT_ID, "awaiting_user_id");
                 }
 
                 case "✅ Підтвердити" -> {
@@ -5378,10 +5388,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow r1 = new KeyboardRow();
         r1.add(new KeyboardButton("🛒 Замовлення користувачів"));
-        r1.add(new KeyboardButton("💬 Відповісти покупцю")); // <-- нова кнопка
+        r1.add(new KeyboardButton("💬 Відповісти покупцю"));
 
         KeyboardRow r2 = new KeyboardRow();
+        r2.add(new KeyboardButton("🆔 Відповісти по ID"));
         r2.add(new KeyboardButton(BACK_BUTTON));
+
         kb.setKeyboard(List.of(r1, r2));
 
         msg.setReplyMarkup(kb);
@@ -8538,5 +8550,37 @@ public class StoreBot extends TelegramLongPollingBot {
         selectedFilter.remove(userId);
 
         sendMessageSafely(createEditMenu(chatId, userId));
+    }
+
+    public void handleAwaitingUserId(Long chatId, String text) {
+        try {
+            Long targetUserId = Long.parseLong(text);
+
+            // Перевірка існування користувача
+            if (!lastUserMessage.containsKey(targetUserId)) {
+                sendText(chatId, "❌ Користувача не знайдено або він ще не писав.");
+                return;
+            }
+
+            consultantReplyTarget.put(chatId, targetUserId);
+
+            String lastMsg = lastUserMessage.get(targetUserId);
+            if (lastMsg == null) {
+                lastMsg = "— (немає збереженого повідомлення)";
+            }
+
+            sendText(
+                    chatId,
+                    "✅ Обрано покупця:\n" +
+                            "🆔 ID: " + targetUserId + "\n" +
+                            "💬 Останнє повідомлення: " + lastMsg + "\n\n" +
+                            "✏️ Напишіть відповідь — я передам її покупцю."
+            );
+
+            userStates.put(chatId, "consultant_reply");
+
+        } catch (NumberFormatException e) {
+            sendText(chatId, "❌ Невірний формат ID. Введіть число.");
+        }
     }
 }
