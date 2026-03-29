@@ -1816,8 +1816,10 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "🆔 Відповісти по ID" -> {
-                    sendText(CONSULTANT_CHAT_ID, "✏️ Введіть User ID покупця:");
-                    userStates.put(CONSULTANT_CHAT_ID, "awaiting_user_id");
+                    Long chatIdLong = Long.parseLong(chatId);
+
+                    sendText(chatId, "✏️ Введіть User ID покупця:");
+                    userStates.put(chatIdLong, "awaiting_user_id");
                 }
 
                 case "✅ Підтвердити" -> {
