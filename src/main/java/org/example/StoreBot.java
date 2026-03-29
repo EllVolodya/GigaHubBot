@@ -983,16 +983,29 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        if ("consultant_reply".equals(userStates.get(userId))) {
+        if ("consultant_reply".equals(userStates.get(userId))
+                && text != null && !text.isBlank()) {
 
             Long target = consultantReplyTarget.get(userId);
 
-            sendText(target.toString(),
-                    "📩 Відповідь консультанта:\n\n" + text);
+            if (target == null) {
+                sendText(chatId, "❌ Користувач не вибраний.");
+                return;
+            }
 
-            sendText(chatId, "✔ Повідомлення надіслано!");
+            try {
+                sendText(target.toString(),
+                        "📩 Відповідь консультанта:\n\n" + text);
+
+                sendText(chatId, "✅ Повідомлення надіслано!");
+
+            } catch (Exception e) {
+                sendText(chatId,
+                        "❌ Не вдалося відправити (користувач не писав боту або заблокував його)");
+            }
 
             userStates.remove(userId);
+
             return;
         }
 
