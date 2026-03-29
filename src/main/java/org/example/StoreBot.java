@@ -794,6 +794,65 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if ("consultant_reply".equals(userStates.get(userId))
+                && text != null && !text.isBlank()) {
+
+            Long target = consultantReplyTarget.get(userId);
+
+            if (target == null) {
+                sendText(chatId, "❌ Користувач не вибраний.");
+                return;
+            }
+
+            try {
+                sendText(target.toString(),
+                        "📩 Відповідь консультанта:\n\n" + text);
+
+                sendText(chatId, "✅ Повідомлення надіслано!");
+
+            } catch (Exception e) {
+                sendText(chatId,
+                        "❌ Не вдалося відправити (користувач не писав боту або заблокував його)");
+            }
+
+            userStates.remove(userId);
+
+            return;
+        }
+
+        if ("consultant_reply".equals(userStates.get(CONSULTANT_CHAT_ID))
+                && update.getMessage().hasPhoto()) {
+
+            Long target = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
+
+            List<PhotoSize> photos = update.getMessage().getPhoto();
+            PhotoSize largest = photos.get(photos.size() - 1);
+            String fileId = largest.getFileId();
+
+            try {
+                SendPhoto ph = new SendPhoto();
+                ph.setChatId(target.toString());
+                ph.setPhoto(new InputFile(fileId));
+                ph.setCaption("📸 Відповідь від консультанта:");
+
+                execute(ph);
+
+                // зберегти в історію як фото
+                supportAnswers.computeIfAbsent(target, k -> new ArrayList<>())
+                        .add("📸 Відповідь консультанта: [фото]");
+
+                sendText(CONSULTANT_CHAT_ID, "✔ Фото надіслано покупцю!");
+
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(CONSULTANT_CHAT_ID, "❌ Помилка при надсиланні фото.");
+            }
+
+            // вихід зі стану
+            userStates.remove(CONSULTANT_CHAT_ID);
+            return;
+        }
+
         if (waitingForQuantity.getOrDefault(realChatId, false)) {
 
             // 🔹 Якщо користувач натиснув Назад
@@ -980,65 +1039,6 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             userStates.remove(userId);
-            return;
-        }
-
-        if ("consultant_reply".equals(userStates.get(userId))
-                && text != null && !text.isBlank()) {
-
-            Long target = consultantReplyTarget.get(userId);
-
-            if (target == null) {
-                sendText(chatId, "❌ Користувач не вибраний.");
-                return;
-            }
-
-            try {
-                sendText(target.toString(),
-                        "📩 Відповідь консультанта:\n\n" + text);
-
-                sendText(chatId, "✅ Повідомлення надіслано!");
-
-            } catch (Exception e) {
-                sendText(chatId,
-                        "❌ Не вдалося відправити (користувач не писав боту або заблокував його)");
-            }
-
-            userStates.remove(userId);
-
-            return;
-        }
-
-        if ("consultant_reply".equals(userStates.get(CONSULTANT_CHAT_ID))
-                && update.getMessage().hasPhoto()) {
-
-            Long target = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
-
-            List<PhotoSize> photos = update.getMessage().getPhoto();
-            PhotoSize largest = photos.get(photos.size() - 1);
-            String fileId = largest.getFileId();
-
-            try {
-                SendPhoto ph = new SendPhoto();
-                ph.setChatId(target.toString());
-                ph.setPhoto(new InputFile(fileId));
-                ph.setCaption("📸 Відповідь від консультанта:");
-
-                execute(ph);
-
-                // зберегти в історію як фото
-                supportAnswers.computeIfAbsent(target, k -> new ArrayList<>())
-                        .add("📸 Відповідь консультанта: [фото]");
-
-                sendText(CONSULTANT_CHAT_ID, "✔ Фото надіслано покупцю!");
-
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-                sendText(CONSULTANT_CHAT_ID, "❌ Помилка при надсиланні фото.");
-            }
-
-            // вихід зі стану
-            userStates.remove(CONSULTANT_CHAT_ID);
             return;
         }
 
