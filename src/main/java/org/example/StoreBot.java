@@ -3618,7 +3618,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "Відправте фото або відео (або напишіть 'немає'):");
             }
 
-            case "awaiting_hit_media" -> {
+            /*case "awaiting_hit_media" -> {
 
                 // 1️⃣ Дані
                 String title = String.valueOf(
@@ -3657,9 +3657,9 @@ public class StoreBot extends TelegramLongPollingBot {
                         );
                     } catch (Exception ignored) {}
                 }
-            }
+            }*/
 
-            case "awaiting_hit_media_only" -> {
+            /*case "awaiting_hit_media_only" -> {
 
                 // 1️⃣ Медіа
                 String mediaUrl = "немає";
@@ -3687,7 +3687,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         );
                     } catch (Exception ignored) {}
                 }
-            }
+            }*/
 
             case "choose_subcategory_for_filter" -> {
 
@@ -6831,19 +6831,6 @@ public class StoreBot extends TelegramLongPollingBot {
             Long targetUserId = Long.parseLong(data.split("_")[1]);
             FeedbackManager.removeLastFeedback(targetUserId);
             sendText(chatId, "🧹 Відгук видалено.");
-        }
-    }
-
-    private void notifyAllActiveUsersAboutHit() {
-        for (Long userId : userStates.keySet()) {
-            try {
-                execute(SendMessage.builder()
-                        .chatId(userId.toString())
-                        .text("🌟 Новий Хіт продажу!")
-                        .build());
-            } catch (Exception e) {
-                System.out.println("❌ Не вдалося надіслати користувачу " + userId);
-            }
         }
     }
 
