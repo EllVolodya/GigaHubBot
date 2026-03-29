@@ -320,8 +320,8 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        if ("awaiting_user_id".equals(userStates.get(chatId))) {
-            handleAwaitingUserId(Long.parseLong(chatId), text);
+        if ("awaiting_user_id".equals(userStates.get(userId))) {
+            handleAwaitingUserId(userId, text);
             return;
         }
 
@@ -983,24 +983,16 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        if ("consultant_reply".equals(userStates.get(CONSULTANT_CHAT_ID))
-                && text != null && !text.isBlank()) {
+        if ("consultant_reply".equals(userStates.get(userId))) {
 
-            Long target = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
+            Long target = consultantReplyTarget.get(userId);
 
-            // надсилаємо покупцю
-            sendText(target, "📩 Відповідь консультанта:\n\n" + text);
+            sendText(target.toString(),
+                    "📩 Відповідь консультанта:\n\n" + text);
 
-            // зберігаємо відповідь в історію
-            supportAnswers.computeIfAbsent(target, k -> new ArrayList<>())
-                    .add("📨 Відповідь консультанта:\n" + text);
+            sendText(chatId, "✔ Повідомлення надіслано!");
 
-            // повідомляємо консультанта
-            sendText(CONSULTANT_CHAT_ID, "✔ Повідомлення надіслано!");
-
-            // очищаємо стан
-            userStates.remove(CONSULTANT_CHAT_ID);
-
+            userStates.remove(userId);
             return;
         }
 
@@ -1816,10 +1808,8 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "🆔 Відповісти по ID" -> {
-                    Long chatIdLong = Long.parseLong(chatId);
-
                     sendText(chatId, "✏️ Введіть User ID покупця:");
-                    userStates.put(chatIdLong, "awaiting_user_id");
+                    userStates.put(userId, "awaiting_user_id");
                 }
 
                 case "✅ Підтвердити" -> {
@@ -8554,34 +8544,34 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessageSafely(createEditMenu(chatId, userId));
     }
 
-    public void handleAwaitingUserId(Long chatId, String text) {
+    public void handleAwaitingUserId(Long userId, String text) {
         try {
             Long targetUserId = Long.parseLong(text);
 
             if (!lastUserMessage.containsKey(targetUserId)) {
-                sendText(chatId, "❌ Користувача не знайдено або він ще не писав.");
+                sendText(userId.toString(), "❌ Користувача не знайдено.");
                 return;
             }
 
-            consultantReplyTarget.put(chatId, targetUserId);
+            consultantReplyTarget.put(userId, targetUserId);
 
-            String lastMsg = lastUserMessage.get(targetUserId);
-            if (lastMsg == null) {
-                lastMsg = "— (немає збереженого повідомлення)";
-            }
-
-            sendText(
-                    chatId,
-                    "✅ Обрано покупця:\n" +
-                            "🆔 ID: " + targetUserId + "\n" +
-                            "💬 Останнє повідомлення: " + lastMsg + "\n\n" +
-                            "✏️ Напишіть відповідь — я передам її покупцю."
+            String lastMsg = lastUserMessage.getOrDefault(
+                    targetUserId,
+                    "— (немає повідомлення)"
             );
 
-            userStates.put(chatId, "consultant_reply");
+            sendText(
+                    userId.toString(),
+                    "✅ Обрано покупця:\n" +
+                            "🆔 ID: " + targetUserId + "\n" +
+                            "💬 Повідомлення: " + lastMsg + "\n\n" +
+                            "✏️ Напишіть відповідь"
+            );
+
+            userStates.put(userId, "consultant_reply");
 
         } catch (NumberFormatException e) {
-            sendText(chatId, "❌ Невірний формат ID. Введіть число.");
+            sendText(userId.toString(), "❌ Невірний ID");
         }
     }
 }
