@@ -321,7 +321,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         if ("awaiting_user_id".equals(userStates.get(chatId))) {
-            handleAwaitingUserId(chatId, text);
+            handleAwaitingUserId(Long.parseLong(chatId), text);
             return;
         }
 
@@ -8556,7 +8556,6 @@ public class StoreBot extends TelegramLongPollingBot {
         try {
             Long targetUserId = Long.parseLong(text);
 
-            // Перевірка існування користувача
             if (!lastUserMessage.containsKey(targetUserId)) {
                 sendText(chatId, "❌ Користувача не знайдено або він ще не писав.");
                 return;
