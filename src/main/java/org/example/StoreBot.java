@@ -5402,7 +5402,7 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("⭐ Додати товар у Хіт продажу");
+        //row2.add("⭐ Додати товар у Хіт продажу");
         row2.add("⚙️ Керування фільтрами");
         keyboard.add(row2);
 
