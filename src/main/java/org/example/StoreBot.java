@@ -7976,16 +7976,13 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔴 якщо нічого не знайдено
         if (subfilters.isEmpty()) {
             sendText(chatId, "❌ Підфільтрів не знайдено для: " + filterName);
             return;
         }
 
-        // 🔥 Убираємо дублікати (як у тебе було на скріні)
         subfilters = subfilters.stream().distinct().toList();
 
-        // 🔹 Пагінація
         int pageSize = 20;
         int totalPages = (int) Math.ceil((double) subfilters.size() / pageSize);
 
@@ -8004,7 +8001,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             String sub = subfilters.get(i);
 
-            // ❗ НЕ обрізаємо текст — це було джерело багів
             row.add(sub);
 
             if (row.size() == 2) {
@@ -8017,22 +8013,21 @@ public class StoreBot extends TelegramLongPollingBot {
             rows.add(row);
         }
 
-        // 🔹 Навігація
+        // 🔥 ВАЖЛИВО — під твою логіку кнопок
         KeyboardRow nav = new KeyboardRow();
 
         if (page > 0) {
-            nav.add("⬅️ Попередні");
+            nav.add("Попередні");
         }
 
         if (page < totalPages - 1) {
-            nav.add("➡️ Далі");
+            nav.add("Продовжити");
         }
 
         if (!nav.isEmpty()) {
             rows.add(nav);
         }
 
-        // 🔹 Назад
         KeyboardRow back = new KeyboardRow();
         back.add(BACK_BUTTON);
         rows.add(back);
