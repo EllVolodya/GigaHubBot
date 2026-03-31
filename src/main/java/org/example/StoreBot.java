@@ -1070,11 +1070,19 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔥 ОБРОБКА ФІЛЬТРІВ (ВАЖЛИВО!)
         if (isFilter(text)) {
             try {
-                sendSubfilters(Long.valueOf(chatId), text, 0);
+                Long chatIdLong = Long.valueOf(chatId);
+
+                if (hasSubfilters(text)) {
+                    sendSubfilters(chatIdLong, text, 0);
+                } else {
+                    sendText(chatId, "ℹ️ У цьому розділі поки що немає підфільтрів.");
+                }
+
             } catch (TelegramApiException e) {
                 e.printStackTrace();
-                sendText(chatId, "❌ Помилка при відкритті підфільтрів.");
+                sendText(chatId, "❌ Помилка при відкритті розділу.");
             }
+
             return;
         }
 
@@ -7988,7 +7996,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         if (subfilters.isEmpty()) {
-            sendText(chatId, "❌ Підфільтрів не знайдено для: " + filterName);
+            sendText(chatId, "ℹ️ У цьому розділі поки що немає підфільтрів.");
             return;
         }
 
