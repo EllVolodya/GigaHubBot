@@ -784,6 +784,25 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🔥 ОБРОБКА ФІЛЬТРІВ (ВАЖЛИВО!)
+        if (isFilter(text)) {
+            try {
+                Long chatIdLong = Long.valueOf(chatId);
+
+                if (hasSubfilters(text)) {
+                    sendSubfilters(chatIdLong, text, 0);
+                } else {
+                    sendText(chatId, "ℹ️ У цьому розділі поки що немає підфільтрів.");
+                }
+
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Помилка при відкритті розділу.");
+            }
+
+            return;
+        }
+
         if (state != null) {
 
             System.out.println("[STATE] " + state + " TEXT=" + text);
@@ -1066,25 +1085,6 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔹 DEFAULT DELEGATION TO PHOTO HANDLER
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
         photoHandler.handleUpdate(userId, chatId, update);
-
-        // 🔥 ОБРОБКА ФІЛЬТРІВ (ВАЖЛИВО!)
-        if (isFilter(text)) {
-            try {
-                Long chatIdLong = Long.valueOf(chatId);
-
-                if (hasSubfilters(text)) {
-                    sendSubfilters(chatIdLong, text, 0);
-                } else {
-                    sendText(chatId, "ℹ️ У цьому розділі поки що немає підфільтрів.");
-                }
-
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-                sendText(chatId, "❌ Помилка при відкритті розділу.");
-            }
-
-            return;
-        }
 
         if (text == null || text.isBlank()) {
             return;
