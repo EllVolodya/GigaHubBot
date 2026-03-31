@@ -1067,6 +1067,17 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
         photoHandler.handleUpdate(userId, chatId, update);
 
+        // 🔥 ОБРОБКА ФІЛЬТРІВ (ВАЖЛИВО!)
+        if (isFilter(text)) {
+            try {
+                sendSubfilters(Long.valueOf(chatId), text, 0);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Помилка при відкритті підфільтрів.");
+            }
+            return;
+        }
+
         if (text == null || text.isBlank()) {
             return;
         }
@@ -8572,5 +8583,29 @@ public class StoreBot extends TelegramLongPollingBot {
         } catch (NumberFormatException e) {
             sendText(userId.toString(), "❌ Введіть правильний ID (число).");
         }
+    }
+
+    private boolean isFilter(String text) {
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement("""
+            SELECT COUNT(*) 
+            FROM filters 
+            WHERE LOWER(name) = LOWER(?)
+        """);
+
+            ps.setString(1, text.trim());
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
     }
 }
