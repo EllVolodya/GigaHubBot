@@ -784,7 +784,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 ОБРОБКА ФІЛЬТРІВ (ВАЖЛИВО!)
+        /*// 🔥 ОБРОБКА ФІЛЬТРІВ (ВАЖЛИВО!)
         if (isFilter(text)) {
             try {
                 Long chatIdLong = Long.valueOf(chatId);
@@ -801,7 +801,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             return;
-        }
+        }*/
 
         if (state != null) {
 
