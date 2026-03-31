@@ -1067,23 +1067,40 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
         photoHandler.handleUpdate(userId, chatId, update);
 
-        // 🔥 ОБРОБКА ФІЛЬТРІВ
-        if (text != null && !text.isBlank() && isFilter(text)) {
+        // 🔥 ОБРОБКА ФІЛЬТРІВ (універсальна і без багів)
+        if (text != null && !text.isBlank()) {
+
             try {
                 Long chatIdLong = Long.valueOf(chatId);
 
-                if (hasSubfilters(text)) {
-                    sendSubfilters(chatIdLong, text, 0);
-                } else {
+                // ✅ якщо це фільтр
+                if (isFilter(text)) {
+
+                    // 🔹 є підфільтри
+                    if (hasSubfilters(text)) {
+                        sendSubfilters(chatIdLong, text, 0);
+                        return;
+                    }
+
+                    // 🔹 нема підфільтрів → можливо це кінцевий розділ
                     sendText(chatId, "ℹ️ У цьому розділі поки що немає підфільтрів.");
+
+                    return;
+                }
+
+                // ✅ якщо це підфільтр (важливо!)
+                if (isSubfilter(text)) {
+
+                    showProductsBySubfilter(chatIdLong, text);
+
+                    return;
                 }
 
             } catch (TelegramApiException e) {
                 e.printStackTrace();
                 sendText(chatId, "❌ Помилка при відкритті розділу.");
+                return;
             }
-
-            return;
         }
 
         if (text == null || text.isBlank()) {
@@ -8630,5 +8647,33 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         return false;
+    }
+
+    private boolean isSubfilter(String text) {
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement("""
+            SELECT COUNT(*) 
+            FROM subfilters 
+            WHERE LOWER(TRIM(name)) LIKE CONCAT('%', LOWER(TRIM(?)), '%')
+        """);
+
+            ps.setString(1, text.trim());
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return false;
+    }
+
+    private void showProductsBySubfilter(Long chatId, String subfilter) {
+        sendText(chatId.toString(), "📦 Товари для: " + subfilter);
     }
 }
