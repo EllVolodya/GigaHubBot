@@ -7962,7 +7962,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private void sendSubfilters(Long chatId, String filterName, int page) throws TelegramApiException {
 
         if (filterName == null || filterName.isBlank()) {
-            sendText(chatId, "❌ Помилка: фільтр не визначений.");
+            sendText(chatId.toString(), "❌ Помилка: фільтр не визначений.");
             return;
         }
 
@@ -7970,14 +7970,31 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            PreparedStatement ps = conn.prepareStatement("""
-            SELECT sf.name
-            FROM subfilters sf
-            JOIN filters f ON sf.filter_id = f.id
-            WHERE LOWER(f.name) = LOWER(?)
+            // 🔥 Шукаємо filter_id по назві (гнучко)
+            PreparedStatement findFilter = conn.prepareStatement("""
+            SELECT id FROM filters
+            WHERE LOWER(TRIM(name)) LIKE CONCAT('%', LOWER(TRIM(?)), '%')
+            LIMIT 1
         """);
 
-            ps.setString(1, filterName.trim());
+            findFilter.setString(1, filterName.trim());
+
+            ResultSet filterRs = findFilter.executeQuery();
+
+            if (!filterRs.next()) {
+                sendText(chatId.toString(), "❌ Фільтр не знайдено.");
+                return;
+            }
+
+            int filterId = filterRs.getInt("id");
+
+            // 🔥 Тепер шукаємо підфільтри по ID (це правильно)
+            PreparedStatement ps = conn.prepareStatement("""
+            SELECT name FROM subfilters
+            WHERE filter_id = ?
+        """);
+
+            ps.setInt(1, filterId);
 
             ResultSet rs = ps.executeQuery();
 
@@ -7991,62 +8008,58 @@ public class StoreBot extends TelegramLongPollingBot {
 
         } catch (Exception e) {
             e.printStackTrace();
-            sendText(chatId, "❌ Помилка при завантаженні підфільтрів.");
+            sendText(chatId.toString(), "❌ Помилка при завантаженні підфільтрів.");
             return;
         }
 
+        // 🔴 якщо пусто
         if (subfilters.isEmpty()) {
-            sendText(chatId, "ℹ️ У цьому розділі поки що немає підфільтрів.");
+            sendText(chatId.toString(), "ℹ️ У цьому розділі поки що немає підфільтрів.");
             return;
         }
 
+        // 🔥 унікальні
         subfilters = subfilters.stream().distinct().toList();
 
+        // 🔹 Пагінація
         int pageSize = 20;
         int totalPages = (int) Math.ceil((double) subfilters.size() / pageSize);
 
         if (totalPages == 0) totalPages = 1;
 
-        if (page < 0) page = 0;
-        if (page >= totalPages) page = totalPages - 1;
+        page = Math.max(0, Math.min(page, totalPages - 1));
 
         int start = page * pageSize;
         int end = Math.min(start + pageSize, subfilters.size());
 
         List<KeyboardRow> rows = new ArrayList<>();
-        KeyboardRow row = new KeyboardRow();
 
-        for (int i = start; i < end; i++) {
+        for (int i = start; i < end; i += 2) {
+            KeyboardRow row = new KeyboardRow();
 
-            String sub = subfilters.get(i);
+            row.add(subfilters.get(i));
 
-            row.add(sub);
-
-            if (row.size() == 2) {
-                rows.add(row);
-                row = new KeyboardRow();
+            if (i + 1 < end) {
+                row.add(subfilters.get(i + 1));
             }
-        }
 
-        if (!row.isEmpty()) {
             rows.add(row);
         }
 
-        // 🔥 ВАЖЛИВО — під твою логіку кнопок
-        KeyboardRow nav = new KeyboardRow();
+        // 🔹 Навігація (без конфліктів)
+        if (page < totalPages - 1) {
+            KeyboardRow nextRow = new KeyboardRow();
+            nextRow.add("Далі сторінка");
+            rows.add(nextRow);
+        }
 
         if (page > 0) {
-            nav.add("Попередні");
+            KeyboardRow prevRow = new KeyboardRow();
+            prevRow.add("Попередня сторінка");
+            rows.add(prevRow);
         }
 
-        if (page < totalPages - 1) {
-            nav.add("Продовжити");
-        }
-
-        if (!nav.isEmpty()) {
-            rows.add(nav);
-        }
-
+        // 🔙 Назад
         KeyboardRow back = new KeyboardRow();
         back.add(BACK_BUTTON);
         rows.add(back);
@@ -8056,8 +8069,8 @@ public class StoreBot extends TelegramLongPollingBot {
         markup.setResizeKeyboard(true);
 
         sendMessage(
-                chatId,
-                "🔎 Обери підфільтр (" + (page + 1) + "/" + totalPages + "):",
+                chatId.toString(),
+                "🔎 Обери підфільтр:\nСторінка " + (page + 1) + " з " + totalPages,
                 markup
         );
     }
