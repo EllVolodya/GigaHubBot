@@ -1067,7 +1067,7 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
         photoHandler.handleUpdate(userId, chatId, update);
 
-        // 🔥 ОБРОБКА ФІЛЬТРІВ / ПІДФІЛЬТРІВ
+        /*// 🔥 ОБРОБКА ФІЛЬТРІВ / ПІДФІЛЬТРІВ
         if (text != null && !text.isBlank()) {
 
             try {
@@ -1091,7 +1091,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "❌ Помилка при відкритті розділу.");
                 return;
             }
-        }
+        }*/
 
         if (text == null || text.isBlank()) {
             return;
