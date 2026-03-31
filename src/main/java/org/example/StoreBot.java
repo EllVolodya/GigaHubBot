@@ -1067,30 +1067,23 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
         photoHandler.handleUpdate(userId, chatId, update);
 
-        // 🔥 ОБРОБКА ФІЛЬТРІВ (тільки коли користувач у каталозі)
-        if ("catalog".equals(state) && text != null && !text.isBlank()) {
+        // 🔥 ОБРОБКА ФІЛЬТРІВ
+        if (text != null && !text.isBlank() && isFilter(text)) {
+            try {
+                Long chatIdLong = Long.valueOf(chatId);
 
-            if (isFilter(text)) {
-                try {
-                    Long chatIdLong = Long.valueOf(chatId);
-
-                    if (hasSubfilters(text)) {
-                        sendSubfilters(chatIdLong, text, 0);
-
-                        // 🔥 тепер користувач у підфільтрах
-                        userStates.put(userId, "catalog_subfilters");
-
-                    } else {
-                        sendText(chatId, "ℹ️ У цьому розділі поки що немає підфільтрів.");
-                    }
-
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                    sendText(chatId, "❌ Помилка при відкритті розділу.");
+                if (hasSubfilters(text)) {
+                    sendSubfilters(chatIdLong, text, 0);
+                } else {
+                    sendText(chatId, "ℹ️ У цьому розділі поки що немає підфільтрів.");
                 }
 
-                return;
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Помилка при відкритті розділу.");
             }
+
+            return;
         }
 
         if (text == null || text.isBlank()) {
