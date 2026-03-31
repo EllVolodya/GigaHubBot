@@ -8586,12 +8586,14 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private boolean isFilter(String text) {
+        if (text == null || text.isBlank()) return false;
+
         try (Connection conn = DatabaseManager.getConnection()) {
 
             PreparedStatement ps = conn.prepareStatement("""
             SELECT COUNT(*) 
             FROM filters 
-            WHERE LOWER(name) = LOWER(?)
+            WHERE LOWER(TRIM(name)) LIKE CONCAT('%', LOWER(TRIM(?)), '%')
         """);
 
             ps.setString(1, text.trim());
