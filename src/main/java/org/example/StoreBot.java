@@ -1067,32 +1067,22 @@ public class StoreBot extends TelegramLongPollingBot {
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
         photoHandler.handleUpdate(userId, chatId, update);
 
-        // 🔥 ОБРОБКА ФІЛЬТРІВ (універсальна і без багів)
+        // 🔥 ОБРОБКА ФІЛЬТРІВ / ПІДФІЛЬТРІВ
         if (text != null && !text.isBlank()) {
 
             try {
                 Long chatIdLong = Long.valueOf(chatId);
 
-                // ✅ якщо це фільтр
                 if (isFilter(text)) {
 
-                    // 🔹 є підфільтри
+                    // 🔹 якщо є підфільтри → показуємо їх
                     if (hasSubfilters(text)) {
                         sendSubfilters(chatIdLong, text, 0);
                         return;
                     }
 
-                    // 🔹 нема підфільтрів → можливо це кінцевий розділ
-                    sendText(chatId, "ℹ️ У цьому розділі поки що немає підфільтрів.");
-
-                    return;
-                }
-
-                // ✅ якщо це підфільтр (важливо!)
-                if (isSubfilter(text)) {
-
-                    showProductsBySubfilter(chatIdLong, text);
-
+                    // 🔹 якщо нема підфільтрів → це кінцевий розділ
+                    sendText(chatId, "📦 Відкриваємо товари для: " + text);
                     return;
                 }
 
@@ -8647,33 +8637,5 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         return false;
-    }
-
-    private boolean isSubfilter(String text) {
-        try (Connection conn = DatabaseManager.getConnection()) {
-
-            PreparedStatement ps = conn.prepareStatement("""
-            SELECT COUNT(*) 
-            FROM subfilters 
-            WHERE LOWER(TRIM(name)) LIKE CONCAT('%', LOWER(TRIM(?)), '%')
-        """);
-
-            ps.setString(1, text.trim());
-
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                return rs.getInt(1) > 0;
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return false;
-    }
-
-    private void showProductsBySubfilter(Long chatId, String subfilter) {
-        sendText(chatId.toString(), "📦 Товари для: " + subfilter);
     }
 }
