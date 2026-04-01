@@ -6061,7 +6061,6 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // 🔸 Показ товарів списком
     private void sendProductList(Long chatId) throws TelegramApiException {
 
         Long userId = chatId;
@@ -6085,6 +6084,12 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🔥 ОБМЕЖЕННЯ (дуже важливо)
+        int maxProducts = 50;
+        if (products.size() > maxProducts) {
+            products = products.subList(0, maxProducts);
+        }
+
         userProductLists.put(chatId, new ArrayList<>(products));
 
         StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
@@ -6104,13 +6109,26 @@ public class StoreBot extends TelegramLongPollingBot {
                     .append(" грн\n");
         }
 
-        sendText(chatId.toString(), sb.toString());
+        // 🔥 РОЗБИВАЄМО ПОВІДОМЛЕННЯ (щоб Telegram не ламав)
+        sendLongMessage(chatId, sb.toString());
 
-        KeyboardRow row = new KeyboardRow();
-        row.add(BACK_BUTTON);
-
+        // 🔹 КНОПКИ
         List<KeyboardRow> keyboard = new ArrayList<>();
-        keyboard.add(row);
+
+        KeyboardRow nav = new KeyboardRow();
+
+        // 👉 якщо товарів більше ніж 50 — можна додати "Далі"
+        if (products.size() == maxProducts) {
+            nav.add("➡️ Далі");
+        }
+
+        if (!nav.isEmpty()) {
+            keyboard.add(nav);
+        }
+
+        KeyboardRow back = new KeyboardRow();
+        back.add(BACK_BUTTON);
+        keyboard.add(back);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
         markup.setKeyboard(keyboard);
