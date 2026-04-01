@@ -852,10 +852,10 @@ public class CatalogSearcher {
     }
 
     public List<Map<String, Object>> findProducts(
-            Long categoryId,
-            Long subcategoryId,
-            Long filterId,
-            Long subfilterId
+            String category,
+            String subcategory,
+            String filter,
+            String subfilter
     ) {
 
         List<Map<String, Object>> products = new ArrayList<>();
@@ -864,40 +864,37 @@ public class CatalogSearcher {
         SELECT p.*
         FROM products p
         JOIN subcategories s ON p.subcategory_id = s.id
+        JOIN categories c ON s.category_id = c.id
+        LEFT JOIN filters f ON p.filter_id = f.id
+        LEFT JOIN subfilters sf ON p.subfilter_id = sf.id
         WHERE 1=1
     """);
 
         List<Object> params = new ArrayList<>();
 
         // 🔹 CATEGORY
-        if (categoryId != null) {
-            sql.append(" AND s.category_id = ?");
-            params.add(categoryId);
+        if (category != null && !category.isBlank()) {
+            sql.append(" AND c.name = ?");
+            params.add(category);
         }
 
         // 🔹 SUBCATEGORY
-        if (subcategoryId != null) {
-            sql.append(" AND p.subcategory_id = ?");
-            params.add(subcategoryId);
+        if (subcategory != null && !subcategory.isBlank()) {
+            sql.append(" AND s.name = ?");
+            params.add(subcategory);
         }
 
         // 🔥 ГОЛОВНА ЛОГІКА
-        if (subfilterId != null) {
+        if (subfilter != null && !subfilter.isBlank()) {
+            // 👉 тільки підфільтр
+            sql.append(" AND sf.name = ?");
+            params.add(subfilter);
 
-            // 👉 ПЕРЕВІРЯЄМО І subfilter І filter
-            sql.append(" AND p.subfilter_id = ?");
-            params.add(subfilterId);
-
-            if (filterId != null) {
-                sql.append(" AND p.filter_id = ?");
-                params.add(filterId);
-            }
-
-        } else if (filterId != null) {
-
-            // 👉 якщо тільки filter
-            sql.append(" AND p.filter_id = ?");
-            params.add(filterId);
+        } else if (filter != null && !filter.isBlank()) {
+            // 👉 тільки фільтр (без підфільтрів!)
+            sql.append(" AND f.name = ?");
+            sql.append(" AND p.subfilter_id IS NULL");
+            params.add(filter);
         }
 
         try (Connection conn = DatabaseManager.getConnection()) {
@@ -905,7 +902,7 @@ public class CatalogSearcher {
             PreparedStatement ps = conn.prepareStatement(sql.toString());
 
             for (int i = 0; i < params.size(); i++) {
-                ps.setObject(i + 1, params.get(i));
+                ps.setString(i + 1, params.get(i).toString());
             }
 
             ResultSet rs = ps.executeQuery();
@@ -934,47 +931,6 @@ public class CatalogSearcher {
 
         } catch (Exception e) {
             e.printStackTrace();
-        }
-
-        return products;
-    }
-
-    private List<Map<String, Object>> executeQuery(
-            Connection conn,
-            String sql,
-            String... params
-    ) throws SQLException {
-
-        List<Map<String, Object>> products = new ArrayList<>();
-
-        PreparedStatement ps = conn.prepareStatement(sql);
-
-        for (int i = 0; i < params.length; i++) {
-            ps.setString(i + 1, params[i]);
-        }
-
-        ResultSet rs = ps.executeQuery();
-
-        while (rs.next()) {
-
-            Map<String, Object> product = new HashMap<>();
-
-            product.put("id", rs.getLong("id"));
-            product.put("name", rs.getString("name"));
-            product.put("price", rs.getString("price"));
-            product.put("unit", rs.getString("unit"));
-
-            byte[] descBytes = rs.getBytes("description");
-            if (descBytes != null) {
-                product.put("description",
-                        new String(descBytes, java.nio.charset.StandardCharsets.UTF_8));
-            } else {
-                product.put("description", "");
-            }
-
-            product.put("photo", rs.getString("photo"));
-
-            products.add(product);
         }
 
         return products;
