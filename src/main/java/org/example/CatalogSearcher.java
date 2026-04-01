@@ -884,15 +884,15 @@ public class CatalogSearcher {
             params.add(subcategory);
         }
 
-        // 🔹 FILTER (м’яка логіка)
+        // 🔥 FILTER — СТРОГО
         if (filter != null && !filter.isBlank()) {
-            sql.append(" AND (LOWER(TRIM(f.name)) = LOWER(TRIM(?)) OR f.name IS NULL)");
+            sql.append(" AND LOWER(TRIM(f.name)) = LOWER(TRIM(?))");
             params.add(filter);
         }
 
-        // 🔹 SUBFILTER (м’яка логіка)
+        // 🔥 SUBFILTER — СТРОГО
         if (subfilter != null && !subfilter.isBlank()) {
-            sql.append(" AND (LOWER(TRIM(sf.name)) = LOWER(TRIM(?)) OR sf.name IS NULL)");
+            sql.append(" AND LOWER(TRIM(sf.name)) = LOWER(TRIM(?))");
             params.add(subfilter);
         }
 
@@ -930,11 +930,6 @@ public class CatalogSearcher {
 
         } catch (Exception e) {
             e.printStackTrace();
-        }
-
-        // 🔥 fallback якщо нічого не знайдено (дуже важливо)
-        if (products.isEmpty() && subfilter != null) {
-            return findProducts(category, subcategory, filter, null);
         }
 
         return products;
