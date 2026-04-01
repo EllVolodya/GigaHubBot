@@ -860,13 +860,12 @@ public class CatalogSearcher {
 
         List<Map<String, Object>> products = new ArrayList<>();
 
-        // 🔧 нормалізація (дуже важливо)
         category = normalize(category);
         subcategory = normalize(subcategory);
         filter = normalize(filter);
         subfilter = normalize(subfilter);
 
-        String baseSql = """
+        StringBuilder sql = new StringBuilder("""
         SELECT p.*
         FROM products p
         JOIN subcategories s ON p.subcategory_id = s.id
@@ -874,66 +873,64 @@ public class CatalogSearcher {
         LEFT JOIN filters f ON p.filter_id = f.id
         LEFT JOIN subfilters sf ON p.subfilter_id = sf.id
         WHERE 1=1
-    """;
+    """);
+
+        List<String> params = new ArrayList<>();
+
+        // 🔹 CATEGORY (обов'язково)
+        if (category != null) {
+            sql.append(" AND LOWER(TRIM(c.name)) = LOWER(?)");
+            params.add(category);
+        }
+
+        // 🔹 SUBCATEGORY (обов'язково)
+        if (subcategory != null) {
+            sql.append(" AND LOWER(TRIM(s.name)) = LOWER(?)");
+            params.add(subcategory);
+        }
+
+        // 🔥 ЛОГІКА ФІЛЬТРАЦІЇ
+        if (subfilter != null) {
+            // 👉 якщо вибраний підфільтр — шукаємо тільки по ньому
+            sql.append(" AND LOWER(TRIM(sf.name)) = LOWER(?)");
+            params.add(subfilter);
+
+        } else if (filter != null) {
+            // 👉 якщо нема підфільтра — шукаємо по фільтру
+            sql.append(" AND LOWER(TRIM(f.name)) = LOWER(?)");
+            params.add(filter);
+        }
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            // 🔥 1. СПОЧАТКУ пробуємо максимально точний пошук (filter + subfilter)
-            if (subfilter != null) {
+            PreparedStatement ps = conn.prepareStatement(sql.toString());
 
-                List<Map<String, Object>> result = executeQuery(
-                        conn,
-                        baseSql +
-                                " AND LOWER(TRIM(c.name)) = LOWER(?)" +
-                                " AND LOWER(TRIM(s.name)) = LOWER(?)" +
-                                " AND LOWER(TRIM(f.name)) = LOWER(?)" +
-                                " AND LOWER(TRIM(sf.name)) = LOWER(?)",
-                        category, subcategory, filter, subfilter
-                );
-
-                if (!result.isEmpty()) return result;
+            for (int i = 0; i < params.size(); i++) {
+                ps.setString(i + 1, params.get(i));
             }
 
-            // 🔥 2. fallback → тільки filter
-            if (filter != null) {
+            ResultSet rs = ps.executeQuery();
 
-                List<Map<String, Object>> result = executeQuery(
-                        conn,
-                        baseSql +
-                                " AND LOWER(TRIM(c.name)) = LOWER(?)" +
-                                " AND LOWER(TRIM(s.name)) = LOWER(?)" +
-                                " AND LOWER(TRIM(f.name)) = LOWER(?)",
-                        category, subcategory, filter
-                );
+            while (rs.next()) {
 
-                if (!result.isEmpty()) return result;
-            }
+                Map<String, Object> product = new HashMap<>();
 
-            // 🔥 3. fallback → тільки subcategory
-            if (subcategory != null) {
+                product.put("id", rs.getLong("id"));
+                product.put("name", rs.getString("name"));
+                product.put("price", rs.getString("price"));
+                product.put("unit", rs.getString("unit"));
 
-                List<Map<String, Object>> result = executeQuery(
-                        conn,
-                        baseSql +
-                                " AND LOWER(TRIM(c.name)) = LOWER(?)" +
-                                " AND LOWER(TRIM(s.name)) = LOWER(?)",
-                        category, subcategory
-                );
+                byte[] descBytes = rs.getBytes("description");
+                if (descBytes != null) {
+                    product.put("description",
+                            new String(descBytes, java.nio.charset.StandardCharsets.UTF_8));
+                } else {
+                    product.put("description", "");
+                }
 
-                if (!result.isEmpty()) return result;
-            }
+                product.put("photo", rs.getString("photo"));
 
-            // 🔥 4. fallback → тільки category
-            if (category != null) {
-
-                List<Map<String, Object>> result = executeQuery(
-                        conn,
-                        baseSql +
-                                " AND LOWER(TRIM(c.name)) = LOWER(?)",
-                        category
-                );
-
-                if (!result.isEmpty()) return result;
+                products.add(product);
             }
 
         } catch (Exception e) {
