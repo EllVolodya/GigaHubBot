@@ -8663,4 +8663,14 @@ public class StoreBot extends TelegramLongPollingBot {
 
         return false;
     }
+
+    private void sendLongMessage(Long chatId, String text) throws TelegramApiException {
+
+        int maxLength = 4000;
+
+        for (int i = 0; i < text.length(); i += maxLength) {
+            int end = Math.min(i + maxLength, text.length());
+            sendText(chatId.toString(), text.substring(i, end));
+        }
+    }
 }
