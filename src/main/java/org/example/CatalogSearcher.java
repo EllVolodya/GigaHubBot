@@ -863,6 +863,7 @@ public class CatalogSearcher {
         StringBuilder sql = new StringBuilder("""
         SELECT p.*
         FROM products p
+        JOIN subcategories s ON p.subcategory_id = s.id
         WHERE 1=1
     """);
 
@@ -870,7 +871,7 @@ public class CatalogSearcher {
 
         // 🔹 CATEGORY
         if (categoryId != null) {
-            sql.append(" AND p.category_id = ?");
+            sql.append(" AND s.category_id = ?");
             params.add(categoryId);
         }
 
@@ -880,12 +881,14 @@ public class CatalogSearcher {
             params.add(subcategoryId);
         }
 
-        // 🔥 SUBFILTER має пріоритет
+        // 🔥 ГОЛОВНЕ
         if (subfilterId != null) {
+            // 👉 тільки підфільтр
             sql.append(" AND p.subfilter_id = ?");
             params.add(subfilterId);
 
         } else if (filterId != null) {
+            // 👉 тільки фільтр
             sql.append(" AND p.filter_id = ?");
             params.add(filterId);
         }

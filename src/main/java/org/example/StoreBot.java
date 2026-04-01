@@ -6060,7 +6060,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return null;
         }
     }
-    
+
     // 🔸 Показ товарів списком
     private void sendProductList(Long chatId) throws TelegramApiException {
 
