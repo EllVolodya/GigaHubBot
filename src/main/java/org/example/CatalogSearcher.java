@@ -872,23 +872,27 @@ public class CatalogSearcher {
 
         List<Object> params = new ArrayList<>();
 
-        if (category != null) {
-            sql.append(" AND c.name = ?");
+        // 🔹 CATEGORY
+        if (category != null && !category.isBlank()) {
+            sql.append(" AND LOWER(TRIM(c.name)) = LOWER(TRIM(?))");
             params.add(category);
         }
 
-        if (subcategory != null) {
-            sql.append(" AND s.name = ?");
+        // 🔹 SUBCATEGORY
+        if (subcategory != null && !subcategory.isBlank()) {
+            sql.append(" AND LOWER(TRIM(s.name)) = LOWER(TRIM(?))");
             params.add(subcategory);
         }
 
-        if (filter != null) {
-            sql.append(" AND f.name = ?");
+        // 🔹 FILTER (м’яка логіка)
+        if (filter != null && !filter.isBlank()) {
+            sql.append(" AND (LOWER(TRIM(f.name)) = LOWER(TRIM(?)) OR f.name IS NULL)");
             params.add(filter);
         }
 
-        if (subfilter != null) {
-            sql.append(" AND sf.name = ?");
+        // 🔹 SUBFILTER (м’яка логіка)
+        if (subfilter != null && !subfilter.isBlank()) {
+            sql.append(" AND (LOWER(TRIM(sf.name)) = LOWER(TRIM(?)) OR sf.name IS NULL)");
             params.add(subfilter);
         }
 
@@ -913,12 +917,12 @@ public class CatalogSearcher {
 
                 byte[] descBytes = rs.getBytes("description");
                 if (descBytes != null) {
-                    product.put("description", new String(descBytes, java.nio.charset.StandardCharsets.UTF_8));
+                    product.put("description",
+                            new String(descBytes, java.nio.charset.StandardCharsets.UTF_8));
                 } else {
                     product.put("description", "");
                 }
 
-                // 🔥 фото
                 product.put("photo", rs.getString("photo"));
 
                 products.add(product);
@@ -926,6 +930,11 @@ public class CatalogSearcher {
 
         } catch (Exception e) {
             e.printStackTrace();
+        }
+
+        // 🔥 fallback якщо нічого не знайдено (дуже важливо)
+        if (products.isEmpty() && subfilter != null) {
+            return findProducts(category, subcategory, filter, null);
         }
 
         return products;
