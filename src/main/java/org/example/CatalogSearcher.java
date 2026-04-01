@@ -852,53 +852,42 @@ public class CatalogSearcher {
     }
 
     public List<Map<String, Object>> findProducts(
-            String category,
-            String subcategory,
-            String filter,
-            String subfilter
+            Long categoryId,
+            Long subcategoryId,
+            Long filterId,
+            Long subfilterId
     ) {
 
         List<Map<String, Object>> products = new ArrayList<>();
 
-        category = normalize(category);
-        subcategory = normalize(subcategory);
-        filter = normalize(filter);
-        subfilter = normalize(subfilter);
-
         StringBuilder sql = new StringBuilder("""
         SELECT p.*
         FROM products p
-        JOIN subcategories s ON p.subcategory_id = s.id
-        JOIN categories c ON s.category_id = c.id
-        LEFT JOIN filters f ON p.filter_id = f.id
-        LEFT JOIN subfilters sf ON p.subfilter_id = sf.id
         WHERE 1=1
     """);
 
-        List<String> params = new ArrayList<>();
+        List<Object> params = new ArrayList<>();
 
-        // 🔹 CATEGORY (обов'язково)
-        if (category != null) {
-            sql.append(" AND LOWER(TRIM(c.name)) = LOWER(?)");
-            params.add(category);
+        // 🔹 CATEGORY
+        if (categoryId != null) {
+            sql.append(" AND p.category_id = ?");
+            params.add(categoryId);
         }
 
-        // 🔹 SUBCATEGORY (обов'язково)
-        if (subcategory != null) {
-            sql.append(" AND LOWER(TRIM(s.name)) = LOWER(?)");
-            params.add(subcategory);
+        // 🔹 SUBCATEGORY
+        if (subcategoryId != null) {
+            sql.append(" AND p.subcategory_id = ?");
+            params.add(subcategoryId);
         }
 
-        // 🔥 ЛОГІКА ФІЛЬТРАЦІЇ
-        if (subfilter != null) {
-            // 👉 якщо вибраний підфільтр — шукаємо тільки по ньому
-            sql.append(" AND LOWER(TRIM(sf.name)) = LOWER(?)");
-            params.add(subfilter);
+        // 🔥 SUBFILTER має пріоритет
+        if (subfilterId != null) {
+            sql.append(" AND p.subfilter_id = ?");
+            params.add(subfilterId);
 
-        } else if (filter != null) {
-            // 👉 якщо нема підфільтра — шукаємо по фільтру
-            sql.append(" AND LOWER(TRIM(f.name)) = LOWER(?)");
-            params.add(filter);
+        } else if (filterId != null) {
+            sql.append(" AND p.filter_id = ?");
+            params.add(filterId);
         }
 
         try (Connection conn = DatabaseManager.getConnection()) {
@@ -906,7 +895,7 @@ public class CatalogSearcher {
             PreparedStatement ps = conn.prepareStatement(sql.toString());
 
             for (int i = 0; i < params.size(); i++) {
-                ps.setString(i + 1, params.get(i));
+                ps.setObject(i + 1, params.get(i));
             }
 
             ResultSet rs = ps.executeQuery();

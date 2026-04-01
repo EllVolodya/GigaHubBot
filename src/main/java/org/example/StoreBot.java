@@ -6052,23 +6052,32 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
+    private Long parseLongSafe(String value) {
+        if (value == null) return null;
+        try {
+            return Long.parseLong(value);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    
     // 🔸 Показ товарів списком
     private void sendProductList(Long chatId) throws TelegramApiException {
 
         Long userId = chatId;
 
-        String category = currentCategory.get(userId);
-        String subcategory = currentSubcategory.get(userId);
-        String filter = currentFilter.get(userId);
-        String subfilter = currentSubfilter.get(userId);
+        Long categoryId = parseLongSafe(currentCategory.get(userId));
+        Long subcategoryId = parseLongSafe(currentSubcategory.get(userId));
+        Long filterId = parseLongSafe(currentFilter.get(userId));
+        Long subfilterId = parseLongSafe(currentSubfilter.get(userId));
 
         CatalogSearcher searcher = new CatalogSearcher();
 
         List<Map<String, Object>> products = searcher.findProducts(
-                category,
-                subcategory,
-                filter,
-                subfilter
+                categoryId,
+                subcategoryId,
+                filterId,
+                subfilterId
         );
 
         if (products == null || products.isEmpty()) {
@@ -6076,7 +6085,6 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 зберігаємо список (ключ — chatId ок для UI)
         userProductLists.put(chatId, new ArrayList<>(products));
 
         StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
@@ -6098,7 +6106,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         sendText(chatId.toString(), sb.toString());
 
-        // 🔥 кнопка назад
         KeyboardRow row = new KeyboardRow();
         row.add(BACK_BUTTON);
 
