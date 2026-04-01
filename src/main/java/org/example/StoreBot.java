@@ -6061,6 +6061,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
+    // Показ товару по списку
     private void sendProductList(Long chatId) throws TelegramApiException {
 
         Long userId = chatId;

@@ -881,14 +881,21 @@ public class CatalogSearcher {
             params.add(subcategoryId);
         }
 
-        // 🔥 ГОЛОВНЕ
+        // 🔥 ГОЛОВНА ЛОГІКА
         if (subfilterId != null) {
-            // 👉 тільки підфільтр
+
+            // 👉 ПЕРЕВІРЯЄМО І subfilter І filter
             sql.append(" AND p.subfilter_id = ?");
             params.add(subfilterId);
 
+            if (filterId != null) {
+                sql.append(" AND p.filter_id = ?");
+                params.add(filterId);
+            }
+
         } else if (filterId != null) {
-            // 👉 тільки фільтр
+
+            // 👉 якщо тільки filter
             sql.append(" AND p.filter_id = ?");
             params.add(filterId);
         }
