@@ -8037,6 +8037,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
+    // Показ фільтрів
     private void sendFilters(Long chatId, int page) throws TelegramApiException {
 
         List<String> filters = userFilters.get(chatId);
@@ -8046,8 +8047,47 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🔥 Прибираємо вимкнені фільтри
+        List<String> activeFilters = new ArrayList<>();
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement("""
+            SELECT name
+            FROM filters
+            WHERE active = 1
+            ORDER BY sort_order ASC, name ASC
+        """);
+
+            ResultSet rs = ps.executeQuery();
+
+            Set<String> dbFilters = new HashSet<>();
+
+            while (rs.next()) {
+                dbFilters.add(rs.getString("name").trim());
+            }
+
+            for (String filter : filters) {
+                if (filter != null && dbFilters.contains(filter.trim())) {
+                    activeFilters.add(filter.trim());
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendText(chatId, "❌ Помилка при завантаженні фільтрів.");
+            return;
+        }
+
+        if (activeFilters.isEmpty()) {
+            sendText(chatId, "❌ Активні фільтри не знайдено.");
+            return;
+        }
+
         int pageSize = 20;
-        int totalPages = (int) Math.ceil((double) filters.size() / pageSize);
+        int totalPages = (int) Math.ceil((double) activeFilters.size() / pageSize);
+
+        if (totalPages <= 0) totalPages = 1;
 
         if (page < 0) page = 0;
         if (page >= totalPages) page = totalPages - 1;
@@ -8055,14 +8095,14 @@ public class StoreBot extends TelegramLongPollingBot {
         filterPage.put(chatId, page);
 
         int start = page * pageSize;
-        int end = Math.min(start + pageSize, filters.size());
+        int end = Math.min(start + pageSize, activeFilters.size());
 
         List<KeyboardRow> rows = new ArrayList<>();
         KeyboardRow row = new KeyboardRow();
 
         for (int i = start; i < end; i++) {
 
-            String filter = filters.get(i);
+            String filter = activeFilters.get(i);
 
             if (filter.length() > 25) {
                 filter = filter.substring(0, 25);
@@ -8085,7 +8125,9 @@ public class StoreBot extends TelegramLongPollingBot {
         if (page > 0) nav.add("Попередні");
         if (page < totalPages - 1) nav.add("Продовжити");
 
-        if (!nav.isEmpty()) rows.add(nav);
+        if (!nav.isEmpty()) {
+            rows.add(nav);
+        }
 
         KeyboardRow back = new KeyboardRow();
         back.add(BACK_BUTTON);
@@ -8095,9 +8137,11 @@ public class StoreBot extends TelegramLongPollingBot {
         markup.setKeyboard(rows);
         markup.setResizeKeyboard(true);
 
-        sendMessage(chatId,
+        sendMessage(
+                chatId,
                 "🔎 Обери фільтр (" + (page + 1) + "/" + totalPages + "):",
-                markup);
+                markup
+        );
     }
 
     // 🔹 Показ підфільтрів
