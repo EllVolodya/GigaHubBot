@@ -2141,6 +2141,8 @@ public class StoreBot extends TelegramLongPollingBot {
             // 🔹 Вимкнути фільтр
             if ("awaiting_disable_filter".equals(state)) {
 
+                System.out.println("[STATE] awaiting_disable_filter TEXT=" + text);
+
                 if (text.equals("⬅️ Назад")) {
                     userStates.remove(userId);
                     sendMessageSafely(createFiltersAdminMenu(chatId));
@@ -2158,7 +2160,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 sendMessageSafely(createFiltersAdminMenu(chatId));
-                return;
+                return; // 🔥 ОБОВЯЗКОВО
             }
 
             // 🔹 Увімкнути підфільтр
