@@ -7966,6 +7966,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 markup);
     }
 
+    /// Показ підфільтри
     private void sendSubfilters(Long chatId, String filterName, int page) throws TelegramApiException {
 
         if (filterName == null || filterName.isBlank()) {
