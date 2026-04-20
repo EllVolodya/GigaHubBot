@@ -5064,6 +5064,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
         newValue = newValue.trim();
 
+        // 🔥 Якщо є масове редагування — один товар прибираємо
+        if (productsToEdit != null && !productsToEdit.isEmpty()) {
+            singleProduct = null;
+            adminEditingProduct.remove(userId);
+        }
+
         // 🔹 Перевірка unit
         if ("unit".equals(field)) {
 
@@ -5092,7 +5098,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 boolean updated = CatalogEditor.updateField(productName, field, newValue);
 
-                // якщо unit = під замовлення → очистити ціну
                 if ("unit".equals(field) && newValue.equals("під замовлення")) {
                     CatalogEditor.updateField(productName, "price", "");
                 }
@@ -5104,7 +5109,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             sendText(chatId,
                     "✅ Поле '" + field + "' оновлено для " + successCount + " товарів."
-                            + (field.equals("unit") && newValue.equals("під замовлення")
+                            + ("unit".equals(field) && newValue.equals("під замовлення")
                             ? "\n💡 Ціна очищена для товарів під замовлення."
                             : "")
             );
@@ -5121,11 +5126,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             if (success) {
                 sendText(chatId,
-                        "✅ Поле '" + field + "' оновлено для товару '" + singleProduct + "'."
-                                + (field.equals("unit") && newValue.equals("під замовлення")
-                                ? "\n💡 Ціна очищена, бо товар під замовлення."
-                                : "")
-                );
+                        "✅ Поле '" + field + "' оновлено для товару '" + singleProduct + "'.");
             } else {
                 sendText(chatId, "⚠️ Не вдалося оновити товар.");
             }
@@ -5138,7 +5139,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         userStates.put(userId, "editing");
     }
-
+    
     // ⭐ Додавання хіта продажу
     private void handleAddHit(Long userId, String chatId, String text) {
         hitItems.add("⭐ " + text);
