@@ -5653,26 +5653,39 @@ public class StoreBot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
+
     // Метод для першого показу меню редагування
     private void showEditMenuOnce(Long userId, String chatId) {
+
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
+        String productName = adminEditingProduct.get(userId);
+
         String menuTitle;
 
+        // 🔥 Пріоритет масовому редагуванню
         if (productsToEdit != null && !productsToEdit.isEmpty()) {
-            menuTitle = "Редагуємо " + productsToEdit.size() + " товарів. Вибрані: ";
-            if (productsToEdit.size() > 1) {
-                menuTitle += "1-" + productsToEdit.size();
-            } else {
-                menuTitle += "1";
-            }
-            menuTitle += "\nПоточний: " + productsToEdit.get(0);
-        } else {
-            String productName = adminEditingProduct.get(userId);
-            menuTitle = "Редагування товару: " + (productName != null ? productName : "не вибрано");
+
+            // прибираємо конфлікт одиночного режиму
+            adminEditingProduct.remove(userId);
+
+            menuTitle = "✏️ Редагуємо " + productsToEdit.size() + " товар(ів)\n\n";
+            menuTitle += "📦 Поточний:\n" + productsToEdit.get(0);
         }
 
-        sendText(chatId, menuTitle); // текст один раз
-        sendMessageSafely(createEditMenu(chatId, userId)); // тільки кнопки
+        // 🔹 Один товар
+        else if (productName != null && !productName.isBlank()) {
+
+            menuTitle = "✏️ Редагування товару:\n" + productName;
+        }
+
+        // 🔹 Нічого не вибрано
+        else {
+            sendText(chatId, "❌ Товар не вибрано.");
+            return;
+        }
+
+        sendText(chatId, menuTitle);
+        sendMessageSafely(createEditMenu(chatId, userId));
     }
 
     // 🔹 Створюємо клавіатуру меню редагування
