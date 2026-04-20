@@ -2147,11 +2147,15 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                disableFilter(text.trim());
+                boolean success = disableFilter(text.trim());
 
                 userStates.remove(userId);
 
-                sendText(chatId, "⛔ Фільтр вимкнено: " + text);
+                if (success) {
+                    sendText(chatId, "⛔ Фільтр вимкнено.");
+                } else {
+                    sendText(chatId, "❌ Фільтр не знайдено.");
+                }
 
                 sendMessageSafely(createFiltersAdminMenu(chatId));
                 return;
@@ -8857,7 +8861,7 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔹 Вимкнути фільтр
-    private void disableFilter(String name) {
+    private boolean disableFilter(String name) {
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
@@ -8868,11 +8872,16 @@ public class StoreBot extends TelegramLongPollingBot {
         """);
 
             ps.setString(1, name);
-            ps.executeUpdate();
+
+            int rows = ps.executeUpdate();
+
+            return rows > 0;
 
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+        return false;
     }
 
     // 🔹 Увімкнути підфільтр
