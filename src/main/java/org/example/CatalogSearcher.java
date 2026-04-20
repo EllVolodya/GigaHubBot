@@ -874,52 +874,35 @@ public class CatalogSearcher {
 
         // 🔹 CATEGORY
         if (category != null && !category.isBlank()) {
-            sql.append(" AND LOWER(TRIM(c.name)) = LOWER(TRIM(?))");
+            sql.append(" AND c.name = ?");
             params.add(category);
         }
 
         // 🔹 SUBCATEGORY
         if (subcategory != null && !subcategory.isBlank()) {
-            sql.append(" AND LOWER(TRIM(s.name)) = LOWER(TRIM(?))");
+            sql.append(" AND s.name = ?");
             params.add(subcategory);
         }
 
-        // 🔥 Якщо вибраний підфільтр
+        // 🔥 ГОЛОВНА ЛОГІКА
         if (subfilter != null && !subfilter.isBlank()) {
-
-            sql.append("""
-            AND (
-                LOWER(TRIM(sf.name)) = LOWER(TRIM(?))
-                OR (
-                    p.subfilter_id IS NULL
-                    AND LOWER(TRIM(f.name)) = LOWER(TRIM(?))
-                )
-            )
-        """);
-
+            // 👉 тільки підфільтр
+            sql.append(" AND sf.name = ?");
             params.add(subfilter);
-            params.add(filter);
 
-        }
-
-        // 🔥 Якщо вибраний тільки фільтр
-        else if (filter != null && !filter.isBlank()) {
-
-            sql.append("""
-            AND LOWER(TRIM(f.name)) = LOWER(TRIM(?))
-        """);
-
+        } else if (filter != null && !filter.isBlank()) {
+            // 👉 тільки фільтр (без підфільтрів!)
+            sql.append(" AND f.name = ?");
+            sql.append(" AND p.subfilter_id IS NULL");
             params.add(filter);
         }
 
-        // 🔹 Сортування
-        sql.append(" ORDER BY p.name ASC");
+        try (Connection conn = DatabaseManager.getConnection()) {
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+            PreparedStatement ps = conn.prepareStatement(sql.toString());
 
             for (int i = 0; i < params.size(); i++) {
-                ps.setObject(i + 1, params.get(i));
+                ps.setString(i + 1, params.get(i).toString());
             }
 
             ResultSet rs = ps.executeQuery();
@@ -932,18 +915,16 @@ public class CatalogSearcher {
                 product.put("name", rs.getString("name"));
                 product.put("price", rs.getString("price"));
                 product.put("unit", rs.getString("unit"));
-                product.put("photo", rs.getString("photo"));
 
                 byte[] descBytes = rs.getBytes("description");
-
                 if (descBytes != null) {
-                    product.put(
-                            "description",
-                            new String(descBytes, java.nio.charset.StandardCharsets.UTF_8)
-                    );
+                    product.put("description",
+                            new String(descBytes, java.nio.charset.StandardCharsets.UTF_8));
                 } else {
                     product.put("description", "");
                 }
+
+                product.put("photo", rs.getString("photo"));
 
                 products.add(product);
             }
