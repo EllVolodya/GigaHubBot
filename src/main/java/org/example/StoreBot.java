@@ -5053,67 +5053,81 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessageSafely(createEditMenu(chatId, userId));
     }
 
-    // 📝 Очікування значення для редагування
+    // Оновлення одиниці товару
     private void handleAwaitingField(Long userId, String chatId, String newValue) {
+
         String field = adminEditingField.get(userId);
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
         String singleProduct = adminEditingProduct.get(userId);
 
         if (field == null) return;
 
+        newValue = newValue.trim();
+
+        // 🔹 Перевірка unit
         if ("unit".equals(field)) {
 
-            newValue = newValue.trim().toLowerCase();
+            String check = newValue.toLowerCase();
 
-            if (!newValue.equals("шт")
-                    && !newValue.equals("метр")
-                    && !newValue.equals("м2")
-                    && !newValue.equals("під замовлення")) {
+            if (!check.equals("шт")
+                    && !check.equals("метр")
+                    && !check.equals("м2")
+                    && !check.equals("під замовлення")) {
 
                 sendText(chatId,
                         "❌ Недопустиме значення.\n" +
                                 "Можна вводити лише: шт, метр, м2, під замовлення.\nСпробуйте ще раз:");
                 return;
             }
+
+            newValue = check;
         }
 
+        // 🔥 Масове редагування
         if (productsToEdit != null && !productsToEdit.isEmpty()) {
 
             int successCount = 0;
 
             for (String productName : productsToEdit) {
+
                 boolean updated = CatalogEditor.updateField(productName, field, newValue);
 
-                if (newValue.equals("під замовлення")) {
+                // якщо unit = під замовлення → очистити ціну
+                if ("unit".equals(field) && newValue.equals("під замовлення")) {
                     CatalogEditor.updateField(productName, "price", "");
                 }
 
-                if (updated) successCount++;
+                if (updated) {
+                    successCount++;
+                }
             }
 
             sendText(chatId,
-                    "✅ Одиницю виміру оновлено для " + successCount + " товарів.\n" +
-                            (newValue.equals("під замовлення")
-                                    ? "💡 Ціна очищена, бо товар під замовлення."
-                                    : ""));
+                    "✅ Поле '" + field + "' оновлено для " + successCount + " товарів."
+                            + (field.equals("unit") && newValue.equals("під замовлення")
+                            ? "\n💡 Ціна очищена для товарів під замовлення."
+                            : "")
+            );
         }
 
+        // 🔥 Один товар
         else if (singleProduct != null) {
 
             boolean success = CatalogEditor.updateField(singleProduct, field, newValue);
 
-            if (newValue.equals("під замовлення")) {
+            if ("unit".equals(field) && newValue.equals("під замовлення")) {
                 CatalogEditor.updateField(singleProduct, "price", "");
             }
 
             if (success) {
                 sendText(chatId,
-                        "✅ Одиницю виміру оновлено для товару '" + singleProduct + "'.\n" +
-                                (newValue.equals("під замовлення")
-                                        ? "💡 Ціна очищена, бо товар під замовлення."
-                                        : ""));
+                        "✅ Поле '" + field + "' оновлено для товару '" + singleProduct + "'."
+                                + (field.equals("unit") && newValue.equals("під замовлення")
+                                ? "\n💡 Ціна очищена, бо товар під замовлення."
+                                : "")
+                );
             } else {
-                sendText(chatId, "⚠️ Не вдалося оновити одиницю виміру.");
+                sendText(chatId, "⚠️ Не вдалося оновити товар.");
             }
         }
 
