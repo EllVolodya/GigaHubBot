@@ -8940,6 +8940,8 @@ public class StoreBot extends TelegramLongPollingBot {
             ps.setString(1, name);
             ps.executeUpdate();
 
+            userFilters.clear();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
