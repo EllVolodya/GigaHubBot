@@ -206,72 +206,89 @@ public class CatalogEditor {
             return false;
         }
 
-        // 🔥 Нормалізація назви
+        if (field == null || field.trim().isEmpty()) {
+            System.out.println("❌ Поле не вказано.");
+            return false;
+        }
+
+        // Нормалізація назви
         productName = productName
                 .replaceAll("\\s+", " ")
                 .trim();
 
-        System.out.println("DEBUG: updateField()");
-        System.out.println("DEBUG: Product = " + productName);
-        System.out.println("DEBUG: Field = " + field);
-        System.out.println("DEBUG: Value = " + value);
+        field = field.trim().toLowerCase();
 
-        // 🔒 Дозволені поля
-        boolean isBlobField = "manufacturer".equals(field);
+        System.out.println("========== updateField() ==========");
+        System.out.println("DEBUG Product = " + productName);
+        System.out.println("DEBUG Field   = " + field);
+        System.out.println("DEBUG Value   = " + value);
 
-        boolean isAllowed =
-                isBlobField
-                        || "price".equals(field)
-                        || "description".equals(field)
-                        || "photo".equals(field)
-                        || "unit".equals(field)
-                        || "name".equals(field);
+        // Дозволені поля
+        Set<String> allowedFields = Set.of(
+                "price",
+                "description",
+                "photo",
+                "unit",
+                "name",
+                "manufacturer"
+        );
 
-        if (!isAllowed) {
+        if (!allowedFields.contains(field)) {
             System.out.println("❌ Заборонене поле: " + field);
             return false;
         }
 
+        boolean isBlobField = field.equals("manufacturer");
+
         String checkSql = """
         SELECT id, name
         FROM products
-        WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+        WHERE BINARY TRIM(name) = TRIM(?)
         LIMIT 1
-    """;
+        """;
 
-        String updateSql = "UPDATE products SET " + field + " = ? " +
-                "WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))";
+        String updateSql =
+                "UPDATE products SET " + field + " = ? " +
+                        "WHERE BINARY TRIM(name) = TRIM(?)";
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
             conn.setAutoCommit(true);
 
-            // 🔍 Перевіряємо чи товар існує
+            int productId = -1;
+            String dbName = null;
+
+            // Перевіряємо чи товар існує
             try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
 
                 checkStmt.setString(1, productName);
 
-                ResultSet rs = checkStmt.executeQuery();
+                try (ResultSet rs = checkStmt.executeQuery()) {
 
-                if (!rs.next()) {
-                    System.out.println("⚠️ Товар не знайдено: " + productName);
-                    return false;
+                    if (!rs.next()) {
+                        System.out.println("⚠️ Товар не знайдено: " + productName);
+                        return false;
+                    }
+
+                    productId = rs.getInt("id");
+                    dbName = rs.getString("name");
+
+                    System.out.println("DEBUG Знайдено ID   = " + productId);
+                    System.out.println("DEBUG Знайдено Name = " + dbName);
                 }
-
-                System.out.println("DEBUG: Знайдено товар у БД -> " + rs.getString("name"));
             }
 
-            // 🔥 Оновлення
+            // Оновлення
             try (PreparedStatement stmt = conn.prepareStatement(updateSql)) {
 
                 if (isBlobField) {
 
-                    if (value == null
-                            || value.toString().trim().isEmpty()
-                            || value.toString().equalsIgnoreCase("❌")) {
+                    if (value == null ||
+                            value.toString().trim().isEmpty() ||
+                            value.toString().equals("❌")) {
 
                         stmt.setNull(1, Types.BLOB);
-                        System.out.println("DEBUG: manufacturer = NULL");
+                        System.out.println("DEBUG manufacturer = NULL");
 
                     } else {
 
@@ -280,23 +297,41 @@ public class CatalogEditor {
                                 .getBytes(StandardCharsets.UTF_8);
 
                         stmt.setBytes(1, bytes);
-
-                        System.out.println("DEBUG: manufacturer bytes saved");
+                        System.out.println("DEBUG manufacturer bytes saved");
                     }
 
                 } else {
 
-                    stmt.setObject(1, value);
+                    if (field.equals("price")) {
+
+                        if (value instanceof Number) {
+                            stmt.setDouble(1, ((Number) value).doubleValue());
+                        } else {
+                            stmt.setDouble(1,
+                                    Double.parseDouble(
+                                            value.toString()
+                                                    .replace(",", ".")
+                                                    .trim()
+                                    )
+                            );
+                        }
+
+                    } else {
+
+                        stmt.setString(1,
+                                value == null ? "" : value.toString().trim());
+                    }
                 }
 
                 stmt.setString(2, productName);
 
                 int rows = stmt.executeUpdate();
 
-                System.out.println("DEBUG: Rows updated = " + rows);
+                System.out.println("DEBUG Rows updated = " + rows);
 
                 if (rows > 0) {
-                    System.out.println("✅ Поле '" + field + "' оновлено.");
+                    System.out.println("✅ Поле '" + field +
+                            "' успішно оновлено для товару ID=" + productId);
                     return true;
                 } else {
                     System.out.println("⚠️ Оновлення не виконано.");
@@ -304,9 +339,9 @@ public class CatalogEditor {
                 }
             }
 
-        } catch (SQLException e) {
+        } catch (Exception e) {
 
-            System.out.println("❌ SQL ERROR updateField(): " + e.getMessage());
+            System.out.println("❌ updateField ERROR: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
