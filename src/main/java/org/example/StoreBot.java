@@ -1464,9 +1464,39 @@ public class StoreBot extends TelegramLongPollingBot {
                     userStates.put(userId, "awaiting_filter_for_subfilter");
                     filterPage.put(userId, 0);
 
-                    sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0)); // 🔥 АДМІН
+                    sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0));
 
                     return;
+                }
+
+                case "✏️ Редагувати підфільтр" -> {
+                    userStates.put(userId, "awaiting_edit_subfilter");
+                    sendText(chatId, "✏️ Введіть назву підфільтра:");
+                }
+
+                case "🗑 Видалити підфільтр" -> {
+                    userStates.put(userId, "awaiting_delete_subfilter");
+                    sendText(chatId, "🗑 Введіть назву підфільтра:");
+                }
+
+                case "✅ Увімкнути фільтр" -> {
+                    userStates.put(userId, "awaiting_enable_filter");
+                    sendText(chatId, "✅ Введіть назву фільтра:");
+                }
+
+                case "⛔ Вимкнути фільтр" -> {
+                    userStates.put(userId, "awaiting_disable_filter");
+                    sendText(chatId, "⛔ Введіть назву фільтра:");
+                }
+
+                case "✅ Увімкнути підфільтр" -> {
+                    userStates.put(userId, "awaiting_enable_subfilter");
+                    sendText(chatId, "✅ Введіть назву підфільтра:");
+                }
+
+                case "⛔ Вимкнути підфільтр" -> {
+                    userStates.put(userId, "awaiting_disable_subfilter");
+                    sendText(chatId, "⛔ Введіть назву підфільтра:");
                 }
 
                 case "✏️ Редагувати фільтр" -> {
@@ -2048,6 +2078,120 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 sendMessageSafely(createFiltersAdminMenu(chatId));
 
+                return;
+            }
+
+            // 🔹 Редагування підфільтра
+            if ("awaiting_edit_subfilter".equals(state)) {
+
+                if (text.equals("⬅️ Назад")) {
+                    userStates.remove(userId);
+                    sendMessageSafely(createFiltersAdminMenu(chatId));
+                    return;
+                }
+
+                editSubfilter(text.trim());
+
+                userStates.remove(userId);
+
+                sendText(chatId, "✅ Підфільтр оновлено: " + text);
+
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+                return;
+            }
+
+            // 🔹 Видалення підфільтра
+            if ("awaiting_delete_subfilter".equals(state)) {
+
+                if (text.equals("⬅️ Назад")) {
+                    userStates.remove(userId);
+                    sendMessageSafely(createFiltersAdminMenu(chatId));
+                    return;
+                }
+
+                deleteSubfilter(text.trim());
+
+                userStates.remove(userId);
+
+                sendText(chatId, "✅ Підфільтр видалено: " + text);
+
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+                return;
+            }
+
+            // 🔹 Увімкнути фільтр
+            if ("awaiting_enable_filter".equals(state)) {
+
+                if (text.equals("⬅️ Назад")) {
+                    userStates.remove(userId);
+                    sendMessageSafely(createFiltersAdminMenu(chatId));
+                    return;
+                }
+
+                enableFilter(text.trim());
+
+                userStates.remove(userId);
+
+                sendText(chatId, "✅ Фільтр увімкнено: " + text);
+
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+                return;
+            }
+
+            // 🔹 Вимкнути фільтр
+            if ("awaiting_disable_filter".equals(state)) {
+
+                if (text.equals("⬅️ Назад")) {
+                    userStates.remove(userId);
+                    sendMessageSafely(createFiltersAdminMenu(chatId));
+                    return;
+                }
+
+                disableFilter(text.trim());
+
+                userStates.remove(userId);
+
+                sendText(chatId, "⛔ Фільтр вимкнено: " + text);
+
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+                return;
+            }
+
+            // 🔹 Увімкнути підфільтр
+            if ("awaiting_enable_subfilter".equals(state)) {
+
+                if (text.equals("⬅️ Назад")) {
+                    userStates.remove(userId);
+                    sendMessageSafely(createFiltersAdminMenu(chatId));
+                    return;
+                }
+
+                enableSubfilter(text.trim());
+
+                userStates.remove(userId);
+
+                sendText(chatId, "✅ Підфільтр увімкнено: " + text);
+
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+                return;
+            }
+
+            // 🔹 Вимкнути підфільтр
+            if ("awaiting_disable_subfilter".equals(state)) {
+
+                if (text.equals("⬅️ Назад")) {
+                    userStates.remove(userId);
+                    sendMessageSafely(createFiltersAdminMenu(chatId));
+                    return;
+                }
+
+                disableSubfilter(text.trim());
+
+                userStates.remove(userId);
+
+                sendText(chatId, "⛔ Підфільтр вимкнено: " + text);
+
+                sendMessageSafely(createFiltersAdminMenu(chatId));
                 return;
             }
 
@@ -7706,23 +7850,39 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row2 = new KeyboardRow();
         row2.add("✏️ Редагувати фільтр");
-        row2.add("🗑 Видалити фільтр");
+        row2.add("✏️ Редагувати підфільтр");
 
         KeyboardRow row3 = new KeyboardRow();
-        row3.add("📋 Список фільтрів");
-        row3.add("📦 Товари у фільтрі");
+        row3.add("🗑 Видалити фільтр");
+        row3.add("🗑 Видалити підфільтр");
 
         KeyboardRow row4 = new KeyboardRow();
-        row4.add("🧹 Очистити фільтр");
+        row4.add("✅ Увімкнути фільтр");
+        row4.add("⛔ Вимкнути фільтр");
 
         KeyboardRow row5 = new KeyboardRow();
-        row5.add(BACK_BUTTON);
+        row5.add("✅ Увімкнути підфільтр");
+        row5.add("⛔ Вимкнути підфільтр");
+
+        KeyboardRow row6 = new KeyboardRow();
+        row6.add("📋 Список фільтрів");
+        row6.add("📋 Список підфільтрів");
+
+        KeyboardRow row7 = new KeyboardRow();
+        row7.add("📦 Товари у фільтрі");
+        row7.add("🧹 Очистити фільтр");
+
+        KeyboardRow row8 = new KeyboardRow();
+        row8.add(BACK_BUTTON);
 
         keyboard.add(row1);
         keyboard.add(row2);
         keyboard.add(row3);
         keyboard.add(row4);
         keyboard.add(row5);
+        keyboard.add(row6);
+        keyboard.add(row7);
+        keyboard.add(row8);
 
         markup.setKeyboard(keyboard);
 
@@ -8638,5 +8798,118 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         return false;
+    }
+
+    // 🔹 Редагувати підфільтр
+    private void editSubfilter(String oldName) {
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement("""
+            UPDATE subfilters
+            SET name = CONCAT(name, ' (edited)')
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+        """);
+
+            ps.setString(1, oldName);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 🔹 Видалити підфільтр
+    private void deleteSubfilter(String name) {
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement("""
+            DELETE FROM subfilters
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+        """);
+
+            ps.setString(1, name);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 🔹 Увімкнути фільтр
+    private void enableFilter(String name) {
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement("""
+            UPDATE filters
+            SET active = 1
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+        """);
+
+            ps.setString(1, name);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 🔹 Вимкнути фільтр
+    private void disableFilter(String name) {
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement("""
+            UPDATE filters
+            SET active = 0
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+        """);
+
+            ps.setString(1, name);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 🔹 Увімкнути підфільтр
+    private void enableSubfilter(String name) {
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement("""
+            UPDATE subfilters
+            SET active = 1
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+        """);
+
+            ps.setString(1, name);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // 🔹 Вимкнути підфільтр
+    private void disableSubfilter(String name) {
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement("""
+            UPDATE subfilters
+            SET active = 0
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+        """);
+
+            ps.setString(1, name);
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
