@@ -385,7 +385,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 ОБРОБКА КОШИКА (ГЛОБАЛЬНО)
+        // 🔥 ОБРОБКА КОШИКА
         if ("in_cart".equals(state)) {
 
             System.out.println("[STATE] in_cart TEXT=" + text);
@@ -473,6 +473,126 @@ public class StoreBot extends TelegramLongPollingBot {
                 );
             }
 
+            return;
+        }
+
+        // 🔹 Редагування підфільтра
+        if ("awaiting_edit_subfilter".equals(state)) {
+
+            if (text.equals("⬅️ Назад")) {
+                userStates.remove(userId);
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+                return;
+            }
+
+            editSubfilter(text.trim());
+
+            userStates.remove(userId);
+
+            sendText(chatId, "✅ Підфільтр оновлено: " + text);
+
+            sendMessageSafely(createFiltersAdminMenu(chatId));
+            return;
+        }
+
+        // 🔹 Видалення підфільтра
+        if ("awaiting_delete_subfilter".equals(state)) {
+
+            if (text.equals("⬅️ Назад")) {
+                userStates.remove(userId);
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+                return;
+            }
+
+            deleteSubfilter(text.trim());
+
+            userStates.remove(userId);
+
+            sendText(chatId, "✅ Підфільтр видалено: " + text);
+
+            sendMessageSafely(createFiltersAdminMenu(chatId));
+            return;
+        }
+
+        // 🔹 Увімкнути фільтр
+        if ("awaiting_enable_filter".equals(state)) {
+
+            if (text.equals("⬅️ Назад")) {
+                userStates.remove(userId);
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+                return;
+            }
+
+            enableFilter(text.trim());
+
+            userStates.remove(userId);
+
+            sendText(chatId, "✅ Фільтр увімкнено: " + text);
+
+            sendMessageSafely(createFiltersAdminMenu(chatId));
+            return;
+        }
+
+        // 🔹 Вимкнути фільтр
+        if ("awaiting_disable_filter".equals(state)) {
+
+            System.out.println("[STATE] awaiting_disable_filter TEXT=" + text);
+
+            if (text.equals("⬅️ Назад")) {
+                userStates.remove(userId);
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+                return;
+            }
+
+            boolean success = disableFilter(text.trim());
+
+            userStates.remove(userId);
+
+            if (success) {
+                sendText(chatId, "⛔ Фільтр вимкнено.");
+            } else {
+                sendText(chatId, "❌ Фільтр не знайдено.");
+            }
+
+            sendMessageSafely(createFiltersAdminMenu(chatId));
+            return; // 🔥 ОБОВЯЗКОВО
+        }
+
+        // 🔹 Увімкнути підфільтр
+        if ("awaiting_enable_subfilter".equals(state)) {
+
+            if (text.equals("⬅️ Назад")) {
+                userStates.remove(userId);
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+                return;
+            }
+
+            enableSubfilter(text.trim());
+
+            userStates.remove(userId);
+
+            sendText(chatId, "✅ Підфільтр увімкнено: " + text);
+
+            sendMessageSafely(createFiltersAdminMenu(chatId));
+            return;
+        }
+
+        // 🔹 Вимкнути підфільтр
+        if ("awaiting_disable_subfilter".equals(state)) {
+
+            if (text.equals("⬅️ Назад")) {
+                userStates.remove(userId);
+                sendMessageSafely(createFiltersAdminMenu(chatId));
+                return;
+            }
+
+            disableSubfilter(text.trim());
+
+            userStates.remove(userId);
+
+            sendText(chatId, "⛔ Підфільтр вимкнено: " + text);
+
+            sendMessageSafely(createFiltersAdminMenu(chatId));
             return;
         }
 
@@ -2078,126 +2198,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 sendMessageSafely(createFiltersAdminMenu(chatId));
 
-                return;
-            }
-
-            // 🔹 Редагування підфільтра
-            if ("awaiting_edit_subfilter".equals(state)) {
-
-                if (text.equals("⬅️ Назад")) {
-                    userStates.remove(userId);
-                    sendMessageSafely(createFiltersAdminMenu(chatId));
-                    return;
-                }
-
-                editSubfilter(text.trim());
-
-                userStates.remove(userId);
-
-                sendText(chatId, "✅ Підфільтр оновлено: " + text);
-
-                sendMessageSafely(createFiltersAdminMenu(chatId));
-                return;
-            }
-
-            // 🔹 Видалення підфільтра
-            if ("awaiting_delete_subfilter".equals(state)) {
-
-                if (text.equals("⬅️ Назад")) {
-                    userStates.remove(userId);
-                    sendMessageSafely(createFiltersAdminMenu(chatId));
-                    return;
-                }
-
-                deleteSubfilter(text.trim());
-
-                userStates.remove(userId);
-
-                sendText(chatId, "✅ Підфільтр видалено: " + text);
-
-                sendMessageSafely(createFiltersAdminMenu(chatId));
-                return;
-            }
-
-            // 🔹 Увімкнути фільтр
-            if ("awaiting_enable_filter".equals(state)) {
-
-                if (text.equals("⬅️ Назад")) {
-                    userStates.remove(userId);
-                    sendMessageSafely(createFiltersAdminMenu(chatId));
-                    return;
-                }
-
-                enableFilter(text.trim());
-
-                userStates.remove(userId);
-
-                sendText(chatId, "✅ Фільтр увімкнено: " + text);
-
-                sendMessageSafely(createFiltersAdminMenu(chatId));
-                return;
-            }
-
-            // 🔹 Вимкнути фільтр
-            if ("awaiting_disable_filter".equals(state)) {
-
-                System.out.println("[STATE] awaiting_disable_filter TEXT=" + text);
-
-                if (text.equals("⬅️ Назад")) {
-                    userStates.remove(userId);
-                    sendMessageSafely(createFiltersAdminMenu(chatId));
-                    return;
-                }
-
-                boolean success = disableFilter(text.trim());
-
-                userStates.remove(userId);
-
-                if (success) {
-                    sendText(chatId, "⛔ Фільтр вимкнено.");
-                } else {
-                    sendText(chatId, "❌ Фільтр не знайдено.");
-                }
-
-                sendMessageSafely(createFiltersAdminMenu(chatId));
-                return; // 🔥 ОБОВЯЗКОВО
-            }
-
-            // 🔹 Увімкнути підфільтр
-            if ("awaiting_enable_subfilter".equals(state)) {
-
-                if (text.equals("⬅️ Назад")) {
-                    userStates.remove(userId);
-                    sendMessageSafely(createFiltersAdminMenu(chatId));
-                    return;
-                }
-
-                enableSubfilter(text.trim());
-
-                userStates.remove(userId);
-
-                sendText(chatId, "✅ Підфільтр увімкнено: " + text);
-
-                sendMessageSafely(createFiltersAdminMenu(chatId));
-                return;
-            }
-
-            // 🔹 Вимкнути підфільтр
-            if ("awaiting_disable_subfilter".equals(state)) {
-
-                if (text.equals("⬅️ Назад")) {
-                    userStates.remove(userId);
-                    sendMessageSafely(createFiltersAdminMenu(chatId));
-                    return;
-                }
-
-                disableSubfilter(text.trim());
-
-                userStates.remove(userId);
-
-                sendText(chatId, "⛔ Підфільтр вимкнено: " + text);
-
-                sendMessageSafely(createFiltersAdminMenu(chatId));
                 return;
             }
 
