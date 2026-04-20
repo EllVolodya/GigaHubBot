@@ -217,13 +217,13 @@ public class CatalogEditor {
             return false;
         }
 
-        String sql = "UPDATE products SET " + field + " = ? WHERE LOWER(name) = LOWER(?)";
+        String sql = "UPDATE products SET " + field + " = ? WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))";
 
         try (Connection conn = DatabaseManager.getConnection()) {
             conn.setAutoCommit(true);
 
             try (PreparedStatement checkStmt = conn.prepareStatement(
-                    "SELECT name FROM products WHERE LOWER(name) = LOWER(?)"
+                    "SELECT name FROM products WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))"
             )) {
                 checkStmt.setString(1, productName);
                 ResultSet rs = checkStmt.executeQuery();

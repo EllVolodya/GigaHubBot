@@ -5139,7 +5139,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         userStates.put(userId, "editing");
     }
-    
+
     // ⭐ Додавання хіта продажу
     private void handleAddHit(Long userId, String chatId, String text) {
         hitItems.add("⭐ " + text);
