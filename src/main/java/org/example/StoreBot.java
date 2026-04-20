@@ -4352,53 +4352,85 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "editing_field_value" -> {
                 String field = adminEditingField.get(userId);
-                String singleProduct = adminEditingProduct.get(userId);
                 List<String> productsToEdit = adminSelectedProductsRange.get(userId);
+                String singleProduct = adminEditingProduct.get(userId);
 
-                if (field == null || (singleProduct == null && (productsToEdit == null || productsToEdit.isEmpty()))) {
+                // Якщо є список товарів — працюємо тільки з ним
+                if (productsToEdit != null && !productsToEdit.isEmpty()) {
+                    singleProduct = null;
+                }
+
+                // Перевірка
+                if (field == null || ((productsToEdit == null || productsToEdit.isEmpty()) && singleProduct == null)) {
                     sendText(chatId, "❌ Сталася помилка. Спробуйте ще раз.");
+                    adminEditingField.remove(userId);
                     userStates.remove(userId);
                     return;
                 }
 
                 String newValue = text.trim();
-                System.out.println("DEBUG: User " + userId + " entered new value '" + newValue + "' for field '" + field + "'");
 
-                // Перевірка для одиниці виміру
-                if ("unit".equals(field) && !newValue.equalsIgnoreCase("шт") && !newValue.equalsIgnoreCase("метр")) {
-                    sendText(chatId, "❌ Допустимі значення: 'шт' або 'метр'. Спробуйте ще раз:");
-                    return;
+                System.out.println("DEBUG: User " + userId +
+                        " entered new value '" + newValue +
+                        "' for field '" + field + "'");
+
+                // Перевірка unit
+                if ("unit".equals(field)) {
+                    if (!newValue.equalsIgnoreCase("шт") &&
+                            !newValue.equalsIgnoreCase("метр")) {
+
+                        sendText(chatId,
+                                "❌ Допустимі значення: 'шт' або 'метр'. Спробуйте ще раз:");
+                        return;
+                    }
                 }
 
+                // =========================
+                // Масове оновлення
+                // =========================
                 if (productsToEdit != null && !productsToEdit.isEmpty()) {
-                    // Масове оновлення
+
                     int successCount = 0;
+
                     for (String productName : productsToEdit) {
                         boolean updated = CatalogEditor.updateField(productName, field, newValue);
-                        if (updated) successCount++;
+
+                        if (updated) {
+                            successCount++;
+                        }
                     }
 
-                    // Формуємо рядок з вибраними товарами (діапазон або номери)
-                    String selection = productsToEdit.size() > 1 ? "1-" + productsToEdit.size() : "1";
-                    sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для всіх " + successCount +
-                            " товарів у вибраному діапазоні (" + selection + ").");
+                    sendText(chatId,
+                            "✅ Поле '" + field + "' успішно оновлено для "
+                                    + successCount + " із "
+                                    + productsToEdit.size() + " товарів.");
 
-                } else if (singleProduct != null) {
-                    // Оновлення одного товару
+                }
+
+                // =========================
+                // Одиночне оновлення
+                // =========================
+                else if (singleProduct != null) {
+
                     boolean success = CatalogEditor.updateField(singleProduct, field, newValue);
+
                     if (success) {
-                        sendText(chatId, "✅ Поле '" + field + "' успішно оновлено для товару '" + singleProduct + "'");
+                        sendText(chatId,
+                                "✅ Поле '" + field + "' успішно оновлено для товару:\n"
+                                        + singleProduct);
                     } else {
-                        sendText(chatId, "⚠️ Не вдалося оновити поле '" + field + "' для товару '" + singleProduct + "'");
+                        sendText(chatId,
+                                "⚠️ Не вдалося оновити поле '" + field + "' для товару:\n"
+                                        + singleProduct);
                     }
                 }
 
-                // 🔹 Залишаємо користувача в меню редагування для подальших змін
-                sendMessageSafely(createEditMenu(chatId, userId));
-
-                // --- Очищення станів для поля (але залишаємо список товарів для подальшого редагування)
+                // Очистка поля редагування
                 adminEditingField.remove(userId);
-                userStates.put(userId, "editing"); // повертаємо користувача в режим редагування
+
+                // Повернення в меню редагування
+                userStates.put(userId, "editing");
+                sendMessageSafely(createEditMenu(chatId, userId));
             }
 
             case "changelog_menu" -> {
@@ -4938,22 +4970,27 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "Введіть нову ціну:");
                 break;
 
-            case "📖 Опис":
-                if (productsToEdit != null && !productsToEdit.isEmpty()) {
-                    adminEditingProduct.remove(userId);
+            case "📖 Опис": {
 
-                } else {
-                    if (adminEditingProduct.get(userId) == null) {
-                        sendText(chatId, "❌ Спочатку виберіть товар.");
-                        return;
-                    }
+                // Якщо нічого не вибрано
+                if ((productsToEdit == null || productsToEdit.isEmpty()) && singleProduct == null) {
+                    sendText(chatId, "❌ Спочатку виберіть товар.");
+                    return;
                 }
 
+                // Ставимо поле для редагування
                 adminEditingField.put(userId, "description");
                 userStates.put(userId, "editing_field_value");
 
-                sendText(chatId, "✏️ Введіть новий опис:");
+                // Повідомлення
+                if (productsToEdit != null && !productsToEdit.isEmpty()) {
+                    sendText(chatId, "✏️ Введіть новий опис для " + productsToEdit.size() + " товар(ів):");
+                } else {
+                    sendText(chatId, "✏️ Введіть новий опис:");
+                }
+
                 return;
+            }
 
             case "🗂️ Додати в підкатегорію":
 
