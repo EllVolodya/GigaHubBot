@@ -4940,7 +4940,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "📖 Опис":
                 adminEditingField.put(userId, "description");
-                userStates.put(userId, "awaiting_field_value");
+                userStates.put(userId, "editing_field_value");
                 sendText(chatId, "Введіть новий опис:");
                 return;
 
