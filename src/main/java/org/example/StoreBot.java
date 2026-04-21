@@ -2898,7 +2898,7 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessage(createUserMenu(chatId, userId));
     }
 
-    //Показ товара новий
+    //Показ товара
     private void handleProductSelection(Long chatId, int choice) throws TelegramApiException {
 
         List<Map<String, Object>> products = userProductLists.get(chatId);
@@ -8125,17 +8125,10 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // Показ фільтрів
-    private void sendFilters(Long chatId, int page) throws TelegramApiException {
+    private void sendFilters(Long chatId, int page)
+            throws TelegramApiException {
 
-        List<String> filters = userFilters.get(chatId);
-
-        if (filters == null || filters.isEmpty()) {
-            sendText(chatId, "❌ Фільтри не знайдено.");
-            return;
-        }
-
-        // 🔥 Прибираємо вимкнені фільтри
-        List<String> activeFilters = new ArrayList<>();
+        List<String> filters = new ArrayList<>();
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
@@ -8148,62 +8141,46 @@ public class StoreBot extends TelegramLongPollingBot {
 
             ResultSet rs = ps.executeQuery();
 
-            Set<String> dbFilters = new HashSet<>();
-
             while (rs.next()) {
-                dbFilters.add(rs.getString("name").trim());
-            }
-
-            for (String filter : filters) {
-                if (filter != null && dbFilters.contains(filter.trim())) {
-                    activeFilters.add(filter.trim());
-                }
+                filters.add(rs.getString("name").trim());
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-            sendText(chatId, "❌ Помилка при завантаженні фільтрів.");
+            sendText(chatId, "❌ Помилка завантаження фільтрів.");
             return;
         }
 
-        if (activeFilters.isEmpty()) {
-            sendText(chatId, "❌ Активні фільтри не знайдено.");
+        if (filters.isEmpty()) {
+            sendText(chatId, "❌ Доступних фільтрів немає.");
             return;
         }
 
         int pageSize = 20;
-        int totalPages = (int) Math.ceil((double) activeFilters.size() / pageSize);
+        int totalPages =
+                (int) Math.ceil((double) filters.size() / pageSize);
 
         if (totalPages <= 0) totalPages = 1;
 
-        if (page < 0) page = 0;
-        if (page >= totalPages) page = totalPages - 1;
+        page = Math.max(0, Math.min(page, totalPages - 1));
 
         filterPage.put(chatId, page);
 
         int start = page * pageSize;
-        int end = Math.min(start + pageSize, activeFilters.size());
+        int end = Math.min(start + pageSize, filters.size());
 
         List<KeyboardRow> rows = new ArrayList<>();
-        KeyboardRow row = new KeyboardRow();
 
-        for (int i = start; i < end; i++) {
+        for (int i = start; i < end; i += 2) {
 
-            String filter = activeFilters.get(i);
+            KeyboardRow row = new KeyboardRow();
 
-            if (filter.length() > 25) {
-                filter = filter.substring(0, 25);
+            row.add(filters.get(i));
+
+            if (i + 1 < end) {
+                row.add(filters.get(i + 1));
             }
 
-            row.add(filter);
-
-            if (row.size() == 2) {
-                rows.add(row);
-                row = new KeyboardRow();
-            }
-        }
-
-        if (!row.isEmpty()) {
             rows.add(row);
         }
 
@@ -8212,58 +8189,55 @@ public class StoreBot extends TelegramLongPollingBot {
         if (page > 0) nav.add("Попередні");
         if (page < totalPages - 1) nav.add("Продовжити");
 
-        if (!nav.isEmpty()) {
-            rows.add(nav);
-        }
+        if (!nav.isEmpty()) rows.add(nav);
 
         KeyboardRow back = new KeyboardRow();
         back.add(BACK_BUTTON);
         rows.add(back);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
-        markup.setKeyboard(rows);
         markup.setResizeKeyboard(true);
+        markup.setKeyboard(rows);
 
         sendMessage(
                 chatId,
-                "🔎 Обери фільтр (" + (page + 1) + "/" + totalPages + "):",
+                "🔎 Обери фільтр (" +
+                        (page + 1) + "/" + totalPages + "):",
                 markup
         );
     }
 
     // 🔹 Показ підфільтрів
-    private void sendSubfilters(Long chatId, String filterName, int page) throws TelegramApiException {
-
-        if (filterName == null || filterName.isBlank()) {
-            sendText(chatId.toString(), "❌ Помилка: фільтр не визначений.");
-            return;
-        }
+    private void sendSubfilters(
+            Long chatId,
+            String filterName,
+            int page
+    ) throws TelegramApiException {
 
         List<String> subfilters = new ArrayList<>();
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            // 🔥 Шукаємо активний filter_id
             PreparedStatement findFilter = conn.prepareStatement("""
             SELECT id
             FROM filters
-            WHERE LOWER(TRIM(name)) LIKE CONCAT('%', LOWER(TRIM(?)), '%')
+            WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
             AND active = 1
             LIMIT 1
         """);
 
             findFilter.setString(1, filterName.trim());
 
-            ResultSet filterRs = findFilter.executeQuery();
+            ResultSet frs = findFilter.executeQuery();
 
-            if (!filterRs.next()) {
-                sendText(chatId.toString(), "❌ Фільтр не знайдено або вимкнений.");
+            if (!frs.next()) {
+                sendText(chatId,
+                        "❌ Фільтр вимкнений або не знайдений.");
                 return;
             }
 
-            int filterId = filterRs.getInt("id");
+            int filterId = frs.getInt("id");
 
-            // 🔥 Беремо тільки активні підфільтри
             PreparedStatement ps = conn.prepareStatement("""
             SELECT name
             FROM subfilters
@@ -8277,36 +8251,29 @@ public class StoreBot extends TelegramLongPollingBot {
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-
-                String name = rs.getString("name");
-
-                if (name != null && !name.isBlank()) {
-                    subfilters.add(name.trim());
-                }
+                subfilters.add(
+                        rs.getString("name").trim()
+                );
             }
 
         } catch (Exception e) {
             e.printStackTrace();
-            sendText(chatId.toString(), "❌ Помилка при завантаженні підфільтрів.");
+            sendText(chatId,
+                    "❌ Помилка завантаження підфільтрів.");
             return;
         }
 
-        // 🔴 Якщо немає активних підфільтрів
         if (subfilters.isEmpty()) {
-            sendText(chatId.toString(), "ℹ️ У цьому розділі немає доступних підфільтрів.");
+            sendText(chatId,
+                    "❌ Активних підфільтрів немає.");
             return;
         }
 
-        // 🔥 Унікальні значення
-        subfilters = subfilters.stream().distinct().toList();
-
-        // 🔹 Пагінація
         int pageSize = 20;
-        int totalPages = (int) Math.ceil((double) subfilters.size() / pageSize);
+        int totalPages =
+                (int) Math.ceil((double) subfilters.size() / pageSize);
 
-        if (totalPages <= 0) {
-            totalPages = 1;
-        }
+        if (totalPages <= 0) totalPages = 1;
 
         page = Math.max(0, Math.min(page, totalPages - 1));
 
@@ -8328,6 +8295,8 @@ public class StoreBot extends TelegramLongPollingBot {
             rows.add(row);
         }
 
+        KeyboardRow nav = new KeyboardRow();
+
         // 🔹 Навігація
         if (page < totalPages - 1) {
             KeyboardRow nextRow = new KeyboardRow();
@@ -8341,18 +8310,20 @@ public class StoreBot extends TelegramLongPollingBot {
             rows.add(prevRow);
         }
 
-        // 🔙 Назад
-        KeyboardRow backRow = new KeyboardRow();
-        backRow.add(BACK_BUTTON);
-        rows.add(backRow);
+        if (!nav.isEmpty()) rows.add(nav);
+
+        KeyboardRow back = new KeyboardRow();
+        back.add(BACK_BUTTON);
+        rows.add(back);
 
         ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
-        markup.setKeyboard(rows);
         markup.setResizeKeyboard(true);
+        markup.setKeyboard(rows);
 
         sendMessage(
-                chatId.toString(),
-                "🔎 Обери підфільтр:\nСторінка " + (page + 1) + " з " + totalPages,
+                chatId,
+                "🔎 Обери підфільтр (" +
+                        (page + 1) + "/" + totalPages + "):",
                 markup
         );
     }
