@@ -7930,15 +7930,10 @@ public class StoreBot extends TelegramLongPollingBot {
         row4.add("🗑 Видалити підфільтр");
 
         KeyboardRow row5 = new KeyboardRow();
-        row5.add("📋 Список фільтрів");
-        row5.add("📋 Список підфільтрів");
+        row5.add("🧹 Очистити фільтр");
 
         KeyboardRow row6 = new KeyboardRow();
-        row6.add("📦 Товари у фільтрі");
-        row6.add("🧹 Очистити фільтр");
-
-        KeyboardRow row7 = new KeyboardRow();
-        row7.add(BACK_BUTTON);
+        row6.add(BACK_BUTTON);
 
         keyboard.add(row1);
         keyboard.add(row2);
@@ -7946,7 +7941,6 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row4);
         keyboard.add(row5);
         keyboard.add(row6);
-        keyboard.add(row7);
 
         markup.setKeyboard(keyboard);
 
