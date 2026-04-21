@@ -1623,6 +1623,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "🔄 Увімк/Вимк фільтри" -> {
                     userStates.put(userId, "filters_toggle_menu");
                     sendMessageSafely(createFiltersToggleMenu(chatId));
+                    return;
                 }
 
                 case "🗑 Видалити підфільтр" -> {
