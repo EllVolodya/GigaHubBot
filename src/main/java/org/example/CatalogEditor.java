@@ -443,4 +443,37 @@ public class CatalogEditor {
 
         return out;
     }
+
+    public static boolean updateFieldById(
+            int productId,
+            String field,
+            Object value
+    ) {
+
+        try (Connection conn =
+                     DatabaseManager.getConnection()) {
+
+            String sql =
+                    "UPDATE products SET "
+                            + field
+                            + "=? WHERE id=?";
+
+            try (PreparedStatement stmt =
+                         conn.prepareStatement(sql)) {
+
+                stmt.setString(1,
+                        value == null ? "" : value.toString());
+
+                stmt.setInt(2, productId);
+
+                int rows = stmt.executeUpdate();
+
+                return rows > 0;
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

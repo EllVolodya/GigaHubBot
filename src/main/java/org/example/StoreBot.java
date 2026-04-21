@@ -115,7 +115,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<String, Object> tempStorage = new HashMap<>();
     private Map<Long, Integer> filterPage = new HashMap<>();
     private Map<Long, Map<String, Object>> adminSelectedProduct = new HashMap<>(); // 🔹 один товар
-    private Map<Long, List<Map<String, Object>>> adminSelectedProducts = new HashMap<>(); // 🔹 список товарів
+    private Map<Long, List<Map<String, Object>>> adminSelectedProducts = new HashMap<>();// 🔹 список товарів
+    private final Map<Long, List<Integer>> adminSelectedProductsIds = new HashMap<>();
 
     private final CatalogSearcher catalogSearcher = new CatalogSearcher();
     protected Map<Long, List<Map<String, Object>>> searchResults = new HashMap<>();
@@ -4388,125 +4389,44 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 String field = adminEditingField.get(userId);
 
-                List<String> productsToEdit =
-                        adminSelectedProductsRange.get(userId);
+                List<Integer> productIds =
+                        adminSelectedProductsIds.get(userId);
 
-                String singleProduct =
-                        adminEditingProduct.get(userId);
-
-                // Якщо вибрано декілька товарів
-                if (productsToEdit != null && !productsToEdit.isEmpty()) {
-                    singleProduct = null;
-                }
-
-                // Перевірка
                 if (field == null ||
-                        ((productsToEdit == null || productsToEdit.isEmpty())
-                                && singleProduct == null)) {
+                        productIds == null ||
+                        productIds.isEmpty()) {
 
-                    sendText(chatId, "❌ Сталася помилка. Спробуйте ще раз.");
-
-                    adminEditingField.remove(userId);
-                    userStates.remove(userId);
+                    sendText(chatId, "❌ Помилка вибору товару.");
                     return;
                 }
 
                 String newValue = text.trim();
 
-                // Перевірка unit
-                if ("unit".equals(field)) {
+                int successCount = 0;
 
-                    if (!newValue.equalsIgnoreCase("шт")
-                            && !newValue.equalsIgnoreCase("метр")
-                            && !newValue.equalsIgnoreCase("м2")
-                            && !newValue.equalsIgnoreCase("під замовлення")) {
+                for (Integer productId : productIds) {
 
-                        sendText(chatId,
-                                "❌ Допустимі значення:\n" +
-                                        "• шт\n" +
-                                        "• метр\n" +
-                                        "• м2\n" +
-                                        "• під замовлення");
-                        return;
+                    boolean updated =
+                            CatalogEditor.updateFieldById(
+                                    productId,
+                                    field,
+                                    newValue
+                            );
+
+                    if (updated) {
+                        successCount++;
                     }
                 }
 
-                // Масове оновлення через SQL
-                if (productsToEdit != null && !productsToEdit.isEmpty()) {
+                sendText(chatId,
+                        "✅ Оновлено "
+                                + successCount
+                                + " із "
+                                + productIds.size()
+                                + " товарів.");
 
-                    int successCount = 0;
-
-                    try (Connection conn = DatabaseManager.getConnection()) {
-
-                        for (String productName : productsToEdit) {
-
-                            String sql =
-                                    "UPDATE products SET " + field + "=? WHERE name=?";
-
-                            try (PreparedStatement stmt =
-                                         conn.prepareStatement(sql)) {
-
-                                stmt.setString(1, newValue);
-                                stmt.setString(2, productName);
-
-                                int rows = stmt.executeUpdate();
-
-                                if (rows > 0) {
-                                    successCount++;
-                                }
-                            }
-                        }
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        sendText(chatId, "❌ Помилка бази даних.");
-                        return;
-                    }
-
-                    sendText(chatId,
-                            "✅ Оновлено "
-                                    + successCount
-                                    + " із "
-                                    + productsToEdit.size()
-                                    + " товарів.");
-                }
-
-                // Один товар через SQL
-                else {
-
-                    try (Connection conn = DatabaseManager.getConnection()) {
-
-                        String sql =
-                                "UPDATE products SET " + field + "=? WHERE name=?";
-
-                        try (PreparedStatement stmt =
-                                     conn.prepareStatement(sql)) {
-
-                            stmt.setString(1, newValue);
-                            stmt.setString(2, singleProduct);
-
-                            int rows = stmt.executeUpdate();
-
-                            if (rows > 0) {
-                                sendText(chatId,
-                                        "✅ Товар успішно оновлено.");
-                            } else {
-                                sendText(chatId,
-                                        "⚠️ Товар не знайдено.");
-                            }
-                        }
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        sendText(chatId, "❌ Помилка бази даних.");
-                        return;
-                    }
-                }
-
-                // Очистка
                 adminEditingField.remove(userId);
 
-                // Повернення в меню
                 userStates.put(userId, "editing");
 
                 sendMessageSafely(
@@ -4941,6 +4861,7 @@ public class StoreBot extends TelegramLongPollingBot {
         userStates.put(userId, "choose_search_source");
     }
 
+    ///  Вибір товару
     private void handleChooseProduct(Long userId, String chatId, String text) {
 
         List<Map<String, Object>> matches = adminMatchList.get(userId);
@@ -4954,11 +4875,11 @@ public class StoreBot extends TelegramLongPollingBot {
         text = text.trim();
 
         List<Map<String, Object>> selectedProducts = new ArrayList<>();
-        List<String> selectedNames = new ArrayList<>();
+        List<Integer> selectedIds = new ArrayList<>();
 
         try {
 
-            // ДІАПАЗОН
+            // Діапазон
             if (text.contains("-")) {
 
                 String[] parts = text.split("-");
@@ -4967,15 +4888,14 @@ public class StoreBot extends TelegramLongPollingBot {
                 int end   = Integer.parseInt(parts[1].trim()) - 1;
 
                 start = Math.max(start, 0);
-                end = Math.min(end, matches.size() - 1);
+                end   = Math.min(end, matches.size() - 1);
 
                 for (int i = start; i <= end; i++) {
                     selectedProducts.add(matches.get(i));
                 }
-
             }
 
-            // СПИСОК
+            // Список
             else if (text.contains(",")) {
 
                 String[] parts = text.split(",");
@@ -4990,7 +4910,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // ОДИН
+            // Один товар
             else {
 
                 int index = Integer.parseInt(text) - 1;
@@ -5005,42 +4925,44 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // Формуємо список назв
+            // Збираємо ID
             for (Map<String, Object> product : selectedProducts) {
-                selectedNames.add(product.get("name").toString());
+
+                Object rawId = product.get("id");
+
+                if (rawId instanceof Integer) {
+                    selectedIds.add((Integer) rawId);
+                } else {
+                    selectedIds.add(
+                            Integer.parseInt(rawId.toString())
+                    );
+                }
             }
 
-            // ГОЛОВНИЙ ФІКС
+            // Зберігаємо
             adminSelectedProducts.put(userId, selectedProducts);
-            adminSelectedProductsRange.put(userId, selectedNames);
+            adminSelectedProductsIds.put(userId, selectedIds);
 
-            Map<String, Object> currentProduct = selectedProducts.get(0);
+            Map<String, Object> first = selectedProducts.get(0);
 
-            adminSelectedProduct.put(userId, currentProduct);
+            adminSelectedProduct.put(userId, first);
             adminEditingProduct.put(userId,
-                    currentProduct.get("name").toString());
+                    first.get("name").toString());
 
             userStates.put(userId, "editing");
 
             adminMatchList.remove(userId);
 
-            StringBuilder sb = new StringBuilder();
-
-            sb.append("✏️ Редагуємо ")
-                    .append(selectedProducts.size())
-                    .append(" товар(ів)\n\n");
-
-            sb.append("📦 Поточний:\n")
-                    .append(currentProduct.get("name"));
-
-            sendText(chatId, sb.toString());
+            sendText(chatId,
+                    "✏️ Редагуємо "
+                            + selectedProducts.size()
+                            + " товар(ів)");
 
             showEditMenuOnce(userId, chatId);
 
         } catch (Exception e) {
-
             sendText(chatId,
-                    "❌ Введіть номер, діапазон (1-10) або список (1,3,5)");
+                    "❌ Введіть номер, діапазон (1-5) або список (1,3,5)");
         }
     }
 
