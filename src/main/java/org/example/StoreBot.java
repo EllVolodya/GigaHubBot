@@ -4385,18 +4385,28 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case "editing_field_value" -> {
-                String field = adminEditingField.get(userId);
-                List<String> productsToEdit = adminSelectedProductsRange.get(userId);
-                String singleProduct = adminEditingProduct.get(userId);
 
-                // Якщо є список товарів — працюємо тільки з ним
+                String field =
+                        adminEditingField.get(userId);
+
+                List<String> productsToEdit =
+                        adminSelectedProductsRange.get(userId);
+
+                String singleProduct =
+                        adminEditingProduct.get(userId);
+
+                // Якщо вибрано список товарів — одиночний ігноруємо
                 if (productsToEdit != null && !productsToEdit.isEmpty()) {
                     singleProduct = null;
                 }
 
                 // Перевірка
-                if (field == null || ((productsToEdit == null || productsToEdit.isEmpty()) && singleProduct == null)) {
+                if (field == null ||
+                        ((productsToEdit == null || productsToEdit.isEmpty())
+                                && singleProduct == null)) {
+
                     sendText(chatId, "❌ Сталася помилка. Спробуйте ще раз.");
+
                     adminEditingField.remove(userId);
                     userStates.remove(userId);
                     return;
@@ -4404,30 +4414,40 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 String newValue = text.trim();
 
-                System.out.println("DEBUG: User " + userId +
-                        " entered new value '" + newValue +
-                        "' for field '" + field + "'");
-
-                // Перевірка unit
+                // Перевірка одиниці виміру
                 if ("unit".equals(field)) {
-                    if (!newValue.equalsIgnoreCase("шт") &&
-                            !newValue.equalsIgnoreCase("метр")) {
+
+                    if (!newValue.equalsIgnoreCase("шт")
+                            && !newValue.equalsIgnoreCase("метр")
+                            && !newValue.equalsIgnoreCase("м2")
+                            && !newValue.equalsIgnoreCase("під замовлення")) {
 
                         sendText(chatId,
-                                "❌ Допустимі значення: 'шт' або 'метр'. Спробуйте ще раз:");
+                                "❌ Допустимі значення:\n" +
+                                        "• шт\n" +
+                                        "• метр\n" +
+                                        "• м2\n" +
+                                        "• під замовлення");
+
                         return;
                     }
                 }
 
-                // =========================
+                // ==========================
                 // Масове оновлення
-                // =========================
+                // ==========================
                 if (productsToEdit != null && !productsToEdit.isEmpty()) {
 
                     int successCount = 0;
 
                     for (String productName : productsToEdit) {
-                        boolean updated = CatalogEditor.updateField(productName, field, newValue);
+
+                        boolean updated =
+                                CatalogEditor.updateField(
+                                        productName,
+                                        field,
+                                        newValue
+                                );
 
                         if (updated) {
                             successCount++;
@@ -4435,36 +4455,41 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     sendText(chatId,
-                            "✅ Поле '" + field + "' успішно оновлено для "
-                                    + successCount + " із "
-                                    + productsToEdit.size() + " товарів.");
-
+                            "✅ Оновлено "
+                                    + successCount
+                                    + " із "
+                                    + productsToEdit.size()
+                                    + " товарів.");
                 }
 
-                // =========================
+                // ==========================
                 // Одиночне оновлення
-                // =========================
-                else if (singleProduct != null) {
+                // ==========================
+                else {
 
-                    boolean success = CatalogEditor.updateField(singleProduct, field, newValue);
+                    boolean success =
+                            CatalogEditor.updateField(
+                                    singleProduct,
+                                    field,
+                                    newValue
+                            );
 
                     if (success) {
-                        sendText(chatId,
-                                "✅ Поле '" + field + "' успішно оновлено для товару:\n"
-                                        + singleProduct);
+                        sendText(chatId, "✅ Товар успішно оновлено.");
                     } else {
-                        sendText(chatId,
-                                "⚠️ Не вдалося оновити поле '" + field + "' для товару:\n"
-                                        + singleProduct);
+                        sendText(chatId, "⚠️ Не вдалося оновити товар.");
                     }
                 }
 
                 // Очистка поля редагування
                 adminEditingField.remove(userId);
 
-                // Повернення в меню редагування
+                // Повернення в меню
                 userStates.put(userId, "editing");
-                sendMessageSafely(createEditMenu(chatId, userId));
+
+                sendMessageSafely(
+                        createEditMenu(chatId, userId)
+                );
             }
 
             case "changelog_menu" -> {
