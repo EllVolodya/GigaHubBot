@@ -1298,6 +1298,40 @@ public class StoreBot extends TelegramLongPollingBot {
             // 🔹 Обробка станів користувача
             if (state != null) {
                 switch (state) {
+                    case "filters_toggle_menu" -> {
+
+                        switch (text) {
+
+                            case "✅ Увімкнути фільтр":
+                                userStates.put(userId, "enable_filter");
+                                sendText(chatId, "📂 Введіть назву фільтра для увімкнення:");
+                                return;
+
+                            case "⛔ Вимкнути фільтр":
+                                userStates.put(userId, "disable_filter");
+                                sendText(chatId, "📂 Введіть назву фільтра для вимкнення:");
+                                return;
+
+                            case "✅ Увімкнути підфільтр":
+                                userStates.put(userId, "enable_subfilter");
+                                sendText(chatId, "📁 Введіть назву підфільтра для увімкнення:");
+                                return;
+
+                            case "⛔ Вимкнути підфільтр":
+                                userStates.put(userId, "disable_subfilter");
+                                sendText(chatId, "📁 Введіть назву підфільтра для вимкнення:");
+                                return;
+
+                            case "⬅️ Назад":
+                                userStates.put(userId, "developer_menu");
+                                sendMessageSafely(createFiltersAdminMenu(chatId));
+                                return;
+
+                            default:
+                                sendText(chatId, "❌ Оберіть кнопку з меню.");
+                                return;
+                        }
+                    }
                     case "awaiting_pickup_data" -> {
                         List<Map<String, Object>> cart = userCart.get(userId);
                         if (cart == null || cart.isEmpty()) {
@@ -1589,9 +1623,9 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                case "✏️ Редагувати підфільтр" -> {
-                    userStates.put(userId, "awaiting_edit_subfilter");
-                    sendText(chatId, "✏️ Введіть назву підфільтра:");
+                case "🔄 Увімк/Вимк фільтри" -> {
+                    userStates.put(userId, "filters_toggle_menu");
+                    sendMessageSafely(createFiltersToggleMenu(chatId));
                 }
 
                 case "🗑 Видалити підфільтр" -> {
@@ -7893,23 +7927,18 @@ public class StoreBot extends TelegramLongPollingBot {
         row3.add("🗑 Видалити підфільтр");
 
         KeyboardRow row4 = new KeyboardRow();
-        row4.add("✅ Увімкнути фільтр");
-        row4.add("⛔ Вимкнути фільтр");
+        row4.add("🔄 Увімк/Вимк фільтри");
 
         KeyboardRow row5 = new KeyboardRow();
-        row5.add("✅ Увімкнути підфільтр");
-        row5.add("⛔ Вимкнути підфільтр");
+        row5.add("📋 Список фільтрів");
+        row5.add("📋 Список підфільтрів");
 
         KeyboardRow row6 = new KeyboardRow();
-        row6.add("📋 Список фільтрів");
-        row6.add("📋 Список підфільтрів");
+        row6.add("📦 Товари у фільтрі");
+        row6.add("🧹 Очистити фільтр");
 
         KeyboardRow row7 = new KeyboardRow();
-        row7.add("📦 Товари у фільтрі");
-        row7.add("🧹 Очистити фільтр");
-
-        KeyboardRow row8 = new KeyboardRow();
-        row8.add(BACK_BUTTON);
+        row7.add(BACK_BUTTON);
 
         keyboard.add(row1);
         keyboard.add(row2);
@@ -7918,13 +7947,43 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row5);
         keyboard.add(row6);
         keyboard.add(row7);
-        keyboard.add(row8);
 
         markup.setKeyboard(keyboard);
 
         return SendMessage.builder()
                 .chatId(chatId)
                 .text("⚙️ Керування фільтрами:")
+                .replyMarkup(markup)
+                .build();
+    }
+
+    private SendMessage createFiltersToggleMenu(String chatId) {
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setResizeKeyboard(true);
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("✅ Увімкнути фільтр");
+        row1.add("⛔ Вимкнути фільтр");
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("✅ Увімкнути підфільтр");
+        row2.add("⛔ Вимкнути підфільтр");
+
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add("⬅️ Назад");
+
+        keyboard.add(row1);
+        keyboard.add(row2);
+        keyboard.add(row3);
+
+        markup.setKeyboard(keyboard);
+
+        return SendMessage.builder()
+                .chatId(chatId)
+                .text("🔄 Увімкнення / вимкнення фільтрів:")
                 .replyMarkup(markup)
                 .build();
     }
