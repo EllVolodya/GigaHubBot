@@ -1301,34 +1301,37 @@ public class StoreBot extends TelegramLongPollingBot {
                 switch (state) {
                     case "filters_toggle_menu" -> {
 
-                        switch (text) {
+                        if (text.contains("Вимкнути фільтр")) {
+                            userStates.put(userId, "awaiting_disable_filter");
+                            sendText(chatId, "⛔ Введіть назву фільтра:");
+                            return;
+                        }
 
-                            case "✅ Увімкнути фільтр":
-                                userStates.put(userId, "awaiting_enable_filter");
-                                sendText(chatId, "✅ Введіть назву фільтра:");
-                                return;
+                        if (text.contains("Увімкнути фільтр")) {
+                            userStates.put(userId, "awaiting_enable_filter");
+                            sendText(chatId, "✅ Введіть назву фільтра:");
+                            return;
+                        }
 
-                            case "⛔ Вимкнути фільтр":
-                                userStates.put(userId, "awaiting_disable_filter");
-                                sendText(chatId, "⛔ Введіть назву фільтра:");
-                                return;
+                        if (text.contains("Вимкнути підфільтр")) {
+                            userStates.put(userId, "awaiting_disable_subfilter");
+                            sendText(chatId, "⛔ Введіть назву підфільтра:");
+                            return;
+                        }
 
-                            case "✅ Увімкнути підфільтр":
-                                userStates.put(userId, "awaiting_enable_subfilter");
-                                sendText(chatId, "✅ Введіть назву підфільтра:");
-                                return;
+                        if (text.contains("Увімкнути підфільтр")) {
+                            userStates.put(userId, "awaiting_enable_subfilter");
+                            sendText(chatId, "✅ Введіть назву підфільтра:");
+                            return;
+                        }
 
-                            case "⛔ Вимкнути підфільтр":
-                                userStates.put(userId, "awaiting_disable_subfilter");
-                                sendText(chatId, "⛔ Введіть назву підфільтра:");
-                                return;
-
-                            case "⬅️ Назад":
-                                sendMessageSafely(createFiltersAdminMenu(chatId));
-                                userStates.remove(userId);
-                                return;
+                        if (text.contains("Назад")) {
+                            sendMessageSafely(createFiltersAdminMenu(chatId));
+                            userStates.remove(userId);
+                            return;
                         }
                     }
+
                     case "awaiting_pickup_data" -> {
                         List<Map<String, Object>> cart = userCart.get(userId);
                         if (cart == null || cart.isEmpty()) {
@@ -1631,22 +1634,22 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendText(chatId, "🗑 Введіть назву підфільтра:");
                 }
 
-                case "✅ Увімкнути фільтр" -> {
+                case "Увімкнути фільтр" -> {
                     userStates.put(userId, "awaiting_enable_filter");
                     sendText(chatId, "✅ Введіть назву фільтра:");
                 }
 
-                case "⛔ Вимкнути фільтр" -> {
+                case "Вимкнути фільтр" -> {
                     userStates.put(userId, "awaiting_disable_filter");
                     sendText(chatId, "⛔ Введіть назву фільтра:");
                 }
 
-                case "✅ Увімкнути підфільтр" -> {
+                case "Увімкнути підфільтр" -> {
                     userStates.put(userId, "awaiting_enable_subfilter");
                     sendText(chatId, "✅ Введіть назву підфільтра:");
                 }
 
-                case "⛔ Вимкнути підфільтр" -> {
+                case "Вимкнути підфільтр" -> {
                     userStates.put(userId, "awaiting_disable_subfilter");
                     sendText(chatId, "⛔ Введіть назву підфільтра:");
                 }
@@ -7928,12 +7931,12 @@ public class StoreBot extends TelegramLongPollingBot {
         List<KeyboardRow> keyboard = new ArrayList<>();
 
         KeyboardRow row1 = new KeyboardRow();
-        row1.add("✅ Увімкнути фільтр");
-        row1.add("⛔ Вимкнути фільтр");
+        row1.add("Увімкнути фільтр");
+        row1.add("Вимкнути фільтр");
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("✅ Увімкнути підфільтр");
-        row2.add("⛔ Вимкнути підфільтр");
+        row2.add("Увімкнути підфільтр");
+        row2.add("Вимкнути підфільтр");
 
         KeyboardRow row3 = new KeyboardRow();
         row3.add("⬅️ Назад");
