@@ -4992,33 +4992,32 @@ public class StoreBot extends TelegramLongPollingBot {
         String singleProduct = adminEditingProduct.get(userId);
 
         switch (text) {
-            case "✏️ Назву":
+            case "✏️ Назву" -> {
                 adminEditingField.put(userId, "name");
                 userStates.put(userId, "awaiting_field_value");
                 sendText(chatId, "Введіть нову назву товару:");
-                break;
+            }
 
-            case "💰 Ціну":
+            case "💰 Ціну" -> {
                 adminEditingField.put(userId, "price");
                 userStates.put(userId, "awaiting_field_value");
                 sendText(chatId, "Введіть нову ціну:");
-                break;
+            }
 
-            case "📖 Опис": {
-
-                // Якщо нічого не вибрано
+            case "📖 Опис" -> {
                 if ((productsToEdit == null || productsToEdit.isEmpty()) && singleProduct == null) {
                     sendText(chatId, "❌ Спочатку виберіть товар.");
                     return;
                 }
 
-                // Ставимо поле для редагування
                 adminEditingField.put(userId, "description");
                 userStates.put(userId, "editing_field_value");
 
-                // Повідомлення
                 if (productsToEdit != null && !productsToEdit.isEmpty()) {
-                    sendText(chatId, "✏️ Введіть новий опис для " + productsToEdit.size() + " товар(ів):");
+                    sendText(chatId,
+                            "✏️ Введіть новий опис для "
+                                    + productsToEdit.size()
+                                    + " товар(ів):");
                 } else {
                     sendText(chatId, "✏️ Введіть новий опис:");
                 }
@@ -5026,13 +5025,11 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            case "🗂️ Додати в підкатегорію":
+            case "🗂️ Додати в підкатегорію" -> {
 
                 List<Map<String, Object>> products = adminSelectedProducts.get(userId);
 
-                // 🔥 fallback для одного товару
                 if (products == null || products.isEmpty()) {
-
                     Map<String, Object> single = adminSelectedProduct.get(userId);
 
                     if (single != null) {
@@ -5043,19 +5040,17 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 if (products == null || products.isEmpty()) {
                     sendText(chatId, "❌ Немає вибраних товарів.");
-                    break;
+                    return;
                 }
 
                 userStates.put(userId, "awaiting_subcategory");
-
                 sendText(chatId, "📁 Введіть назву підкатегорії або оберіть:");
+                return;
+            }
 
-                break;
-
-            case "🧩 Додати в підфільтр":
+            case "🧩 Додати в підфільтр" -> {
 
                 List<Map<String, Object>> selectedProducts = adminSelectedProducts.get(userId);
-                //Map<String, Object> singleProduct = adminSelectedProduct.get(userId);
 
                 if ((selectedProducts == null || selectedProducts.isEmpty()) && singleProduct == null) {
                     sendText(chatId, "⚠️ Спочатку виберіть товар.");
@@ -5066,72 +5061,69 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 sendText(chatId, "🔽 Оберіть або введіть фільтр:");
                 sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0));
-
                 return;
+            }
 
-            case "🖼️ Додати фотографію":
+            case "🖼️ Додати фотографію" -> {
                 if (productsToEdit != null && productsToEdit.size() > 1) {
-                    sendText(chatId, "⚠️ Масове додавання фотографій не підтримується. Виберіть один товар.");
+                    sendText(chatId, "⚠️ Масове додавання фотографій не підтримується.");
                 } else if (singleProduct != null) {
                     startPhotoUpload(userId, chatId, singleProduct);
                 } else {
-                    sendText(chatId, "⚠️ Будь ласка, спочатку виберіть товар.");
+                    sendText(chatId, "⚠️ Спочатку виберіть товар.");
                 }
-                break;
+                return;
+            }
 
-            case "📏 Одиниця виміру":
+            case "📏 Одиниця виміру" -> {
                 adminEditingField.put(userId, "unit");
                 userStates.put(userId, "awaiting_field_value");
 
                 sendText(chatId,
-                        "Введіть одиницю виміру для товару:\n\n" +
-                                "Доступні варіанти:\n" +
+                        "Введіть одиницю виміру:\n\n" +
                                 "• шт\n" +
                                 "• метр\n" +
                                 "• м2\n" +
-                                "• під замовлення\n\n" +
-                                "✏️ Введіть одне зі значень:");
-                break;
+                                "• під замовлення");
+            }
 
-            case "🏭 Виробник":
+            case "🏭 Виробник" -> {
                 adminEditingField.put(userId, "manufacturer");
                 userStates.put(userId, "awaiting_field_value");
-                sendText(chatId, "✏️ Введіть назву виробника для товару (або ❌ щоб видалити):");
-                break;
+                sendText(chatId,
+                        "✏️ Введіть виробника (або ❌ щоб видалити):");
+            }
 
-            case "⚙️ Додати в фільтр":
+            case "⚙️ Додати в фільтр" -> {
 
                 if (adminSelectedProduct.get(userId) == null) {
                     sendText(chatId, "⚠️ Спочатку виберіть товар.");
-                    break;
+                    return;
                 }
 
                 userStates.put(userId, "awaiting_filter_select");
 
                 sendText(chatId, "🔽 Оберіть фільтр:");
-
                 sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
-
                 return;
+            }
 
-            case BACK_BUTTON:
-                // 🔹 Очищаємо тимчасові стани редагування
+            case BACK_BUTTON -> {
                 adminEditingField.remove(userId);
                 adminEditingProduct.remove(userId);
                 adminSelectedProductsRange.remove(userId);
                 userStates.remove(userId);
 
-                // 🔹 Повертаємо користувача в меню розробника
                 sendText(chatId, "↩️ Ви повернулися до меню розробника.");
                 sendMessageSafely(createDeveloperMenu(chatId));
                 return;
+            }
 
-            default:
+            default -> {
                 sendText(chatId, "Невідома опція редагування.");
-                break;
+            }
         }
 
-        // 🔹 Показуємо меню редагування тільки якщо це не кнопка "Назад"
         sendMessageSafely(createEditMenu(chatId, userId));
     }
 
