@@ -7886,8 +7886,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
         List<KeyboardRow> keyboard = new ArrayList<>();
 
-        KeyboardRow row1 = new KeyboardRow();
-        row1.add("🔄 Увімк/Вимк фільтри");
+        /*KeyboardRow row1 = new KeyboardRow();
+        row1.add("🔄 Увімк/Вимк фільтри");*/
 
         KeyboardRow row2 = new KeyboardRow();
         row2.add("➕ Додати фільтр");
