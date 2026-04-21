@@ -4433,9 +4433,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
                 }
 
-                // ==========================
                 // Масове оновлення
-                // ==========================
                 if (productsToEdit != null && !productsToEdit.isEmpty()) {
 
                     int successCount = 0;
@@ -4462,9 +4460,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                     + " товарів.");
                 }
 
-                // ==========================
                 // Одиночне оновлення
-                // ==========================
                 else {
 
                     boolean success =
