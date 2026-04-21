@@ -7918,8 +7918,8 @@ public class StoreBot extends TelegramLongPollingBot {
         row1.add("🔄 Увімк/Вимк фільтри");
 
         KeyboardRow row2 = new KeyboardRow();
-        row1.add("➕ Додати фільтр");
-        row1.add("➕ Додати підфільтр");
+        row2.add("➕ Додати фільтр");
+        row2.add("➕ Додати підфільтр");
 
         KeyboardRow row3 = new KeyboardRow();
         row3.add("✏️ Редагувати фільтр");
