@@ -4386,8 +4386,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "editing_field_value" -> {
 
-                String field =
-                        adminEditingField.get(userId);
+                String field = adminEditingField.get(userId);
 
                 List<String> productsToEdit =
                         adminSelectedProductsRange.get(userId);
@@ -4395,7 +4394,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 String singleProduct =
                         adminEditingProduct.get(userId);
 
-                // Якщо вибрано список товарів — одиночний ігноруємо
+                // Якщо вибрано декілька товарів
                 if (productsToEdit != null && !productsToEdit.isEmpty()) {
                     singleProduct = null;
                 }
@@ -4414,7 +4413,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 String newValue = text.trim();
 
-                // Перевірка одиниці виміру
+                // Перевірка unit
                 if ("unit".equals(field)) {
 
                     if (!newValue.equalsIgnoreCase("шт")
@@ -4428,28 +4427,40 @@ public class StoreBot extends TelegramLongPollingBot {
                                         "• метр\n" +
                                         "• м2\n" +
                                         "• під замовлення");
-
                         return;
                     }
                 }
 
-                // Масове оновлення
+                // Масове оновлення через SQL
                 if (productsToEdit != null && !productsToEdit.isEmpty()) {
 
                     int successCount = 0;
 
-                    for (String productName : productsToEdit) {
+                    try (Connection conn = DatabaseManager.getConnection()) {
 
-                        boolean updated =
-                                CatalogEditor.updateField(
-                                        productName,
-                                        field,
-                                        newValue
-                                );
+                        for (String productName : productsToEdit) {
 
-                        if (updated) {
-                            successCount++;
+                            String sql =
+                                    "UPDATE products SET " + field + "=? WHERE name=?";
+
+                            try (PreparedStatement stmt =
+                                         conn.prepareStatement(sql)) {
+
+                                stmt.setString(1, newValue);
+                                stmt.setString(2, productName);
+
+                                int rows = stmt.executeUpdate();
+
+                                if (rows > 0) {
+                                    successCount++;
+                                }
+                            }
                         }
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        sendText(chatId, "❌ Помилка бази даних.");
+                        return;
                     }
 
                     sendText(chatId,
@@ -4460,24 +4471,39 @@ public class StoreBot extends TelegramLongPollingBot {
                                     + " товарів.");
                 }
 
-                // Одиночне оновлення
+                // Один товар через SQL
                 else {
 
-                    boolean success =
-                            CatalogEditor.updateField(
-                                    singleProduct,
-                                    field,
-                                    newValue
-                            );
+                    try (Connection conn = DatabaseManager.getConnection()) {
 
-                    if (success) {
-                        sendText(chatId, "✅ Товар успішно оновлено.");
-                    } else {
-                        sendText(chatId, "⚠️ Не вдалося оновити товар.");
+                        String sql =
+                                "UPDATE products SET " + field + "=? WHERE name=?";
+
+                        try (PreparedStatement stmt =
+                                     conn.prepareStatement(sql)) {
+
+                            stmt.setString(1, newValue);
+                            stmt.setString(2, singleProduct);
+
+                            int rows = stmt.executeUpdate();
+
+                            if (rows > 0) {
+                                sendText(chatId,
+                                        "✅ Товар успішно оновлено.");
+                            } else {
+                                sendText(chatId,
+                                        "⚠️ Товар не знайдено.");
+                            }
+                        }
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        sendText(chatId, "❌ Помилка бази даних.");
+                        return;
                     }
                 }
 
-                // Очистка поля редагування
+                // Очистка
                 adminEditingField.remove(userId);
 
                 // Повернення в меню
