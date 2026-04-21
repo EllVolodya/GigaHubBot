@@ -1304,32 +1304,28 @@ public class StoreBot extends TelegramLongPollingBot {
                         switch (text) {
 
                             case "✅ Увімкнути фільтр":
-                                userStates.put(userId, "enable_filter");
-                                sendText(chatId, "📂 Введіть назву фільтра для увімкнення:");
+                                userStates.put(userId, "awaiting_enable_filter");
+                                sendText(chatId, "✅ Введіть назву фільтра:");
                                 return;
 
                             case "⛔ Вимкнути фільтр":
-                                userStates.put(userId, "disable_filter");
-                                sendText(chatId, "📂 Введіть назву фільтра для вимкнення:");
+                                userStates.put(userId, "awaiting_disable_filter");
+                                sendText(chatId, "⛔ Введіть назву фільтра:");
                                 return;
 
                             case "✅ Увімкнути підфільтр":
-                                userStates.put(userId, "enable_subfilter");
-                                sendText(chatId, "📁 Введіть назву підфільтра для увімкнення:");
+                                userStates.put(userId, "awaiting_enable_subfilter");
+                                sendText(chatId, "✅ Введіть назву підфільтра:");
                                 return;
 
                             case "⛔ Вимкнути підфільтр":
-                                userStates.put(userId, "disable_subfilter");
-                                sendText(chatId, "📁 Введіть назву підфільтра для вимкнення:");
+                                userStates.put(userId, "awaiting_disable_subfilter");
+                                sendText(chatId, "⛔ Введіть назву підфільтра:");
                                 return;
 
                             case "⬅️ Назад":
-                                userStates.put(userId, "developer_menu");
                                 sendMessageSafely(createFiltersAdminMenu(chatId));
-                                return;
-
-                            default:
-                                sendText(chatId, "❌ Оберіть кнопку з меню.");
+                                userStates.remove(userId);
                                 return;
                         }
                     }
