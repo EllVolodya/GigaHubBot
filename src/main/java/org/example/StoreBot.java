@@ -7915,19 +7915,19 @@ public class StoreBot extends TelegramLongPollingBot {
         List<KeyboardRow> keyboard = new ArrayList<>();
 
         KeyboardRow row1 = new KeyboardRow();
+        row1.add("🔄 Увімк/Вимк фільтри");
+
+        KeyboardRow row2 = new KeyboardRow();
         row1.add("➕ Додати фільтр");
         row1.add("➕ Додати підфільтр");
 
-        KeyboardRow row2 = new KeyboardRow();
-        row2.add("✏️ Редагувати фільтр");
-        row2.add("✏️ Редагувати підфільтр");
-
         KeyboardRow row3 = new KeyboardRow();
-        row3.add("🗑 Видалити фільтр");
-        row3.add("🗑 Видалити підфільтр");
+        row3.add("✏️ Редагувати фільтр");
+        row3.add("✏️ Редагувати підфільтр");
 
         KeyboardRow row4 = new KeyboardRow();
-        row4.add("🔄 Увімк/Вимк фільтри");
+        row4.add("🗑 Видалити фільтр");
+        row4.add("🗑 Видалити підфільтр");
 
         KeyboardRow row5 = new KeyboardRow();
         row5.add("📋 Список фільтрів");
