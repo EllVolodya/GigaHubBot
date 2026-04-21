@@ -4941,7 +4941,6 @@ public class StoreBot extends TelegramLongPollingBot {
         userStates.put(userId, "choose_search_source");
     }
 
-    // Вибір товару по списку
     private void handleChooseProduct(Long userId, String chatId, String text) {
 
         List<Map<String, Object>> matches = adminMatchList.get(userId);
@@ -4955,15 +4954,17 @@ public class StoreBot extends TelegramLongPollingBot {
         text = text.trim();
 
         List<Map<String, Object>> selectedProducts = new ArrayList<>();
+        List<String> selectedNames = new ArrayList<>();
 
         try {
 
-            // 🔹 ДІАПАЗОН
+            // ДІАПАЗОН
             if (text.contains("-")) {
 
                 String[] parts = text.split("-");
+
                 int start = Integer.parseInt(parts[0].trim()) - 1;
-                int end = Integer.parseInt(parts[1].trim()) - 1;
+                int end   = Integer.parseInt(parts[1].trim()) - 1;
 
                 start = Math.max(start, 0);
                 end = Math.min(end, matches.size() - 1);
@@ -4973,12 +4974,14 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
             }
-            // 🔹 СПИСОК
+
+            // СПИСОК
             else if (text.contains(",")) {
 
                 String[] parts = text.split(",");
 
                 for (String part : parts) {
+
                     int index = Integer.parseInt(part.trim()) - 1;
 
                     if (index >= 0 && index < matches.size()) {
@@ -4986,7 +4989,8 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
                 }
             }
-            // 🔹 ОДИН
+
+            // ОДИН
             else {
 
                 int index = Integer.parseInt(text) - 1;
@@ -5001,12 +5005,18 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 ВАЖЛИВО — ОСЬ ФІКС
+            // Формуємо список назв
+            for (Map<String, Object> product : selectedProducts) {
+                selectedNames.add(product.get("name").toString());
+            }
+
+            // ГОЛОВНИЙ ФІКС
             adminSelectedProducts.put(userId, selectedProducts);
+            adminSelectedProductsRange.put(userId, selectedNames);
 
             Map<String, Object> currentProduct = selectedProducts.get(0);
-            adminSelectedProduct.put(userId, currentProduct);
 
+            adminSelectedProduct.put(userId, currentProduct);
             adminEditingProduct.put(userId,
                     currentProduct.get("name").toString());
 
@@ -5027,7 +5037,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
             showEditMenuOnce(userId, chatId);
 
-        } catch (NumberFormatException e) {
+        } catch (Exception e) {
+
             sendText(chatId,
                     "❌ Введіть номер, діапазон (1-10) або список (1,3,5)");
         }
