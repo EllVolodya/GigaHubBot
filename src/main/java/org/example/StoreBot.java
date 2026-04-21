@@ -7907,7 +7907,7 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow row6 = new KeyboardRow();
         row6.add(BACK_BUTTON);
 
-        keyboard.add(row1);
+        //keyboard.add(row1);
         keyboard.add(row2);
         keyboard.add(row3);
         keyboard.add(row4);
