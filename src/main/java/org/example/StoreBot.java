@@ -2759,12 +2759,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
-        // 🔴 1. ВИХІД З ОФОРМЛЕННЯ
         if ("awaiting_delivery_choice".equals(state) ||
                 "order_pickup".equals(state) ||
                 "awaiting_city_delivery".equals(state) ||
                 "awaiting_payment_method".equals(state) ||
-                "awaiting_phone".equals(state)) {
+                "awaiting_phone".equals(state) ||
+                "awaiting_quantity".equals(state)) {   // 🔥 ДОДАЛИ
 
             tempDeliveryType.remove(userId);
             tempAddress.remove(userId);
@@ -2774,6 +2774,8 @@ public class StoreBot extends TelegramLongPollingBot {
             tempOrderCode.remove(userId);
             tempOrderItems.remove(userId);
             tempTotal.remove(userId);
+
+            tempStorage.remove(userId + "_product");
 
             userStates.remove(userId);
 
