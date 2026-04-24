@@ -4179,29 +4179,132 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                if (text == null || text.length() < 8) {
+                if (text == null || text.trim().length() < 8) {
                     sendText(chatId, "❌ Введіть коректний номер телефону.");
                     return;
                 }
 
-                // 🔥 зберігаємо телефон
-                userPhones.put(userId, text.trim());
+                // Зберігаємо телефон
+                String phone = text.trim();
+                userPhones.put(userId, phone);
 
-                userStates.put(userId, "awaiting_payment_method");
+                // Кошик
+                List<Map<String, Object>> cart = userCart.get(userId);
 
-                ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
-                markup.setResizeKeyboard(true);
+                if (cart == null || cart.isEmpty()) {
+                    sendText(chatId, "❌ Кошик порожній.");
+                    return;
+                }
 
-                KeyboardRow row1 = new KeyboardRow();
-                row1.add("💵 Готівка");
-                row1.add("💳 Оплата карткою");
+                // Код замовлення
+                int code = (int) (System.currentTimeMillis() % 10000);
+                String orderCode = "ORD-" + code;
 
-                KeyboardRow row2 = new KeyboardRow();
-                row2.add(BACK_BUTTON);
+                // Дані доставки
+                String deliveryType =
+                        tempDeliveryType.getOrDefault(userId, "Не вказано");
 
-                markup.setKeyboard(List.of(row1, row2));
+                String addressValue =
+                        tempAddress.get(userId);
 
-                sendMessage(chatId, "💳 Оберіть спосіб оплати:", markup);
+                String fullname =
+                        tempFullname.getOrDefault(userId, "Користувач");
+
+                String city = null;
+                String address = null;
+                String postOffice = null;
+
+                switch (deliveryType) {
+                    case "Самовивіз" -> city = addressValue;
+                    case "Доставка по місту" -> address = addressValue;
+                    case "Нова пошта" -> postOffice = addressValue;
+                }
+
+                // Формування товарів
+                StringBuilder itemsBuilder = new StringBuilder();
+                double total = 0.0;
+
+                for (Map<String, Object> item : cart) {
+
+                    String name =
+                            String.valueOf(item.get("name"));
+
+                    int qty =
+                            Integer.parseInt(
+                                    item.get("quantity").toString()
+                            );
+
+                    double price =
+                            Double.parseDouble(
+                                    item.get("price").toString()
+                            );
+
+                    itemsBuilder.append(name)
+                            .append(" x")
+                            .append(qty)
+                            .append("; ");
+
+                    total += price * qty;
+                }
+
+                String items = itemsBuilder.toString();
+                total = Math.round(total * 100.0) / 100.0;
+
+                // Запис в БД
+                try (Connection conn =
+                             DatabaseManager.getConnection()) {
+
+                    PreparedStatement stmt =
+                            conn.prepareStatement(
+                                    "INSERT INTO orders " +
+                                            "(userId, orderCode, deliveryType, city, address, postOffice," +
+                                            " fullName, phone, item, total, paymentmethod, paymentstatus, status, date) " +
+                                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
+                            );
+
+                    stmt.setLong(1, userId);
+                    stmt.setString(2, orderCode);
+                    stmt.setString(3, deliveryType);
+                    stmt.setString(4, city);
+                    stmt.setString(5, address);
+                    stmt.setString(6, postOffice);
+                    stmt.setString(7, fullname);
+                    stmt.setString(8, phone);
+                    stmt.setString(9, items);
+                    stmt.setDouble(10, total);
+                    stmt.setString(11, "Готівка");
+                    stmt.setString(12, "Готівка");
+                    stmt.setString(13, "Нове");
+
+                    stmt.executeUpdate();
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+
+                    sendText(chatId,
+                            "❌ Помилка при створенні замовлення.");
+                    return;
+                }
+
+                // Очистка
+                userCart.remove(userId);
+                userPhones.remove(userId);
+                userStates.remove(userId);
+
+                tempDeliveryType.remove(userId);
+                tempAddress.remove(userId);
+                tempFullname.remove(userId);
+                tempCard.remove(userId);
+
+                // Фінал
+                sendText(chatId,
+                        "✅ Замовлення оформлено!\n\n" +
+                                "🔢 Код: " + orderCode + "\n\n" +
+                                "📞 Наш менеджер зателефонує вам найближчим часом\n" +
+                                "для підтвердження замовлення.\n\n" +
+                                "Дякуємо за покупку 🙌");
+
+                return;
             }
 
             case "invites_menu" -> {
