@@ -459,10 +459,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 markup.setKeyboard(List.of(row1, row2));
 
-                sendMessage(chatId,
-                        "👇 Оберіть дію:",
-                        markup);
-
                 return;
 
             } catch (Exception e) {
