@@ -5176,16 +5176,26 @@ public class StoreBot extends TelegramLongPollingBot {
         userStates.put(userId, "choose_search_source");
     }
 
-    /// Вибрати товар по списку при редагування
+    /// Вибрати товар по списку при редагуваня
     private void handleChooseProduct(
             Long userId,
             String chatId,
             String text
     ) {
 
-        // =====================================
-        // 🔥 Визначаємо джерело списку
-        // =====================================
+        // 🔥 КНОПКА НАЗАД ДЛЯ КАТАЛОГУ
+        if (BACK_BUTTON.equals(text)) {
+
+            try {
+                handleBack(userId, chatId);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            return;
+        }
+
+        // Визначаємо джерело списку
         List<Map<String, Object>> matches =
                 adminMatchList.get(userId);
 
@@ -5222,9 +5232,43 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try {
 
-            // =====================================
-            // ДІАПАЗОН
-            // =====================================
+            // 👤 КЛІЄНТУ дозволяємо тільки один номер
+            if (!adminMode) {
+
+                int index =
+                        Integer.parseInt(text) - 1;
+
+                if (index < 0 ||
+                        index >= matches.size()) {
+
+                    sendText(
+                            chatId,
+                            "❌ Невірний номер товару."
+                    );
+
+                    return;
+                }
+
+                Map<String, Object> product =
+                        matches.get(index);
+
+                lastShownProduct.put(
+                        userId,
+                        product
+                );
+
+                userStates.remove(userId);
+                userProductLists.remove(userId);
+
+                sendProductFromMap(
+                        Long.valueOf(chatId),
+                        product
+                );
+
+                return;
+            }
+
+            // 👑 АДМІН
             if (text.contains("-")) {
 
                 String[] parts =
@@ -5250,9 +5294,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // =====================================
-            // СПИСОК
-            // =====================================
             else if (text.contains(",")) {
 
                 String[] parts =
@@ -5275,9 +5316,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // =====================================
-            // ОДИН ТОВАР
-            // =====================================
             else {
 
                 int index =
@@ -5302,34 +5340,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // =====================================
-            // 👤 КЛІЄНТ
-            // =====================================
-            if (!adminMode) {
-
-                Map<String, Object> product =
-                        selectedProducts.get(0);
-
-                lastShownProduct.put(
-                        userId,
-                        product
-                );
-
-                userStates.remove(userId);
-                userProductLists.remove(userId);
-
-                // 🔥 Використовуємо твій існуючий метод
-                sendProductFromMap(
-                        Long.valueOf(chatId),
-                        product
-                );
-
-                return;
-            }
-
-            // =====================================
-            // 👑 АДМІН
-            // =====================================
             for (Map<String, Object> product :
                     selectedProducts) {
 
@@ -5400,7 +5410,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             sendText(
                     chatId,
-                    "❌ Введіть номер, діапазон (1-21) або список (1,3,5)"
+                    "❌ Введіть номер товару."
             );
         }
     }
