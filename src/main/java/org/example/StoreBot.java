@@ -434,16 +434,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 userStates.put(userId, "in_cart");
 
-                // Показ кошика
-                showCartNice(userId, chatId);
-
-                SendMessage msg =
-                        SendMessage.builder()
-                                .chatId(chatId)
-                                .text("📦 Ваш кошик:")
-                                .build();
-
-                execute(msg);
+                showCartNice(userId, chatId); // Показ кошика
 
                 // Нижня клавіатура
                 ReplyKeyboardMarkup markup =
