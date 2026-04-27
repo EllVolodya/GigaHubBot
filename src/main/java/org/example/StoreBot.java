@@ -6634,7 +6634,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // 🔸 Показ товарів списком (через БАЗУ)
+    // 🔸 Показ товарів списком + вибір через один метод
     private void sendProductList(Long chatId)
             throws TelegramApiException {
 
@@ -6684,16 +6684,16 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 список клієнта
+            // 🔥 Зберігаємо список
             userProductLists.put(
                     userId,
                     new ArrayList<>(products)
             );
 
-            // 🔥 окремий state
+            // 🔥 Один state
             userStates.put(
                     userId,
-                    "catalog_choose_product"
+                    "choose_product"
             );
 
             StringBuilder sb =
