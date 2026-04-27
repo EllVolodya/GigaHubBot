@@ -1762,49 +1762,45 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     userStates.put(userId, "awaiting_remove_item");
 
-                    ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
-                    markup.setResizeKeyboard(true);
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("🗑 Введіть номер товару для видалення:\n\n");
 
-                    List<KeyboardRow> rows = new ArrayList<>();
-
-                    KeyboardRow numbers = new KeyboardRow();
-
-                    for (int i = 1; i <= cart.size(); i++) {
-                        numbers.add(String.valueOf(i));
+                    for (int i = 0; i < cart.size(); i++) {
+                        sb.append(i + 1)
+                                .append(". ")
+                                .append(cart.get(i).get("name"))
+                                .append("\n");
                     }
 
-                    rows.add(numbers);
+                    sb.append("\nНапишіть цифру в чат (1, 2, 3...)");
 
-                    KeyboardRow backRow = new KeyboardRow();
-                    backRow.add("⬅️ Назад");
-
-                    rows.add(backRow);
-
-                    markup.setKeyboard(rows);
-
-                    SendMessage msg = SendMessage.builder()
-                            .chatId(chatId)
-                            .text("🗑 Введіть номер товару, який хочете видалити.\n\nНаприклад: 1")
-                            .replyMarkup(markup)
-                            .build();
-
-                    execute(msg);
+                    sendText(chatId, sb.toString());
                 }
 
                 case "✏️ Змінити кількість" -> {
 
-                    List<Map<String,Object>> cart = userCart.get(userId);
+                    List<Map<String, Object>> cart = userCart.get(userId);
 
                     if (cart == null || cart.isEmpty()) {
-                        sendText(chatId,"🧺 Кошик порожній.");
+                        sendText(chatId, "🧺 Кошик порожній.");
                         return;
                     }
 
-                    userStates.put(userId,"awaiting_edit_item");
+                    userStates.put(userId, "awaiting_edit_item");
 
-                    sendText(chatId,
-                            "✏️ Введіть номер товару, який хочете змінити.\n\n" +
-                                    "Наприклад: 1");
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("✏️ Введіть номер товару:\n\n");
+
+                    for (int i = 0; i < cart.size(); i++) {
+                        sb.append(i + 1)
+                                .append(". ")
+                                .append(cart.get(i).get("name"))
+                                .append("\n");
+                    }
+
+                    sb.append("\nНапишіть цифру в чат (1, 2, 3...)");
+
+                    sendText(chatId, sb.toString());
                 }
 
                 case "🏬 Самовивіз" -> {
