@@ -3021,136 +3021,46 @@ public class StoreBot extends TelegramLongPollingBot {
         );
     }
 
-    // 🔸 Вибір товару по номеру
-    private void handleProductSelection(Long userId, int choice)
-            throws TelegramApiException {
+    //Показ товара
+    private void handleProductSelection(Long chatId, int choice) throws TelegramApiException {
 
-        try {
+        List<Map<String, Object>> products = userProductLists.get(chatId);
 
-            // =====================================
-            // DEBUG
-            // =====================================
-            System.out.println(
-                    "[handleProductSelection] userId = " + userId
-            );
-
-            System.out.println(
-                    "[handleProductSelection] keys = "
-                            + userProductLists.keySet()
-            );
-
-            // =====================================
-            // Беремо список товарів
-            // =====================================
-            List<Map<String, Object>> products =
-                    userProductLists.get(userId);
-
-            // 🔥 якщо null — пробуємо chatId String
-            if (products == null) {
-
-                Object alt =
-                        userProductLists.get(
-                                Long.valueOf(userId)
-                        );
-
-                if (alt instanceof List) {
-                    products =
-                            (List<Map<String, Object>>) alt;
-                }
-            }
-
-            // =====================================
-            // Якщо пусто
-            // =====================================
-            if (products == null ||
-                    products.isEmpty()) {
-
-                sendText(
-                        userId.toString(),
-                        "❌ Список товарів порожній."
-                );
-
-                return;
-            }
-
-            // =====================================
-            // Перевірка номера
-            // =====================================
-            if (choice < 1 ||
-                    choice > products.size()) {
-
-                sendText(
-                        userId.toString(),
-                        "❌ Невірний номер."
-                );
-
-                return;
-            }
-
-            // =====================================
-            // Беремо товар
-            // =====================================
-            Map<String, Object> product =
-                    products.get(choice - 1);
-
-            // Зберігаємо відкритий товар
-            lastShownProduct.put(userId, product);
-
-            // Видаляємо зі списку
-            products.remove(choice - 1);
-
-            // Оновлюємо список назад у map
-            userProductLists.put(userId, products);
-
-            // =====================================
-            // Інші товари
-            // =====================================
-            if (!products.isEmpty()) {
-
-                StringBuilder sb =
-                        new StringBuilder();
-
-                sb.append("📦 Інші товари:\n\n");
-
-                for (int i = 0; i < products.size(); i++) {
-
-                    String name =
-                            safeToString(
-                                    products.get(i).get("name"),
-                                    "Без назви"
-                            );
-
-                    sb.append(i + 1)
-                            .append(". ")
-                            .append(name)
-                            .append("\n");
-                }
-
-                sendText(
-                        userId.toString(),
-                        sb.toString()
-                );
-            }
-
-            // =====================================
-            // Показ товару
-            // =====================================
-            sendProductFromMap(userId, product);
-
-            // =====================================
-            // State товар відкритий
-            // =====================================
-            userStates.remove(userId);
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            sendText(
-                    userId.toString(),
-                    "❌ Помилка вибору товару."
-            );
+        if (products == null || products.isEmpty()) {
+            sendText(chatId, "❌ Список порожній.");
+            return;
         }
+
+        if (choice < 1 || choice > products.size()) {
+            sendText(chatId, "❌ Невірний номер.");
+            return;
+        }
+
+        Map<String, Object> product = products.get(choice - 1);
+
+        // 🔥 зберігаємо товар
+        lastShownProduct.put(chatId, product);
+
+        // видаляємо його зі списку
+        products.remove(choice - 1);
+
+        // 🔹 СПОЧАТКУ список
+        if (!products.isEmpty()) {
+
+            StringBuilder sb = new StringBuilder("\n📦 Інші товари:\n\n");
+
+            for (int i = 0; i < products.size(); i++) {
+                sb.append(i + 1)
+                        .append(". ")
+                        .append(products.get(i).get("name"))
+                        .append("\n");
+            }
+
+            sendText(chatId, sb.toString());
+        }
+
+        // 🔹 ПОТІМ товар
+        sendProductFromMap(chatId, product);
     }
 
     private void showNextProduct(Long chatId) throws TelegramApiException {
@@ -6555,136 +6465,63 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔸 Показ товарів списком
-    private void sendProductList(Long userId)
-            throws TelegramApiException {
+    private void sendProductList(Long chatId) throws TelegramApiException {
 
-        try {
-            // Отримуємо поточні вибори користувача
-            String category =
-                    currentCategory.get(userId);
+        Long userId = chatId;
 
-            String subcategory =
-                    currentSubcategory.get(userId);
+        String category = currentCategory.get(userId);
+        String subcategory = currentSubcategory.get(userId);
+        String filter = currentFilter.get(userId);
+        String subfilter = currentSubfilter.get(userId);
 
-            String filter =
-                    currentFilter.get(userId);
+        CatalogSearcher searcher = new CatalogSearcher();
 
-            String subfilter =
-                    currentSubfilter.get(userId);
+        List<Map<String, Object>> products = searcher.findProducts(
+                category,
+                subcategory,
+                filter,
+                subfilter
+        );
 
-            // Пошук товарів
-            CatalogSearcher searcher =
-                    new CatalogSearcher();
-
-            List<Map<String, Object>> products =
-                    searcher.findProducts(
-                            category,
-                            subcategory,
-                            filter,
-                            subfilter
-                    );
-
-            // Якщо пусто
-            if (products == null ||
-                    products.isEmpty()) {
-
-                sendText(
-                        userId.toString(),
-                        "❌ Товарів у цьому розділі немає."
-                );
-
-                return;
-            }
-
-            // Зберігаємо список товарів
-            userProductLists.remove(userId);
-
-            userProductLists.put(
-                    userId,
-                    new ArrayList<>(products)
-            );
-
-            userStates.put(
-                    userId,
-                    "choose_product"
-            );
-
-            // DEBUG
-            System.out.println(
-                    "[sendProductList] userId = " + userId
-            );
-
-            System.out.println(
-                    "[sendProductList] saved products = "
-                            + products.size()
-            );
-
-            // Формуємо список
-            StringBuilder sb =
-                    new StringBuilder();
-
-            sb.append("📦 Обери товар:\n\n");
-
-            for (int i = 0; i < products.size(); i++) {
-
-                Map<String, Object> product =
-                        products.get(i);
-
-                String name =
-                        safeToString(
-                                product.get("name"),
-                                "Без назви"
-                        );
-
-                String price =
-                        safeToString(
-                                product.get("price"),
-                                "0"
-                        );
-
-                sb.append(i + 1)
-                        .append(". ")
-                        .append(name)
-                        .append(" — ")
-                        .append(price)
-                        .append(" грн\n");
-            }
-
-            sendText(
-                    userId.toString(),
-                    sb.toString()
-            );
-
-            // Кнопка назад
-            ReplyKeyboardMarkup markup =
-                    new ReplyKeyboardMarkup();
-
-            markup.setResizeKeyboard(true);
-
-            KeyboardRow row1 =
-                    new KeyboardRow();
-
-            row1.add(BACK_BUTTON);
-
-            markup.setKeyboard(
-                    List.of(row1)
-            );
-
-            sendMessage(
-                    userId.toString(),
-                    "👇 Введи номер товару:",
-                    markup
-            );
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-
-            sendText(
-                    userId.toString(),
-                    "❌ Помилка при завантаженні товарів."
-            );
+        if (products == null || products.isEmpty()) {
+            sendText(chatId.toString(), "❌ Товарів у цьому розділі немає.");
+            return;
         }
+
+        // 🔥 зберігаємо список (ключ — chatId ок для UI)
+        userProductLists.put(chatId, new ArrayList<>(products));
+
+        StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
+
+        for (int i = 0; i < products.size(); i++) {
+
+            Map<String, Object> product = products.get(i);
+
+            String name = safeToString(product.get("name"), "Без назви");
+            String price = safeToString(product.get("price"), "0");
+
+            sb.append(i + 1)
+                    .append(". ")
+                    .append(name)
+                    .append(" — ")
+                    .append(price)
+                    .append(" грн\n");
+        }
+
+        sendText(chatId.toString(), sb.toString());
+
+        // 🔥 кнопка назад
+        KeyboardRow row = new KeyboardRow();
+        row.add(BACK_BUTTON);
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+        keyboard.add(row);
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setKeyboard(keyboard);
+        markup.setResizeKeyboard(true);
+
+        sendTextWithMarkup(chatId, "👇 Введи номер товару:", markup);
     }
 
     private void showRemainingProductList(Long chatId)
