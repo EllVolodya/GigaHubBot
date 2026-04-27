@@ -5158,9 +5158,14 @@ public class StoreBot extends TelegramLongPollingBot {
         List<Map<String, Object>> matches =
                 adminMatchList.get(userId);
 
-        if (matches == null || matches.isEmpty()) {
-            sendText(chatId,
-                    "❌ Список товарів порожній.");
+        if (matches == null ||
+                matches.isEmpty()) {
+
+            sendText(
+                    chatId,
+                    "❌ Список товарів порожній."
+            );
+
             userStates.remove(userId);
             return;
         }
@@ -5177,7 +5182,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try {
 
-            // Діапазон
+            // =====================================
+            // ДІАПАЗОН
+            // =====================================
             if (text.contains("-")) {
 
                 String[] parts =
@@ -5197,11 +5204,15 @@ public class StoreBot extends TelegramLongPollingBot {
                 end = Math.min(end, matches.size() - 1);
 
                 for (int i = start; i <= end; i++) {
-                    selectedProducts.add(matches.get(i));
+                    selectedProducts.add(
+                            matches.get(i)
+                    );
                 }
             }
 
-            // Список
+            // =====================================
+            // СПИСОК
+            // =====================================
             else if (text.contains(",")) {
 
                 String[] parts =
@@ -5224,7 +5235,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // Один
+            // =====================================
+            // ОДИН
+            // =====================================
             else {
 
                 int index =
@@ -5239,24 +5252,46 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
+            // =====================================
+            // НІЧОГО НЕ ВИБРАНО
+            // =====================================
             if (selectedProducts.isEmpty()) {
-                sendText(chatId,
-                        "❌ Немає валідних номерів.");
+
+                sendText(
+                        chatId,
+                        "❌ Немає валідних номерів."
+                );
+
                 return;
             }
 
-            // ID
+            // =====================================
+            // ЗБІР ID (тільки якщо є)
+            // =====================================
             for (Map<String, Object> product :
                     selectedProducts) {
 
-                selectedIds.add(
-                        Integer.parseInt(
-                                product.get("id")
-                                        .toString()
-                        )
-                );
+                Object rawId =
+                        product.get("id");
+
+                if (rawId != null) {
+
+                    try {
+
+                        selectedIds.add(
+                                Integer.parseInt(
+                                        rawId.toString()
+                                )
+                        );
+
+                    } catch (Exception ignored) {
+                    }
+                }
             }
 
+            // =====================================
+            // ЗБЕРІГАЄМО
+            // =====================================
             adminSelectedProducts.put(
                     userId,
                     selectedProducts
@@ -5277,24 +5312,40 @@ public class StoreBot extends TelegramLongPollingBot {
 
             adminEditingProduct.put(
                     userId,
-                    first.get("name").toString()
+                    safeToString(
+                            first.get("name"),
+                            "Без назви"
+                    )
             );
 
-            userStates.put(userId, "editing");
+            userStates.put(
+                    userId,
+                    "editing"
+            );
 
             adminMatchList.remove(userId);
 
-            sendText(chatId,
+            // =====================================
+            // ПОВІДОМЛЕННЯ
+            // =====================================
+            sendText(
+                    chatId,
                     "✏️ Редагуємо "
                             + selectedProducts.size()
-                            + " товар(ів)");
+                            + " товар(ів)"
+            );
 
-            showEditMenuOnce(userId, chatId);
+            showEditMenuOnce(
+                    userId,
+                    chatId
+            );
 
         } catch (Exception e) {
 
-            sendText(chatId,
-                    "❌ Введіть номер, діапазон (1-21) або список (1,3,5)");
+            sendText(
+                    chatId,
+                    "❌ Введіть номер, діапазон (1-21) або список (1,3,5)"
+            );
         }
     }
 
@@ -7177,11 +7228,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             sb.append("\n");
         }
-
-        sb.append("\nПриклад:\n");
-        sb.append("1\n");
-        sb.append("1-20\n");
-        sb.append("1,3,5");
 
         sendText(chatId, sb.toString());
     }
