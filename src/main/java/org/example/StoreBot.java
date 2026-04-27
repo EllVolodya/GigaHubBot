@@ -196,33 +196,6 @@ public class StoreBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (update == null || update.getMessage() == null) return;
 
-        // INLINE кнопки
-        if (update.hasCallbackQuery()) {
-
-            String data =
-                    update.getCallbackQuery().getData();
-
-            Long userId =
-                    update.getCallbackQuery()
-                            .getFrom()
-                            .getId();
-
-            String chatId =
-                    update.getCallbackQuery()
-                            .getMessage()
-                            .getChatId()
-                            .toString();
-
-            if ("cart_back".equals(data)) {
-                try {
-                    handleBack(userId, chatId);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                return;
-            }
-        }
-
         // Повідомлення
         if (update.hasMessage() && update.getMessage().hasVideo()) {
 
@@ -264,6 +237,48 @@ public class StoreBot extends TelegramLongPollingBot {
                 : "";
 
         String state = userStates.get(userId);
+
+        if (text.startsWith("/start")) {
+
+            Long chatIdLong = update.getMessage().getChatId();
+            String chatIdStr = chatIdLong.toString();
+
+            try {
+                clearUserState(userId);
+
+                String inviteCode = text.replace("/start", "").trim();
+
+                UserManager userManager = new UserManager();
+
+                SendMessage msg = userManager.registerUser(
+                        userId,
+                        update.getMessage().getFrom().getFirstName(),
+                        chatIdStr
+                );
+
+                if (msg != null && !inviteCode.isEmpty()) {
+
+                    System.out.println("🔥 inviteCode = " + inviteCode);
+
+                    InviteManager inviteManager = new InviteManager();
+                    boolean ok = inviteManager.incrementInviteNumber(inviteCode);
+
+                    if (ok) System.out.println("✅ Лічильник збільшено");
+                    else    System.out.println("❌ Invite не знайдено");
+                }
+
+                execute(createUserMenu(chatIdStr, userId));
+
+            } catch (SQLException e) {
+                e.printStackTrace();
+                sendText(chatIdStr, "❌ Помилка бази даних.");
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(chatIdStr, "❌ Помилка Telegram.");
+            }
+
+            return;
+        }
 
         // 🔥 Обробка відповіді на питання
         if ("consultant_reply".equals(userStates.get(userId))
@@ -1132,48 +1147,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if ("choose_yaml_product".equals(state)) {
             handleChooseYamlProduct(userId, chatId, normalizedText);
-            return;
-        }
-
-        if (text.startsWith("/start")) {
-
-            Long chatIdLong = update.getMessage().getChatId();
-            String chatIdStr = chatIdLong.toString(); // 🔥 ВИНЕСЛИ СЮДИ
-
-            try {
-                clearUserState(userId);
-
-                String inviteCode = text.replace("/start", "").trim();
-
-                UserManager userManager = new UserManager();
-
-                SendMessage msg = userManager.registerUser(
-                        userId,
-                        update.getMessage().getFrom().getFirstName(),
-                        chatIdStr
-                );
-
-                if (msg != null && !inviteCode.isEmpty()) {
-
-                    System.out.println("🔥 inviteCode = " + inviteCode);
-
-                    InviteManager inviteManager = new InviteManager();
-                    boolean ok = inviteManager.incrementInviteNumber(inviteCode);
-
-                    if (ok) System.out.println("✅ Лічильник збільшено");
-                    else    System.out.println("❌ Invite не знайдено");
-                }
-
-                execute(createUserMenu(chatIdStr, userId));
-
-            } catch (SQLException e) {
-                e.printStackTrace();
-                sendText(chatIdStr, "❌ Помилка бази даних.");
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-                sendText(chatIdStr, "❌ Помилка Telegram.");
-            }
-
             return;
         }
 
@@ -5149,6 +5122,7 @@ public class StoreBot extends TelegramLongPollingBot {
         userStates.put(userId, "choose_search_source");
     }
 
+    /// Вибрати товар по списку при редагування
     private void handleChooseProduct(
             Long userId,
             String chatId,
@@ -5182,9 +5156,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try {
 
-            // =====================================
             // ДІАПАЗОН
-            // =====================================
             if (text.contains("-")) {
 
                 String[] parts =
@@ -5210,9 +5182,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // =====================================
             // СПИСОК
-            // =====================================
             else if (text.contains(",")) {
 
                 String[] parts =
@@ -5235,9 +5205,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // =====================================
             // ОДИН
-            // =====================================
             else {
 
                 int index =
@@ -5252,9 +5220,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // =====================================
-            // НІЧОГО НЕ ВИБРАНО
-            // =====================================
             if (selectedProducts.isEmpty()) {
 
                 sendText(
@@ -5265,9 +5230,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // =====================================
-            // ЗБІР ID (тільки якщо є)
-            // =====================================
+            // ЗБІР ID
             for (Map<String, Object> product :
                     selectedProducts) {
 
@@ -5289,9 +5252,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // =====================================
             // ЗБЕРІГАЄМО
-            // =====================================
             adminSelectedProducts.put(
                     userId,
                     selectedProducts
@@ -5325,9 +5286,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             adminMatchList.remove(userId);
 
-            // =====================================
             // ПОВІДОМЛЕННЯ
-            // =====================================
             sendText(
                     chatId,
                     "✏️ Редагуємо "
