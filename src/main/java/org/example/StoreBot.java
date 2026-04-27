@@ -413,6 +413,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 // Показ кошика
                 showCartNice(userId, chatId);
 
+                // 🔥 Нижня клавіатура (залишається row)
                 ReplyKeyboardMarkup markup =
                         new ReplyKeyboardMarkup();
 
@@ -426,9 +427,35 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 markup.setKeyboard(List.of(row1, row2));
 
-                sendMessage(chatId,
-                        "📦 Ваш кошик:",
-                        markup);
+                // 🔥 Inline кнопка під текстом "Ваш кошик"
+                InlineKeyboardMarkup inline =
+                        new InlineKeyboardMarkup();
+
+                List<List<InlineKeyboardButton>> rows =
+                        new ArrayList<>();
+
+                List<InlineKeyboardButton> line1 =
+                        new ArrayList<>();
+
+                line1.add(
+                        InlineKeyboardButton.builder()
+                                .text("⬅️ Назад")
+                                .callbackData("cart_back")
+                                .build()
+                );
+
+                rows.add(line1);
+                inline.setKeyboard(rows);
+
+                // 🔥 Повідомлення з inline кнопкою
+                SendMessage msg =
+                        SendMessage.builder()
+                                .chatId(chatId)
+                                .text("📦 Ваш кошик:")
+                                .replyMarkup(inline)
+                                .build();
+
+                execute(msg);
 
                 return;
 
