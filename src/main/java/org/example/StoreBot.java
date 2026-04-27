@@ -6465,40 +6465,78 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔸 Показ товарів списком
-    private void sendProductList(Long chatId) throws TelegramApiException {
+    private void sendProductList(Long chatId)
+            throws TelegramApiException {
 
         Long userId = chatId;
 
-        String category = currentCategory.get(userId);
-        String subcategory = currentSubcategory.get(userId);
-        String filter = currentFilter.get(userId);
-        String subfilter = currentSubfilter.get(userId);
+        String category =
+                currentCategory.get(userId);
 
-        CatalogSearcher searcher = new CatalogSearcher();
+        String subcategory =
+                currentSubcategory.get(userId);
 
-        List<Map<String, Object>> products = searcher.findProducts(
-                category,
-                subcategory,
-                filter,
-                subfilter
-        );
+        String filter =
+                currentFilter.get(userId);
 
-        if (products == null || products.isEmpty()) {
-            sendText(chatId.toString(), "❌ Товарів у цьому розділі немає.");
+        String subfilter =
+                currentSubfilter.get(userId);
+
+        CatalogSearcher searcher =
+                new CatalogSearcher();
+
+        List<Map<String, Object>> products =
+                searcher.findProducts(
+                        category,
+                        subcategory,
+                        filter,
+                        subfilter
+                );
+
+        if (products == null ||
+                products.isEmpty()) {
+
+            sendText(
+                    chatId.toString(),
+                    "❌ Товарів у цьому розділі немає."
+            );
             return;
         }
 
-        // 🔥 зберігаємо список (ключ — chatId ок для UI)
-        userProductLists.put(chatId, new ArrayList<>(products));
+        // Зберігаємо список товарів
+        userProductLists.put(
+                userId,
+                new ArrayList<>(products)
+        );
 
-        StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
+        // 🔥 ГОЛОВНИЙ ФІКС
+        userStates.put(
+                userId,
+                "choose_product"
+        );
+
+        // Формуємо список
+        StringBuilder sb =
+                new StringBuilder(
+                        "📦 Обери товар:\n\n"
+                );
 
         for (int i = 0; i < products.size(); i++) {
 
-            Map<String, Object> product = products.get(i);
+            Map<String, Object> product =
+                    products.get(i);
 
-            String name = safeToString(product.get("name"), "Без назви");
-            String price = safeToString(product.get("price"), "0");
+            String name =
+                    safeToString(
+                            product.get("name"),
+                            "Без назви"
+                    );
+
+            String price =
+                    safeToString(
+                            product.get("price"),
+                            "0"
+                    );
 
             sb.append(i + 1)
                     .append(". ")
@@ -6508,20 +6546,33 @@ public class StoreBot extends TelegramLongPollingBot {
                     .append(" грн\n");
         }
 
-        sendText(chatId.toString(), sb.toString());
+        sendText(
+                chatId.toString(),
+                sb.toString()
+        );
 
-        // 🔥 кнопка назад
-        KeyboardRow row = new KeyboardRow();
+        // Кнопка назад
+        KeyboardRow row =
+                new KeyboardRow();
+
         row.add(BACK_BUTTON);
 
-        List<KeyboardRow> keyboard = new ArrayList<>();
+        List<KeyboardRow> keyboard =
+                new ArrayList<>();
+
         keyboard.add(row);
 
-        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        ReplyKeyboardMarkup markup =
+                new ReplyKeyboardMarkup();
+
         markup.setKeyboard(keyboard);
         markup.setResizeKeyboard(true);
 
-        sendTextWithMarkup(chatId, "👇 Введи номер товару:", markup);
+        sendTextWithMarkup(
+                chatId,
+                "👇 Введи номер товару:",
+                markup
+        );
     }
 
     private void showRemainingProductList(Long chatId)
