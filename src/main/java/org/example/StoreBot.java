@@ -5183,11 +5183,23 @@ public class StoreBot extends TelegramLongPollingBot {
             String text
     ) {
 
+        // =====================================
+        // 🔥 Визначаємо джерело списку
+        // =====================================
         List<Map<String, Object>> matches =
                 adminMatchList.get(userId);
 
-        if (matches == null ||
-                matches.isEmpty()) {
+        boolean adminMode = true;
+
+        if (matches == null || matches.isEmpty()) {
+
+            matches =
+                    userProductLists.get(userId);
+
+            adminMode = false;
+        }
+
+        if (matches == null || matches.isEmpty()) {
 
             sendText(
                     chatId,
@@ -5210,7 +5222,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try {
 
+            // =====================================
             // ДІАПАЗОН
+            // =====================================
             if (text.contains("-")) {
 
                 String[] parts =
@@ -5236,7 +5250,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
+            // =====================================
             // СПИСОК
+            // =====================================
             else if (text.contains(",")) {
 
                 String[] parts =
@@ -5259,7 +5275,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // ОДИН
+            // =====================================
+            // ОДИН ТОВАР
+            // =====================================
             else {
 
                 int index =
@@ -5284,7 +5302,34 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // ЗБІР ID
+            // =====================================
+            // 👤 КЛІЄНТ
+            // =====================================
+            if (!adminMode) {
+
+                Map<String, Object> product =
+                        selectedProducts.get(0);
+
+                lastShownProduct.put(
+                        userId,
+                        product
+                );
+
+                userStates.remove(userId);
+                userProductLists.remove(userId);
+
+                // 🔥 Використовуємо твій існуючий метод
+                sendProductFromMap(
+                        Long.valueOf(chatId),
+                        product
+                );
+
+                return;
+            }
+
+            // =====================================
+            // 👑 АДМІН
+            // =====================================
             for (Map<String, Object> product :
                     selectedProducts) {
 
@@ -5306,7 +5351,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // ЗБЕРІГАЄМО
             adminSelectedProducts.put(
                     userId,
                     selectedProducts
@@ -5340,7 +5384,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             adminMatchList.remove(userId);
 
-            // ПОВІДОМЛЕННЯ
             sendText(
                     chatId,
                     "✏️ Редагуємо "
