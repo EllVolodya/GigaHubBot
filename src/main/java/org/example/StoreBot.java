@@ -3021,48 +3021,136 @@ public class StoreBot extends TelegramLongPollingBot {
         );
     }
 
-    //Показ товара
+    // 🔸 Вибір товару по номеру
     private void handleProductSelection(Long userId, int choice)
             throws TelegramApiException {
 
-        List<Map<String, Object>> products =
-                userProductLists.get(userId);
+        try {
 
-        if (products == null || products.isEmpty()) {
-            sendText(userId.toString(),
-                    "❌ Список товарів порожній.");
-            return;
-        }
+            // =====================================
+            // DEBUG
+            // =====================================
+            System.out.println(
+                    "[handleProductSelection] userId = " + userId
+            );
 
-        if (choice < 1 || choice > products.size()) {
-            sendText(userId.toString(),
-                    "❌ Невірний номер.");
-            return;
-        }
+            System.out.println(
+                    "[handleProductSelection] keys = "
+                            + userProductLists.keySet()
+            );
 
-        Map<String, Object> product =
-                products.get(choice - 1);
+            // =====================================
+            // Беремо список товарів
+            // =====================================
+            List<Map<String, Object>> products =
+                    userProductLists.get(userId);
 
-        lastShownProduct.put(userId, product);
+            // 🔥 якщо null — пробуємо chatId String
+            if (products == null) {
 
-        products.remove(choice - 1);
+                Object alt =
+                        userProductLists.get(
+                                Long.valueOf(userId)
+                        );
 
-        if (!products.isEmpty()) {
-
-            StringBuilder sb =
-                    new StringBuilder("📦 Інші товари:\n\n");
-
-            for (int i = 0; i < products.size(); i++) {
-                sb.append(i + 1)
-                        .append(". ")
-                        .append(products.get(i).get("name"))
-                        .append("\n");
+                if (alt instanceof List) {
+                    products =
+                            (List<Map<String, Object>>) alt;
+                }
             }
 
-            sendText(userId.toString(), sb.toString());
-        }
+            // =====================================
+            // Якщо пусто
+            // =====================================
+            if (products == null ||
+                    products.isEmpty()) {
 
-        sendProductFromMap(userId, product);
+                sendText(
+                        userId.toString(),
+                        "❌ Список товарів порожній."
+                );
+
+                return;
+            }
+
+            // =====================================
+            // Перевірка номера
+            // =====================================
+            if (choice < 1 ||
+                    choice > products.size()) {
+
+                sendText(
+                        userId.toString(),
+                        "❌ Невірний номер."
+                );
+
+                return;
+            }
+
+            // =====================================
+            // Беремо товар
+            // =====================================
+            Map<String, Object> product =
+                    products.get(choice - 1);
+
+            // Зберігаємо відкритий товар
+            lastShownProduct.put(userId, product);
+
+            // Видаляємо зі списку
+            products.remove(choice - 1);
+
+            // Оновлюємо список назад у map
+            userProductLists.put(userId, products);
+
+            // =====================================
+            // Інші товари
+            // =====================================
+            if (!products.isEmpty()) {
+
+                StringBuilder sb =
+                        new StringBuilder();
+
+                sb.append("📦 Інші товари:\n\n");
+
+                for (int i = 0; i < products.size(); i++) {
+
+                    String name =
+                            safeToString(
+                                    products.get(i).get("name"),
+                                    "Без назви"
+                            );
+
+                    sb.append(i + 1)
+                            .append(". ")
+                            .append(name)
+                            .append("\n");
+                }
+
+                sendText(
+                        userId.toString(),
+                        sb.toString()
+                );
+            }
+
+            // =====================================
+            // Показ товару
+            // =====================================
+            sendProductFromMap(userId, product);
+
+            // =====================================
+            // State товар відкритий
+            // =====================================
+            userStates.remove(userId);
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            sendText(
+                    userId.toString(),
+                    "❌ Помилка вибору товару."
+            );
+        }
     }
 
     private void showNextProduct(Long chatId) throws TelegramApiException {
