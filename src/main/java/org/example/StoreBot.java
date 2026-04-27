@@ -6581,278 +6581,77 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔸 Показ товарів списком (через БАЗУ)
-    private void sendProductList(Long chatId)
-            throws TelegramApiException {
+    private void sendProductList(Long chatId) throws TelegramApiException {
 
         Long userId = chatId;
 
-        String category =
-                cleanValue(
-                        currentCategory.get(userId)
-                );
+        String category = cleanValue(currentCategory.get(userId));
+        String subcategory = cleanValue(currentSubcategory.get(userId));
+        String filter = cleanValue(currentFilter.get(userId));
+        String subfilter = cleanValue(currentSubfilter.get(userId));
 
-        String subcategory =
-                cleanValue(
-                        currentSubcategory.get(userId)
-                );
+        try {
+            CatalogSearcher searcher = new CatalogSearcher();
 
-        String filter =
-                cleanValue(
-                        currentFilter.get(userId)
-                );
-
-        String subfilter =
-                cleanValue(
-                        currentSubfilter.get(userId)
-                );
-
-        List<Map<String, Object>> products =
-                new ArrayList<>();
-
-        try (Connection conn =
-                     DatabaseManager.getConnection()) {
-
-            StringBuilder sql =
-                    new StringBuilder("""
-            SELECT *
-            FROM products
-            WHERE active = 1
-            """);
-
-            List<Object> params =
-                    new ArrayList<>();
-
-            // -------------------------
-            // category
-            // -------------------------
-            if (category != null) {
-
-                sql.append("""
-             AND category_id = (
-                SELECT id
-                FROM categories
-                WHERE name = ?
-                LIMIT 1
-             )
-            """);
-
-                params.add(category);
-            }
-
-            // -------------------------
-            // subcategory
-            // -------------------------
-            if (subcategory != null) {
-
-                sql.append("""
-             AND subcategory_id = (
-                SELECT id
-                FROM subcategories
-                WHERE name = ?
-                LIMIT 1
-             )
-            """);
-
-                params.add(subcategory);
-            }
-
-            // -------------------------
-            // filter
-            // -------------------------
-            if (filter != null) {
-
-                sql.append("""
-             AND filter_id = (
-                SELECT id
-                FROM filters
-                WHERE name = ?
-                AND active = 1
-                LIMIT 1
-             )
-            """);
-
-                params.add(filter);
-            }
-
-            // -------------------------
-            // subfilter
-            // -------------------------
-            if (subfilter != null) {
-
-                sql.append("""
-             AND subfilter_id = (
-                SELECT id
-                FROM subfilters
-                WHERE name = ?
-                AND active = 1
-                LIMIT 1
-             )
-            """);
-
-                params.add(subfilter);
-            }
-
-            sql.append("""
-         ORDER BY name ASC
-        """);
-
-            PreparedStatement ps =
-                    conn.prepareStatement(
-                            sql.toString()
+            List<Map<String, Object>> products =
+                    searcher.findProducts(
+                            category,
+                            subcategory,
+                            filter,
+                            subfilter
                     );
 
-            for (int i = 0; i < params.size(); i++) {
-                ps.setObject(i + 1, params.get(i));
+            if (products == null || products.isEmpty()) {
+                sendText(chatId.toString(),
+                        "❌ Товарів у цьому розділі немає.");
+                return;
             }
 
-            ResultSet rs =
-                    ps.executeQuery();
+            userProductLists.put(userId, new ArrayList<>(products));
+            userStates.put(userId, "choose_product");
 
-            while (rs.next()) {
+            StringBuilder sb = new StringBuilder("📦 Обери товар:\n\n");
 
-                Map<String, Object> map =
-                        new HashMap<>();
+            for (int i = 0; i < products.size(); i++) {
 
-                map.put(
-                        "id",
-                        rs.getInt("id")
-                );
+                Map<String, Object> p = products.get(i);
 
-                map.put(
-                        "name",
-                        rs.getString("name")
-                );
-
-                map.put(
-                        "price",
-                        rs.getBigDecimal("price")
-                );
-
-                map.put(
-                        "photo",
-                        rs.getString("photo")
-                );
-
-                map.put(
-                        "description",
-                        rs.getString("description")
-                );
-
-                map.put(
-                        "unit",
-                        rs.getString("unit")
-                );
-
-                products.add(map);
+                sb.append(i + 1)
+                        .append(". ")
+                        .append(safeToString(p.get("name"), "Без назви"))
+                        .append(" — ")
+                        .append(safeToString(p.get("price"), "0"))
+                        .append(" грн\n");
             }
+
+            sendText(chatId.toString(), sb.toString());
+
+            KeyboardRow row = new KeyboardRow();
+            row.add(BACK_BUTTON);
+
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+            markup.setResizeKeyboard(true);
+            markup.setKeyboard(List.of(row));
+
+            sendTextWithMarkup(chatId,
+                    "👇 Введи номер товару:",
+                    markup);
 
         } catch (Exception e) {
-
             e.printStackTrace();
 
-            sendText(
-                    chatId.toString(),
-                    "❌ Помилка бази даних."
-            );
-
-            return;
+            sendText(chatId.toString(),
+                    "❌ Помилка завантаження товарів.");
         }
-
-        // -------------------------
-        // Якщо пусто
-        // -------------------------
-        if (products.isEmpty()) {
-
-            sendText(
-                    chatId.toString(),
-                    "❌ Товарів у цьому розділі немає."
-            );
-
-            return;
-        }
-
-        // -------------------------
-        // Зберігаємо список
-        // -------------------------
-        userProductLists.put(
-                userId,
-                new ArrayList<>(products)
-        );
-
-        userStates.put(
-                userId,
-                "choose_product"
-        );
-
-        // -------------------------
-        // Формуємо текст
-        // -------------------------
-        StringBuilder sb =
-                new StringBuilder(
-                        "📦 Обери товар:\n\n"
-                );
-
-        for (int i = 0; i < products.size(); i++) {
-
-            Map<String, Object> p =
-                    products.get(i);
-
-            sb.append(i + 1)
-                    .append(". ")
-                    .append(
-                            safeToString(
-                                    p.get("name"),
-                                    "Без назви"
-                            )
-                    )
-                    .append(" — ")
-                    .append(
-                            safeToString(
-                                    p.get("price"),
-                                    "0"
-                            )
-                    )
-                    .append(" грн\n");
-        }
-
-        sendText(
-                chatId.toString(),
-                sb.toString()
-        );
-
-        // -------------------------
-        // Кнопка назад
-        // -------------------------
-        KeyboardRow row =
-                new KeyboardRow();
-
-        row.add(BACK_BUTTON);
-
-        ReplyKeyboardMarkup markup =
-                new ReplyKeyboardMarkup();
-
-        markup.setResizeKeyboard(true);
-        markup.setKeyboard(
-                List.of(row)
-        );
-
-        sendTextWithMarkup(
-                chatId,
-                "👇 Введи номер товару:",
-                markup
-        );
     }
 
-    // 🔥 helper
     private String cleanValue(String value) {
-
-        if (value == null)
-            return null;
+        if (value == null) return null;
 
         value = value.trim();
 
-        if (value.isBlank()
-                || value.equalsIgnoreCase("null")) {
+        if (value.isBlank() ||
+                value.equalsIgnoreCase("null")) {
             return null;
         }
 
