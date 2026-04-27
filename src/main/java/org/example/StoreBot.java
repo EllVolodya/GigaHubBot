@@ -7087,41 +7087,6 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    public void handleSearchNumber(Long userId, String chatId, String text) {
-
-        List<Map<String, Object>> results = searchResults.get(userId);
-
-        if (results == null || results.isEmpty()) {
-            sendText(chatId, "❌ Список товарів порожній.");
-            return;
-        }
-
-        int index;
-
-        try {
-            index = Integer.parseInt(text) - 1;
-        } catch (NumberFormatException e) {
-            sendText(chatId, "❌ Введіть номер товару цифрою.");
-            return;
-        }
-
-        if (index < 0 || index >= results.size()) {
-            sendText(chatId, "❌ Невірний номер товару.");
-            return;
-        }
-
-        Map<String, Object> product = results.get(index);
-
-        // 🔥 ОСЬ ГОЛОВНЕ — зберігаємо товар
-        lastShownProduct.put(userId, product);
-
-        try {
-            sendProductFromMap(userId, product);
-        } catch (TelegramApiException e) {
-            e.printStackTrace();
-        }
-    }
-
     private void handleAdminSearchInput(Long userId, String chatId, String text)
             throws TelegramApiException {
 
