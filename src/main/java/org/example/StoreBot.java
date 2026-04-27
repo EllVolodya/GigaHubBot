@@ -6467,114 +6467,136 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔸 Показ товарів списком
-    private void sendProductList(Long chatId)
+    private void sendProductList(Long userId)
             throws TelegramApiException {
 
-        Long userId = chatId;
+        try {
+            // Отримуємо поточні вибори користувача
+            String category =
+                    currentCategory.get(userId);
 
-        String category =
-                currentCategory.get(userId);
+            String subcategory =
+                    currentSubcategory.get(userId);
 
-        String subcategory =
-                currentSubcategory.get(userId);
+            String filter =
+                    currentFilter.get(userId);
 
-        String filter =
-                currentFilter.get(userId);
+            String subfilter =
+                    currentSubfilter.get(userId);
 
-        String subfilter =
-                currentSubfilter.get(userId);
+            // Пошук товарів
+            CatalogSearcher searcher =
+                    new CatalogSearcher();
 
-        CatalogSearcher searcher =
-                new CatalogSearcher();
+            List<Map<String, Object>> products =
+                    searcher.findProducts(
+                            category,
+                            subcategory,
+                            filter,
+                            subfilter
+                    );
 
-        List<Map<String, Object>> products =
-                searcher.findProducts(
-                        category,
-                        subcategory,
-                        filter,
-                        subfilter
+            // Якщо пусто
+            if (products == null ||
+                    products.isEmpty()) {
+
+                sendText(
+                        userId.toString(),
+                        "❌ Товарів у цьому розділі немає."
                 );
 
-        if (products == null ||
-                products.isEmpty()) {
+                return;
+            }
+
+            // Зберігаємо список товарів
+            userProductLists.remove(userId);
+
+            userProductLists.put(
+                    userId,
+                    new ArrayList<>(products)
+            );
+
+            userStates.put(
+                    userId,
+                    "choose_product"
+            );
+
+            // DEBUG
+            System.out.println(
+                    "[sendProductList] userId = " + userId
+            );
+
+            System.out.println(
+                    "[sendProductList] saved products = "
+                            + products.size()
+            );
+
+            // Формуємо список
+            StringBuilder sb =
+                    new StringBuilder();
+
+            sb.append("📦 Обери товар:\n\n");
+
+            for (int i = 0; i < products.size(); i++) {
+
+                Map<String, Object> product =
+                        products.get(i);
+
+                String name =
+                        safeToString(
+                                product.get("name"),
+                                "Без назви"
+                        );
+
+                String price =
+                        safeToString(
+                                product.get("price"),
+                                "0"
+                        );
+
+                sb.append(i + 1)
+                        .append(". ")
+                        .append(name)
+                        .append(" — ")
+                        .append(price)
+                        .append(" грн\n");
+            }
 
             sendText(
-                    chatId.toString(),
-                    "❌ Товарів у цьому розділі немає."
+                    userId.toString(),
+                    sb.toString()
             );
-            return;
+
+            // Кнопка назад
+            ReplyKeyboardMarkup markup =
+                    new ReplyKeyboardMarkup();
+
+            markup.setResizeKeyboard(true);
+
+            KeyboardRow row1 =
+                    new KeyboardRow();
+
+            row1.add(BACK_BUTTON);
+
+            markup.setKeyboard(
+                    List.of(row1)
+            );
+
+            sendMessage(
+                    userId.toString(),
+                    "👇 Введи номер товару:",
+                    markup
+            );
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            sendText(
+                    userId.toString(),
+                    "❌ Помилка при завантаженні товарів."
+            );
         }
-
-        // Зберігаємо список товарів
-        userProductLists.put(
-                userId,
-                new ArrayList<>(products)
-        );
-
-        // 🔥 ГОЛОВНИЙ ФІКС
-        userStates.put(
-                userId,
-                "choose_product"
-        );
-
-        // Формуємо список
-        StringBuilder sb =
-                new StringBuilder(
-                        "📦 Обери товар:\n\n"
-                );
-
-        for (int i = 0; i < products.size(); i++) {
-
-            Map<String, Object> product =
-                    products.get(i);
-
-            String name =
-                    safeToString(
-                            product.get("name"),
-                            "Без назви"
-                    );
-
-            String price =
-                    safeToString(
-                            product.get("price"),
-                            "0"
-                    );
-
-            sb.append(i + 1)
-                    .append(". ")
-                    .append(name)
-                    .append(" — ")
-                    .append(price)
-                    .append(" грн\n");
-        }
-
-        sendText(
-                chatId.toString(),
-                sb.toString()
-        );
-
-        // Кнопка назад
-        KeyboardRow row =
-                new KeyboardRow();
-
-        row.add(BACK_BUTTON);
-
-        List<KeyboardRow> keyboard =
-                new ArrayList<>();
-
-        keyboard.add(row);
-
-        ReplyKeyboardMarkup markup =
-                new ReplyKeyboardMarkup();
-
-        markup.setKeyboard(keyboard);
-        markup.setResizeKeyboard(true);
-
-        sendTextWithMarkup(
-                chatId,
-                "👇 Введи номер товару:",
-                markup
-        );
     }
 
     private void showRemainingProductList(Long chatId)
