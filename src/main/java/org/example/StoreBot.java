@@ -328,7 +328,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // Перевірка числа
+                // Перевірка кількості
                 int qty;
 
                 try {
@@ -352,7 +352,8 @@ public class StoreBot extends TelegramLongPollingBot {
                                 tempStorage.get(userId + "_product");
 
                 if (product == null) {
-                    sendText(chatId, "❌ Товар не знайдено.");
+                    sendText(chatId,
+                            "❌ Товар не знайдено.");
                     return;
                 }
 
@@ -397,13 +398,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 userCart.put(userId, cart);
 
-                // Повідомлення
                 sendText(chatId,
                         "✅ Додано в кошик: "
                                 + product.get("name")
                                 + " (" + qty + " шт)");
 
-                // Очистка
                 lastShownProduct.put(userId, product);
 
                 tempStorage.remove(userId + "_product");
@@ -413,21 +412,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 // Показ кошика
                 showCartNice(userId, chatId);
 
-                // 🔥 Нижня клавіатура (залишається row)
-                ReplyKeyboardMarkup markup =
-                        new ReplyKeyboardMarkup();
-
-                markup.setResizeKeyboard(true);
-
-                KeyboardRow row1 = new KeyboardRow();
-                row1.add("🚛 Оформити замовлення");
-
-                KeyboardRow row2 = new KeyboardRow();
-                row2.add(BACK_BUTTON);
-
-                markup.setKeyboard(List.of(row1, row2));
-
-                // 🔥 Inline кнопка під текстом "Ваш кошик"
+                // INLINE кнопка назад
                 InlineKeyboardMarkup inline =
                         new InlineKeyboardMarkup();
 
@@ -445,9 +430,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 );
 
                 rows.add(line1);
+
                 inline.setKeyboard(rows);
 
-                // 🔥 Повідомлення з inline кнопкою
                 SendMessage msg =
                         SendMessage.builder()
                                 .chatId(chatId)
@@ -456,6 +441,24 @@ public class StoreBot extends TelegramLongPollingBot {
                                 .build();
 
                 execute(msg);
+
+                // Нижня клавіатура
+                ReplyKeyboardMarkup markup =
+                        new ReplyKeyboardMarkup();
+
+                markup.setResizeKeyboard(true);
+
+                KeyboardRow row1 = new KeyboardRow();
+                row1.add("🚛 Оформити замовлення");
+
+                KeyboardRow row2 = new KeyboardRow();
+                row2.add(BACK_BUTTON);
+
+                markup.setKeyboard(List.of(row1, row2));
+
+                sendMessage(chatId,
+                        "👇 Оберіть дію:",
+                        markup);
 
                 return;
 
