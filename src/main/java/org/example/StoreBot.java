@@ -5149,34 +5149,52 @@ public class StoreBot extends TelegramLongPollingBot {
         userStates.put(userId, "choose_search_source");
     }
 
-    ///  Вибір товару
-    private void handleChooseProduct(Long userId, String chatId, String text) {
+    private void handleChooseProduct(
+            Long userId,
+            String chatId,
+            String text
+    ) {
 
-        List<Map<String, Object>> matches = adminMatchList.get(userId);
+        List<Map<String, Object>> matches =
+                adminMatchList.get(userId);
 
         if (matches == null || matches.isEmpty()) {
-            sendText(chatId, "❌ Список товарів порожній.");
+            sendText(chatId,
+                    "❌ Список товарів порожній.");
             userStates.remove(userId);
             return;
         }
 
-        text = text.trim();
+        text = text.trim()
+                .replace("–", "-")
+                .replace("—", "-");
 
-        List<Map<String, Object>> selectedProducts = new ArrayList<>();
-        List<Integer> selectedIds = new ArrayList<>();
+        List<Map<String, Object>> selectedProducts =
+                new ArrayList<>();
+
+        List<Integer> selectedIds =
+                new ArrayList<>();
 
         try {
 
             // Діапазон
             if (text.contains("-")) {
 
-                String[] parts = text.split("-");
+                String[] parts =
+                        text.split("\\s*-\\s*");
 
-                int start = Integer.parseInt(parts[0].trim()) - 1;
-                int end   = Integer.parseInt(parts[1].trim()) - 1;
+                if (parts.length != 2) {
+                    throw new Exception();
+                }
+
+                int start =
+                        Integer.parseInt(parts[0]) - 1;
+
+                int end =
+                        Integer.parseInt(parts[1]) - 1;
 
                 start = Math.max(start, 0);
-                end   = Math.min(end, matches.size() - 1);
+                end = Math.min(end, matches.size() - 1);
 
                 for (int i = start; i <= end; i++) {
                     selectedProducts.add(matches.get(i));
@@ -5186,56 +5204,81 @@ public class StoreBot extends TelegramLongPollingBot {
             // Список
             else if (text.contains(",")) {
 
-                String[] parts = text.split(",");
+                String[] parts =
+                        text.split(",");
 
                 for (String part : parts) {
 
-                    int index = Integer.parseInt(part.trim()) - 1;
+                    int index =
+                            Integer.parseInt(
+                                    part.trim()
+                            ) - 1;
 
-                    if (index >= 0 && index < matches.size()) {
-                        selectedProducts.add(matches.get(index));
+                    if (index >= 0 &&
+                            index < matches.size()) {
+
+                        selectedProducts.add(
+                                matches.get(index)
+                        );
                     }
                 }
             }
 
-            // Один товар
+            // Один
             else {
 
-                int index = Integer.parseInt(text) - 1;
+                int index =
+                        Integer.parseInt(text) - 1;
 
-                if (index >= 0 && index < matches.size()) {
-                    selectedProducts.add(matches.get(index));
-                }
-            }
+                if (index >= 0 &&
+                        index < matches.size()) {
 
-            if (selectedProducts.isEmpty()) {
-                sendText(chatId, "❌ Немає валідних номерів.");
-                return;
-            }
-
-            // Збираємо ID
-            for (Map<String, Object> product : selectedProducts) {
-
-                Object rawId = product.get("id");
-
-                if (rawId instanceof Integer) {
-                    selectedIds.add((Integer) rawId);
-                } else {
-                    selectedIds.add(
-                            Integer.parseInt(rawId.toString())
+                    selectedProducts.add(
+                            matches.get(index)
                     );
                 }
             }
 
-            // Зберігаємо
-            adminSelectedProducts.put(userId, selectedProducts);
-            adminSelectedProductsIds.put(userId, selectedIds);
+            if (selectedProducts.isEmpty()) {
+                sendText(chatId,
+                        "❌ Немає валідних номерів.");
+                return;
+            }
 
-            Map<String, Object> first = selectedProducts.get(0);
+            // ID
+            for (Map<String, Object> product :
+                    selectedProducts) {
 
-            adminSelectedProduct.put(userId, first);
-            adminEditingProduct.put(userId,
-                    first.get("name").toString());
+                selectedIds.add(
+                        Integer.parseInt(
+                                product.get("id")
+                                        .toString()
+                        )
+                );
+            }
+
+            adminSelectedProducts.put(
+                    userId,
+                    selectedProducts
+            );
+
+            adminSelectedProductsIds.put(
+                    userId,
+                    selectedIds
+            );
+
+            Map<String, Object> first =
+                    selectedProducts.get(0);
+
+            adminSelectedProduct.put(
+                    userId,
+                    first
+            );
+
+            adminEditingProduct.put(
+                    userId,
+                    first.get("name").toString()
+            );
 
             userStates.put(userId, "editing");
 
@@ -5249,8 +5292,9 @@ public class StoreBot extends TelegramLongPollingBot {
             showEditMenuOnce(userId, chatId);
 
         } catch (Exception e) {
+
             sendText(chatId,
-                    "❌ Введіть номер, діапазон (1-5) або список (1,3,5)");
+                    "❌ Введіть номер, діапазон (1-21) або список (1,3,5)");
         }
     }
 
