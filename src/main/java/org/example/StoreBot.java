@@ -424,7 +424,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 line1.add(
                         InlineKeyboardButton.builder()
-                                .text("⬅️ Назад")
+                                .text(BACK_BUTTON)
                                 .callbackData("cart_back")
                                 .build()
                 );
