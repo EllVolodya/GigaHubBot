@@ -329,6 +329,7 @@ public class StoreBot extends TelegramLongPollingBot {
         if ("awaiting_quantity".equals(state)) {
 
             try {
+
                 if (BACK_BUTTON.equals(text)) {
 
                     tempStorage.remove(userId + "_product");
@@ -353,9 +354,12 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendCategories(userId);
                     return;
                 }
+
+                // Кількість
                 int qty;
 
                 try {
+
                     qty = Integer.parseInt(text.trim());
 
                     if (qty <= 0) {
@@ -365,12 +369,13 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                 } catch (Exception e) {
+
                     sendText(chatId,
                             "❌ Введіть число (1, 2, 3...)");
                     return;
                 }
 
-                // Отримуємо товар
+                // Товар
                 Map<String, Object> product =
                         (Map<String, Object>)
                                 tempStorage.get(userId + "_product");
@@ -381,7 +386,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // Додаємо в кошик
+                // Кошик
                 Map<String, Object> cartItem =
                         new HashMap<>(product);
 
@@ -422,7 +427,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 userCart.put(userId, cart);
 
-                // Повідомлення
                 sendText(chatId,
                         "✅ Додано в кошик: "
                                 + product.get("name")
@@ -434,25 +438,40 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 userStates.put(userId, "in_cart");
 
-                showCartNice(userId, chatId); // Показ кошика
+                // Показ кошика
+                showCartNice(userId, chatId);
 
-                // Нижня клавіатура
+                // Кнопки
                 ReplyKeyboardMarkup markup =
                         new ReplyKeyboardMarkup();
 
                 markup.setResizeKeyboard(true);
 
-                KeyboardRow row1 = new KeyboardRow();
+                KeyboardRow row1 =
+                        new KeyboardRow();
                 row1.add("🚛 Оформити замовлення");
 
-                KeyboardRow row2 = new KeyboardRow();
-                row2.add(BACK_BUTTON);
+                KeyboardRow row2 =
+                        new KeyboardRow();
+                row2.add("❌ Видалити товар");
+                row2.add("✏️ Змінити кількість");
 
-                markup.setKeyboard(List.of(row1, row2));
+                KeyboardRow row3 =
+                        new KeyboardRow();
+                row3.add(BACK_BUTTON);
+
+                markup.setKeyboard(
+                        List.of(row1, row2, row3)
+                );
+
+                sendMessage(chatId,
+                        "📦 Ваш кошик:",
+                        markup);
 
                 return;
 
             } catch (Exception e) {
+
                 e.printStackTrace();
 
                 sendText(chatId,
@@ -8914,6 +8933,7 @@ public class StoreBot extends TelegramLongPollingBot {
         return -1;
     }
 
+    /// Показ кошику з товаром (Новий)
     private void showCartNice(Long userId, String chatId) {
 
         List<Map<String, Object>> cart = userCart.get(userId);
