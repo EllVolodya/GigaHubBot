@@ -991,37 +991,93 @@ public class StoreBot extends TelegramLongPollingBot {
         if ("awaiting_filter_select".equals(state)) {
 
             if (BACK_BUTTON.equals(text)) {
+
                 userStates.remove(userId);
-                sendMessageSafely(createEditMenu(chatId, userId));
+
+                tempStorage.remove(
+                        userId + "_filter_product"
+                );
+
+                sendMessageSafely(
+                        createEditMenu(
+                                chatId,
+                                userId
+                        )
+                );
+
                 return;
             }
 
-            if (text == null || text.isBlank()) {
-                sendText(chatId, "❌ Оберіть фільтр.");
+            if (text == null ||
+                    text.isBlank()) {
+
+                sendText(chatId,
+                        "❌ Оберіть фільтр.");
                 return;
             }
 
-            Map<String, Object> product = adminSelectedProduct.get(userId);
+            Map<String, Object> product =
+                    (Map<String, Object>)
+                            tempStorage.get(
+                                    userId + "_filter_product"
+                            );
 
             if (product == null) {
-                sendText(chatId, "❌ Товар не знайдено.");
+
+                product =
+                        adminSelectedProduct.get(userId);
+            }
+
+            if (product == null) {
+
+                sendText(chatId,
+                        "❌ Товар не знайдено.");
+
                 userStates.remove(userId);
                 return;
             }
 
-            CatalogSearcher searcher = new CatalogSearcher();
+            try {
 
-            boolean success = searcher.addProductToFilter(product, text, null);
+                CatalogSearcher searcher =
+                        new CatalogSearcher();
 
-            userStates.remove(userId);
+                boolean success =
+                        searcher.addProductToFilter(
+                                product,
+                                text,
+                                null
+                        );
 
-            sendText(chatId,
-                    success
-                            ? "✅ Додано у фільтр: " + text
-                            : "❌ Помилка."
-            );
+                userStates.remove(userId);
 
-            sendMessageSafely(createEditMenu(chatId, userId));
+                tempStorage.remove(
+                        userId + "_filter_product"
+                );
+
+                sendText(
+                        chatId,
+                        success
+                                ? "✅ Товар додано у фільтр: " + text
+                                : "❌ Помилка додавання у фільтр."
+                );
+
+                sendMessageSafely(
+                        createEditMenu(
+                                chatId,
+                                userId
+                        )
+                );
+
+            } catch (Exception e) {
+
+                e.printStackTrace();
+
+                sendText(chatId,
+                        "❌ Помилка роботи з базою.");
+            }
+
+            return;
         }
 
         // 🔹 Вибір підфільтра
@@ -5509,15 +5565,50 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "⚙️ Додати в фільтр" -> {
 
-                if (adminSelectedProduct.get(userId) == null) {
-                    sendText(chatId, "⚠️ Спочатку виберіть товар.");
+                Map<String, Object> product =
+                        adminSelectedProduct.get(userId);
+
+                if (product == null) {
+                    sendText(chatId,
+                            "⚠️ Спочатку виберіть товар.");
                     return;
                 }
 
-                userStates.put(userId, "awaiting_filter_select");
+                Object categoryId =
+                        product.get("category_id");
 
-                sendText(chatId, "🔽 Оберіть фільтр:");
-                sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
+                Object subcategoryId =
+                        product.get("subcategory_id");
+
+                if (subcategoryId == null) {
+
+                    sendText(chatId,
+                            "❌ У товарі не знайдена підкатегорія.");
+                    return;
+                }
+
+                // 🔥 зберігаємо тимчасово
+                tempStorage.put(
+                        userId + "_filter_product",
+                        product
+                );
+
+                userStates.put(
+                        userId,
+                        "awaiting_filter_select"
+                );
+
+                sendText(chatId,
+                        "🔽 Оберіть фільтр:");
+
+                sendMessageSafely(
+                        createFilterSelectMenu(
+                                userId,
+                                chatId,
+                                0
+                        )
+                );
+
                 return;
             }
 
