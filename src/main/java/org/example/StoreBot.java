@@ -196,6 +196,34 @@ public class StoreBot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (update == null || update.getMessage() == null) return;
 
+        // INLINE кнопки
+        if (update.hasCallbackQuery()) {
+
+            String data =
+                    update.getCallbackQuery().getData();
+
+            Long userId =
+                    update.getCallbackQuery()
+                            .getFrom()
+                            .getId();
+
+            String chatId =
+                    update.getCallbackQuery()
+                            .getMessage()
+                            .getChatId()
+                            .toString();
+
+            if ("cart_back".equals(data)) {
+                try {
+                    handleBack(userId, chatId);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                return;
+            }
+        }
+
+        // Повідомлення
         if (update.hasMessage() && update.getMessage().hasVideo()) {
 
             Message message = update.getMessage();
@@ -301,10 +329,6 @@ public class StoreBot extends TelegramLongPollingBot {
         if ("awaiting_quantity".equals(state)) {
 
             try {
-
-                // ==================================
-                // Кнопка назад
-                // ==================================
                 if (BACK_BUTTON.equals(text)) {
 
                     tempStorage.remove(userId + "_product");
@@ -329,10 +353,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendCategories(userId);
                     return;
                 }
-
-                // ==================================
-                // Перевірка кількості
-                // ==================================
                 int qty;
 
                 try {
@@ -350,9 +370,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // ==================================
                 // Отримуємо товар
-                // ==================================
                 Map<String, Object> product =
                         (Map<String, Object>)
                                 tempStorage.get(userId + "_product");
@@ -363,9 +381,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // ==================================
                 // Додаємо в кошик
-                // ==================================
                 Map<String, Object> cartItem =
                         new HashMap<>(product);
 
@@ -406,31 +422,22 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 userCart.put(userId, cart);
 
-                // ==================================
                 // Повідомлення
-                // ==================================
                 sendText(chatId,
                         "✅ Додано в кошик: "
                                 + product.get("name")
                                 + " (" + qty + " шт)");
 
-                // ==================================
-                // Очистка
-                // ==================================
                 lastShownProduct.put(userId, product);
 
                 tempStorage.remove(userId + "_product");
 
                 userStates.put(userId, "in_cart");
 
-                // ==================================
                 // Показ кошика
-                // ==================================
                 showCartNice(userId, chatId);
 
-                // ==================================
                 // INLINE кнопка назад через BACK_BUTTON
-                // ==================================
                 InlineKeyboardMarkup inline =
                         new InlineKeyboardMarkup();
 
@@ -460,9 +467,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 execute(msg);
 
-                // ==================================
                 // Нижня клавіатура
-                // ==================================
                 ReplyKeyboardMarkup markup =
                         new ReplyKeyboardMarkup();
 
@@ -1297,32 +1302,6 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔹 DEFAULT DELEGATION TO PHOTO HANDLER
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
         photoHandler.handleUpdate(userId, chatId, update);
-
-        /*// 🔥 ОБРОБКА ФІЛЬТРІВ / ПІДФІЛЬТРІВ
-        if (text != null && !text.isBlank()) {
-
-            try {
-                Long chatIdLong = Long.valueOf(chatId);
-
-                if (isFilter(text)) {
-
-                    // 🔹 якщо є підфільтри → показуємо їх
-                    if (hasSubfilters(text)) {
-                        sendSubfilters(chatIdLong, text, 0);
-                        return;
-                    }
-
-                    // 🔹 якщо нема підфільтрів → це кінцевий розділ
-                    sendText(chatId, "📦 Відкриваємо товари для: " + text);
-                    return;
-                }
-
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-                sendText(chatId, "❌ Помилка при відкритті розділу.");
-                return;
-            }
-        }*/
 
         if (text == null || text.isBlank()) {
             return;
