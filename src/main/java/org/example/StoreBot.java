@@ -5574,20 +5574,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                Object categoryId =
-                        product.get("category_id");
-
-                Object subcategoryId =
-                        product.get("subcategory_id");
-
-                if (subcategoryId == null) {
-
-                    sendText(chatId,
-                            "❌ У товарі не знайдена підкатегорія.");
-                    return;
-                }
-
-                // 🔥 зберігаємо тимчасово
                 tempStorage.put(
                         userId + "_filter_product",
                         product
