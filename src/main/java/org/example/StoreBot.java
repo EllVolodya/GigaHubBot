@@ -6580,93 +6580,188 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // 🔸 Показ товарів списком
+    // 🔸 Показ товарів списком (через БАЗУ)
     private void sendProductList(Long chatId)
             throws TelegramApiException {
 
         Long userId = chatId;
 
-        // Беремо поточні значення
         String category =
-                currentCategory.get(userId);
-
-        String subcategory =
-                currentSubcategory.get(userId);
-
-        String filter =
-                currentFilter.get(userId);
-
-        String subfilter =
-                currentSubfilter.get(userId);
-
-        // 🔥 Чистимо сміття типу "null", "", пробіли
-        if (category != null) {
-            category = category.trim();
-            if (category.isBlank()
-                    || category.equalsIgnoreCase("null")) {
-                category = null;
-            }
-        }
-
-        if (subcategory != null) {
-            subcategory = subcategory.trim();
-            if (subcategory.isBlank()
-                    || subcategory.equalsIgnoreCase("null")) {
-                subcategory = null;
-            }
-        }
-
-        if (filter != null) {
-            filter = filter.trim();
-            if (filter.isBlank()
-                    || filter.equalsIgnoreCase("null")) {
-                filter = null;
-            }
-        }
-
-        if (subfilter != null) {
-            subfilter = subfilter.trim();
-            if (subfilter.isBlank()
-                    || subfilter.equalsIgnoreCase("null")) {
-                subfilter = null;
-            }
-        }
-
-        System.out.println(
-                "[sendProductList] category="
-                        + category
-                        + " subcategory="
-                        + subcategory
-                        + " filter="
-                        + filter
-                        + " subfilter="
-                        + subfilter
-        );
-
-        CatalogSearcher searcher =
-                new CatalogSearcher();
-
-        List<Map<String, Object>> products =
-                searcher.findProducts(
-                        category,
-                        subcategory,
-                        filter,
-                        subfilter
+                cleanValue(
+                        currentCategory.get(userId)
                 );
 
-        // 🔥 Якщо по фільтру пусто — пробуємо без фільтрів
-        if (products == null || products.isEmpty()) {
+        String subcategory =
+                cleanValue(
+                        currentSubcategory.get(userId)
+                );
 
-            products =
-                    searcher.findProducts(
-                            category,
-                            subcategory,
-                            null,
-                            null
+        String filter =
+                cleanValue(
+                        currentFilter.get(userId)
+                );
+
+        String subfilter =
+                cleanValue(
+                        currentSubfilter.get(userId)
+                );
+
+        List<Map<String, Object>> products =
+                new ArrayList<>();
+
+        try (Connection conn =
+                     DatabaseManager.getConnection()) {
+
+            StringBuilder sql =
+                    new StringBuilder("""
+            SELECT *
+            FROM products
+            WHERE active = 1
+            """);
+
+            List<Object> params =
+                    new ArrayList<>();
+
+            // -------------------------
+            // category
+            // -------------------------
+            if (category != null) {
+
+                sql.append("""
+             AND category_id = (
+                SELECT id
+                FROM categories
+                WHERE name = ?
+                LIMIT 1
+             )
+            """);
+
+                params.add(category);
+            }
+
+            // -------------------------
+            // subcategory
+            // -------------------------
+            if (subcategory != null) {
+
+                sql.append("""
+             AND subcategory_id = (
+                SELECT id
+                FROM subcategories
+                WHERE name = ?
+                LIMIT 1
+             )
+            """);
+
+                params.add(subcategory);
+            }
+
+            // -------------------------
+            // filter
+            // -------------------------
+            if (filter != null) {
+
+                sql.append("""
+             AND filter_id = (
+                SELECT id
+                FROM filters
+                WHERE name = ?
+                AND active = 1
+                LIMIT 1
+             )
+            """);
+
+                params.add(filter);
+            }
+
+            // -------------------------
+            // subfilter
+            // -------------------------
+            if (subfilter != null) {
+
+                sql.append("""
+             AND subfilter_id = (
+                SELECT id
+                FROM subfilters
+                WHERE name = ?
+                AND active = 1
+                LIMIT 1
+             )
+            """);
+
+                params.add(subfilter);
+            }
+
+            sql.append("""
+         ORDER BY name ASC
+        """);
+
+            PreparedStatement ps =
+                    conn.prepareStatement(
+                            sql.toString()
                     );
+
+            for (int i = 0; i < params.size(); i++) {
+                ps.setObject(i + 1, params.get(i));
+            }
+
+            ResultSet rs =
+                    ps.executeQuery();
+
+            while (rs.next()) {
+
+                Map<String, Object> map =
+                        new HashMap<>();
+
+                map.put(
+                        "id",
+                        rs.getInt("id")
+                );
+
+                map.put(
+                        "name",
+                        rs.getString("name")
+                );
+
+                map.put(
+                        "price",
+                        rs.getBigDecimal("price")
+                );
+
+                map.put(
+                        "photo",
+                        rs.getString("photo")
+                );
+
+                map.put(
+                        "description",
+                        rs.getString("description")
+                );
+
+                map.put(
+                        "unit",
+                        rs.getString("unit")
+                );
+
+                products.add(map);
+            }
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            sendText(
+                    chatId.toString(),
+                    "❌ Помилка бази даних."
+            );
+
+            return;
         }
 
-        if (products == null || products.isEmpty()) {
+        // -------------------------
+        // Якщо пусто
+        // -------------------------
+        if (products.isEmpty()) {
 
             sendText(
                     chatId.toString(),
@@ -6676,18 +6771,22 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // -------------------------
         // Зберігаємо список
+        // -------------------------
         userProductLists.put(
                 userId,
                 new ArrayList<>(products)
         );
 
-        // 🔥 Ставимо state вибору товару
         userStates.put(
                 userId,
                 "choose_product"
         );
 
+        // -------------------------
+        // Формуємо текст
+        // -------------------------
         StringBuilder sb =
                 new StringBuilder(
                         "📦 Обери товар:\n\n"
@@ -6695,26 +6794,24 @@ public class StoreBot extends TelegramLongPollingBot {
 
         for (int i = 0; i < products.size(); i++) {
 
-            Map<String, Object> product =
+            Map<String, Object> p =
                     products.get(i);
-
-            String name =
-                    safeToString(
-                            product.get("name"),
-                            "Без назви"
-                    );
-
-            String price =
-                    safeToString(
-                            product.get("price"),
-                            "0"
-                    );
 
             sb.append(i + 1)
                     .append(". ")
-                    .append(name)
+                    .append(
+                            safeToString(
+                                    p.get("name"),
+                                    "Без назви"
+                            )
+                    )
                     .append(" — ")
-                    .append(price)
+                    .append(
+                            safeToString(
+                                    p.get("price"),
+                                    "0"
+                            )
+                    )
                     .append(" грн\n");
         }
 
@@ -6723,28 +6820,43 @@ public class StoreBot extends TelegramLongPollingBot {
                 sb.toString()
         );
 
+        // -------------------------
         // Кнопка назад
+        // -------------------------
         KeyboardRow row =
                 new KeyboardRow();
 
         row.add(BACK_BUTTON);
 
-        List<KeyboardRow> keyboard =
-                new ArrayList<>();
-
-        keyboard.add(row);
-
         ReplyKeyboardMarkup markup =
                 new ReplyKeyboardMarkup();
 
-        markup.setKeyboard(keyboard);
         markup.setResizeKeyboard(true);
+        markup.setKeyboard(
+                List.of(row)
+        );
 
         sendTextWithMarkup(
                 chatId,
                 "👇 Введи номер товару:",
                 markup
         );
+    }
+
+    // 🔥 helper
+    private String cleanValue(String value) {
+
+        if (value == null)
+            return null;
+
+        value = value.trim();
+
+        if (value.isBlank()
+                || value.equalsIgnoreCase("null")) {
+            return null;
+        }
+
+        return value;
     }
 
     private void showRemainingProductList(Long chatId)
