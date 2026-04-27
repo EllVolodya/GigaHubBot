@@ -1097,7 +1097,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 userStates.remove(userId);
                 editItemIndex.remove(userId);
 
-                showCart(userId);
+                showCartNice(userId, chatId);
 
             } catch (Exception e) {
 
