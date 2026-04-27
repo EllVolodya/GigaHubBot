@@ -490,25 +490,128 @@ public class StoreBot extends TelegramLongPollingBot {
 
             System.out.println("[STATE] in_cart TEXT=" + text);
 
-            if (text != null && text.contains("Назад")) {
+            if (text != null &&
+                    text.contains("Назад")) {
+
                 try {
                     handleBack(userId, chatId);
                 } catch (TelegramApiException e) {
                     e.printStackTrace();
                 }
-                return;
-            }
-
-            if (text.equals("🚛 Оформити замовлення")) {
-
-                userStates.put(userId, "awaiting_phone");
-
-                sendText(chatId, "📞 Введіть номер телефону для оформлення замовлення:");
 
                 return;
             }
 
-            sendText(chatId, "📦 Ви в кошику. Оберіть дію або натисніть Назад.");
+            // Оформити замовлення
+            if ("🚛 Оформити замовлення".equals(text)) {
+
+                userStates.put(
+                        userId,
+                        "awaiting_phone"
+                );
+
+                sendText(
+                        chatId,
+                        "📞 Введіть номер телефону для оформлення замовлення:"
+                );
+
+                return;
+            }
+
+            // Видалити товар
+            if ("❌ Видалити товар".equals(text)) {
+
+                List<Map<String, Object>> cart =
+                        userCart.get(userId);
+
+                if (cart == null ||
+                        cart.isEmpty()) {
+
+                    sendText(chatId,
+                            "🧺 Кошик порожній.");
+                    return;
+                }
+
+                userStates.put(
+                        userId,
+                        "awaiting_remove_item"
+                );
+
+                StringBuilder sb =
+                        new StringBuilder();
+
+                sb.append("🗑 Введіть номер товару для видалення:\n\n");
+
+                for (int i = 0; i < cart.size(); i++) {
+
+                    String name =
+                            safeToString(
+                                    cart.get(i).get("name"),
+                                    "Товар"
+                            );
+
+                    sb.append(i + 1)
+                            .append(". ")
+                            .append(name)
+                            .append("\n");
+                }
+
+                sb.append("\nНапишіть цифру в чат.");
+
+                sendText(chatId, sb.toString());
+                return;
+            }
+
+            // Змінити кількість
+            if ("✏️ Змінити кількість".equals(text)) {
+
+                List<Map<String, Object>> cart =
+                        userCart.get(userId);
+
+                if (cart == null ||
+                        cart.isEmpty()) {
+
+                    sendText(chatId,
+                            "🧺 Кошик порожній.");
+                    return;
+                }
+
+                userStates.put(
+                        userId,
+                        "awaiting_edit_item"
+                );
+
+                StringBuilder sb =
+                        new StringBuilder();
+
+                sb.append("✏️ Введіть номер товару:\n\n");
+
+                for (int i = 0; i < cart.size(); i++) {
+
+                    String name =
+                            safeToString(
+                                    cart.get(i).get("name"),
+                                    "Товар"
+                            );
+
+                    sb.append(i + 1)
+                            .append(". ")
+                            .append(name)
+                            .append("\n");
+                }
+
+                sb.append("\nНапишіть цифру в чат.");
+
+                sendText(chatId, sb.toString());
+                return;
+            }
+
+            // Інше
+            sendText(
+                    chatId,
+                    "📦 Ви в кошику. Оберіть дію нижче."
+            );
+
             return;
         }
 
