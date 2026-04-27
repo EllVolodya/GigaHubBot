@@ -4328,6 +4328,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "awaiting_phone" -> {
 
+                // Назад
                 if (BACK_BUTTON.equals(text)) {
                     try {
                         handleBack(userId, chatId);
@@ -4337,64 +4338,113 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                if (text == null || text.trim().length() < 8) {
-                    sendText(chatId, "❌ Введіть коректний номер телефону.");
+                // Захист від кнопок меню
+                if ("🚛 Оформити замовлення".equals(text)
+                        || "❌ Видалити товар".equals(text)
+                        || "✏️ Змінити кількість".equals(text)
+                        || "🛒 Замовити товар".equals(text)) {
+
+                    sendText(chatId,
+                            "📞 Будь ласка, введіть номер телефону цифрами.");
+                    return;
+                }
+
+                // Перевірка тексту
+                if (text == null || text.trim().isEmpty()) {
+                    sendText(chatId,
+                            "❌ Введіть номер телефону.");
+                    return;
+                }
+
+                // Чистимо номер
+                String phone = text
+                        .replaceAll("[^0-9+]", "")
+                        .trim();
+
+                // Перевірка номера
+                if (!phone.matches("^\\+?[0-9]{8,15}$")) {
+
+                    sendText(chatId,
+                            "❌ Введіть коректний номер телефону.\n\n" +
+                                    "Приклад:\n" +
+                                    "0971234567\n" +
+                                    "+380971234567");
                     return;
                 }
 
                 // Зберігаємо телефон
-                String phone = text.trim();
                 userPhones.put(userId, phone);
 
                 // Кошик
-                List<Map<String, Object>> cart = userCart.get(userId);
+                List<Map<String, Object>> cart =
+                        userCart.get(userId);
 
                 if (cart == null || cart.isEmpty()) {
-                    sendText(chatId, "❌ Кошик порожній.");
+                    sendText(chatId,
+                            "❌ Кошик порожній.");
                     return;
                 }
 
                 // Код замовлення
-                int code = (int) (System.currentTimeMillis() % 10000);
-                String orderCode = "ORD-" + code;
+                String orderCode =
+                        "ORD-" +
+                                (System.currentTimeMillis() % 10000);
 
                 // Дані доставки
                 String deliveryType =
-                        tempDeliveryType.getOrDefault(userId, "Не вказано");
+                        tempDeliveryType.getOrDefault(
+                                userId,
+                                "Не вказано"
+                        );
 
                 String addressValue =
                         tempAddress.get(userId);
 
                 String fullname =
-                        tempFullname.getOrDefault(userId, "Користувач");
+                        tempFullname.getOrDefault(
+                                userId,
+                                "Користувач"
+                        );
 
                 String city = null;
                 String address = null;
                 String postOffice = null;
 
                 switch (deliveryType) {
-                    case "Самовивіз" -> city = addressValue;
-                    case "Доставка по місту" -> address = addressValue;
-                    case "Нова пошта" -> postOffice = addressValue;
+
+                    case "Самовивіз" ->
+                            city = addressValue;
+
+                    case "Доставка по місту" ->
+                            address = addressValue;
+
+                    case "Нова пошта" ->
+                            postOffice = addressValue;
                 }
 
                 // Формування товарів
-                StringBuilder itemsBuilder = new StringBuilder();
+                StringBuilder itemsBuilder =
+                        new StringBuilder();
+
                 double total = 0.0;
 
                 for (Map<String, Object> item : cart) {
 
                     String name =
-                            String.valueOf(item.get("name"));
+                            String.valueOf(
+                                    item.get("name")
+                            );
 
                     int qty =
                             Integer.parseInt(
-                                    item.get("quantity").toString()
+                                    item.get("quantity")
+                                            .toString()
                             );
 
                     double price =
                             Double.parseDouble(
-                                    item.get("price").toString()
+                                    item.get("price")
+                                            .toString()
                             );
 
                     itemsBuilder.append(name)
@@ -4405,8 +4455,11 @@ public class StoreBot extends TelegramLongPollingBot {
                     total += price * qty;
                 }
 
-                String items = itemsBuilder.toString();
-                total = Math.round(total * 100.0) / 100.0;
+                total =
+                        Math.round(total * 100.0) / 100.0;
+
+                String items =
+                        itemsBuilder.toString();
 
                 // Запис в БД
                 try (Connection conn =
@@ -4415,8 +4468,8 @@ public class StoreBot extends TelegramLongPollingBot {
                     PreparedStatement stmt =
                             conn.prepareStatement(
                                     "INSERT INTO orders " +
-                                            "(userId, orderCode, deliveryType, city, address, postOffice," +
-                                            " fullName, phone, item, total, paymentmethod, paymentstatus, status, date) " +
+                                            "(userId, orderCode, deliveryType, city, address, postOffice, " +
+                                            "fullName, phone, item, total, paymentmethod, paymentstatus, status, date) " +
                                             "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
                             );
 
@@ -4437,6 +4490,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     stmt.executeUpdate();
 
                 } catch (Exception e) {
+
                     e.printStackTrace();
 
                     sendText(chatId,
@@ -4444,7 +4498,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // Очистка
+                // Очистка даних
                 userCart.remove(userId);
                 userPhones.remove(userId);
                 userStates.remove(userId);
@@ -4454,7 +4508,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 tempFullname.remove(userId);
                 tempCard.remove(userId);
 
-                // Фінал
+                // Фінальне повідомлення
                 sendText(chatId,
                         "✅ Замовлення оформлено!\n\n" +
                                 "🔢 Код: " + orderCode + "\n\n" +
