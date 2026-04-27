@@ -991,91 +991,77 @@ public class StoreBot extends TelegramLongPollingBot {
         if ("awaiting_filter_select".equals(state)) {
 
             if (BACK_BUTTON.equals(text)) {
-
                 userStates.remove(userId);
-
-                tempStorage.remove(
-                        userId + "_filter_product"
-                );
-
-                sendMessageSafely(
-                        createEditMenu(
-                                chatId,
-                                userId
-                        )
-                );
-
+                sendMessageSafely(createEditMenu(chatId, userId));
                 return;
             }
 
-            if (text == null ||
-                    text.isBlank()) {
-
-                sendText(chatId,
-                        "❌ Оберіть фільтр.");
+            if (text == null || text.isBlank()) {
+                sendText(chatId, "❌ Оберіть фільтр.");
                 return;
             }
 
-            Map<String, Object> product =
-                    (Map<String, Object>)
-                            tempStorage.get(
-                                    userId + "_filter_product"
+            // 🔥 Беремо ВСІ вибрані товари
+            List<Map<String, Object>> products =
+                    adminSelectedProducts.get(userId);
+
+            if (products == null || products.isEmpty()) {
+
+                // fallback якщо один товар
+                Map<String, Object> one =
+                        adminSelectedProduct.get(userId);
+
+                if (one != null) {
+                    products = List.of(one);
+                }
+            }
+
+            if (products == null || products.isEmpty()) {
+                sendText(chatId, "❌ Товари не знайдені.");
+                userStates.remove(userId);
+                return;
+            }
+
+            CatalogSearcher searcher =
+                    new CatalogSearcher();
+
+            int successCount = 0;
+
+            for (Map<String, Object> product : products) {
+
+                try {
+
+                    boolean success =
+                            searcher.addProductToFilter(
+                                    product,
+                                    text,
+                                    null
                             );
 
-            if (product == null) {
+                    if (success) {
+                        successCount++;
+                    }
 
-                product =
-                        adminSelectedProduct.get(userId);
+                } catch (Exception ignored) {
+                }
             }
 
-            if (product == null) {
+            userStates.remove(userId);
 
-                sendText(chatId,
-                        "❌ Товар не знайдено.");
+            sendText(
+                    chatId,
+                    "✅ Додано у фільтр \"" +
+                            text +
+                            "\" : " +
+                            successCount +
+                            " з " +
+                            products.size() +
+                            " товарів."
+            );
 
-                userStates.remove(userId);
-                return;
-            }
-
-            try {
-
-                CatalogSearcher searcher =
-                        new CatalogSearcher();
-
-                boolean success =
-                        searcher.addProductToFilter(
-                                product,
-                                text,
-                                null
-                        );
-
-                userStates.remove(userId);
-
-                tempStorage.remove(
-                        userId + "_filter_product"
-                );
-
-                sendText(
-                        chatId,
-                        success
-                                ? "✅ Товар додано у фільтр: " + text
-                                : "❌ Помилка додавання у фільтр."
-                );
-
-                sendMessageSafely(
-                        createEditMenu(
-                                chatId,
-                                userId
-                        )
-                );
-
-            } catch (Exception e) {
-
-                e.printStackTrace();
-
-                sendText(chatId,
-                        "❌ Помилка роботи з базою.");
-            }
+            sendMessageSafely(
+                    createEditMenu(chatId, userId)
+            );
 
             return;
         }
