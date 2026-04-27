@@ -8349,6 +8349,32 @@ public class StoreBot extends TelegramLongPollingBot {
         String category = currentCategory.get(userId);
         String subcategory = currentSubcategory.get(userId);
 
+        // 🔥 Якщо нема контексту меню — беремо з товару
+        if (category == null || subcategory == null) {
+
+            Map<String, Object> product =
+                    adminSelectedProduct.get(userId);
+
+            if (product != null) {
+
+                if (category == null) {
+                    category =
+                            safeToString(
+                                    product.get("category"),
+                                    null
+                            );
+                }
+
+                if (subcategory == null) {
+                    subcategory =
+                            safeToString(
+                                    product.get("subcategory"),
+                                    null
+                            );
+                }
+            }
+        }
+
         System.out.println("🔥 CATEGORY = " + category);
         System.out.println("🔥 SUBCATEGORY = " + subcategory);
 
@@ -8360,7 +8386,11 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // 🔥 ГОЛОВНИЙ ФІКС
-        List<String> filters = catalogSearcher.getFilters(category, subcategory);
+        List<String> filters =
+                catalogSearcher.getFilters(
+                        category,
+                        subcategory
+                );
 
         if (filters == null || filters.isEmpty()) {
             return SendMessage.builder()
@@ -8370,7 +8400,10 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         int pageSize = 8;
-        int totalPages = (int) Math.ceil((double) filters.size() / pageSize);
+        int totalPages =
+                (int) Math.ceil(
+                        (double) filters.size() / pageSize
+                );
 
         if (page < 0) page = 0;
         if (page >= totalPages) page = totalPages - 1;
@@ -8378,10 +8411,17 @@ public class StoreBot extends TelegramLongPollingBot {
         filterPage.put(userId, page);
 
         int start = page * pageSize;
-        int end = Math.min(start + pageSize, filters.size());
+        int end =
+                Math.min(
+                        start + pageSize,
+                        filters.size()
+                );
 
-        List<KeyboardRow> rows = new ArrayList<>();
-        KeyboardRow row = new KeyboardRow();
+        List<KeyboardRow> rows =
+                new ArrayList<>();
+
+        KeyboardRow row =
+                new KeyboardRow();
 
         int count = 0;
 
@@ -8399,7 +8439,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (!row.isEmpty()) rows.add(row);
 
-        // 🔹 ПАГІНАЦІЯ
+        // 🔹 ПАГІНАЦІЯ (не чіпав)
         KeyboardRow nav = new KeyboardRow();
 
         if (page > 0) nav.add("Попередні");
@@ -8412,13 +8452,19 @@ public class StoreBot extends TelegramLongPollingBot {
         back.add(BACK_BUTTON);
         rows.add(back);
 
-        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        ReplyKeyboardMarkup markup =
+                new ReplyKeyboardMarkup();
+
         markup.setKeyboard(rows);
         markup.setResizeKeyboard(true);
 
         return SendMessage.builder()
                 .chatId(chatId)
-                .text("🔎 Оберіть фільтр (" + (page + 1) + "/" + totalPages + ")")
+                .text("🔎 Оберіть фільтр (" +
+                        (page + 1) +
+                        "/" +
+                        totalPages +
+                        ")")
                 .replyMarkup(markup)
                 .build();
     }
