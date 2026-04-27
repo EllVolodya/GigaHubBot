@@ -3022,32 +3022,35 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     //Показ товара
-    private void handleProductSelection(Long chatId, int choice) throws TelegramApiException {
+    private void handleProductSelection(Long userId, int choice)
+            throws TelegramApiException {
 
-        List<Map<String, Object>> products = userProductLists.get(chatId);
+        List<Map<String, Object>> products =
+                userProductLists.get(userId);
 
         if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ Список порожній.");
+            sendText(userId.toString(),
+                    "❌ Список товарів порожній.");
             return;
         }
 
         if (choice < 1 || choice > products.size()) {
-            sendText(chatId, "❌ Невірний номер.");
+            sendText(userId.toString(),
+                    "❌ Невірний номер.");
             return;
         }
 
-        Map<String, Object> product = products.get(choice - 1);
+        Map<String, Object> product =
+                products.get(choice - 1);
 
-        // 🔥 зберігаємо товар
-        lastShownProduct.put(chatId, product);
+        lastShownProduct.put(userId, product);
 
-        // видаляємо його зі списку
         products.remove(choice - 1);
 
-        // 🔹 СПОЧАТКУ список
         if (!products.isEmpty()) {
 
-            StringBuilder sb = new StringBuilder("\n📦 Інші товари:\n\n");
+            StringBuilder sb =
+                    new StringBuilder("📦 Інші товари:\n\n");
 
             for (int i = 0; i < products.size(); i++) {
                 sb.append(i + 1)
@@ -3056,11 +3059,10 @@ public class StoreBot extends TelegramLongPollingBot {
                         .append("\n");
             }
 
-            sendText(chatId, sb.toString());
+            sendText(userId.toString(), sb.toString());
         }
 
-        // 🔹 ПОТІМ товар
-        sendProductFromMap(chatId, product);
+        sendProductFromMap(userId, product);
     }
 
     private void showNextProduct(Long chatId) throws TelegramApiException {
