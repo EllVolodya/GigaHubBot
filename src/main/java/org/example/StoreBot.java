@@ -7043,86 +7043,147 @@ public class StoreBot extends TelegramLongPollingBot {
     private void handleAdminSearchInput(Long userId, String chatId, String text)
             throws TelegramApiException {
 
-        String source = adminSearchSource.getOrDefault(userId, "mysql");
-        List<Map<String, Object>> results = new ArrayList<>();
+        String source =
+                adminSearchSource.getOrDefault(
+                        userId,
+                        "mysql"
+                );
 
-        switch (source) {
+        List<Map<String, Object>> results =
+                new ArrayList<>();
 
-            case "mysql" -> {
-                CatalogSearcher searcher = new CatalogSearcher();
-                results = searcher.searchByKeywordsAdmin(text);
-            }
+        try {
 
-            case "yaml" -> {
-                try {
-                    results = CatalogUpdater.searchProductsSimple(text);
-                } catch (Exception e) {
-                    sendText(chatId, "❌ Помилка при пошуку у YAML: " + e.getMessage());
-                    return;
+            switch (source) {
+
+                case "mysql" -> {
+
+                    CatalogSearcher searcher =
+                            new CatalogSearcher();
+
+                    results =
+                            searcher.searchByKeywordsAdmin(text);
                 }
-            }
 
-            case "excel" -> {
-                try {
+                case "excel" -> {
+
                     List<ExcelToMySqlImporter.ExcelProduct> excelResults =
                             ExcelToMySqlImporter.searchInExcel(text);
 
                     for (ExcelToMySqlImporter.ExcelProduct p : excelResults) {
 
-                        Map<String, Object> map = new HashMap<>();
+                        Map<String, Object> map =
+                                new HashMap<>();
 
+                        // id не чіпаємо
                         map.put("name", p.name);
                         map.put("price", p.price);
-                        map.put("group", p.group); // 🔥 ДОДАЛИ ГРУПУ
+                        map.put("group", p.group);
                         map.put("_excel", p);
 
                         results.add(map);
                     }
+                }
 
-                } catch (Exception e) {
-                    sendText(chatId, "❌ Помилка при пошуку у Excel: " + e.getMessage());
-                    return;
+                default -> {
+
+                    CatalogSearcher searcher =
+                            new CatalogSearcher();
+
+                    results =
+                            searcher.searchByKeywordsAdmin(text);
                 }
             }
-        }
 
-        if (results == null || results.isEmpty()) {
-            sendText(chatId, "❌ Товар не знайдено: " + text);
+        } catch (Exception e) {
+
+            sendText(
+                    chatId,
+                    "❌ Помилка пошуку: "
+                            + e.getMessage()
+            );
+
             return;
         }
 
-        // 🔥 ЗБЕРІГАЄМО
-        adminMatchList.put(userId, results);
+        if (results == null ||
+                results.isEmpty()) {
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("🔎 Знайдено товари. Введіть номер для редагування:\n\n");
+            sendText(
+                    chatId,
+                    "❌ Товар не знайдено: "
+                            + text
+            );
+
+            return;
+        }
+
+        adminMatchList.put(
+                userId,
+                results
+        );
+
+        userStates.put(
+                userId,
+                "choose_product"
+        );
+
+        StringBuilder sb =
+                new StringBuilder();
+
+        sb.append("🔎 Знайдено товари.\n");
+        sb.append("Введіть номер, діапазон або список:\n\n");
 
         for (int i = 0; i < results.size(); i++) {
 
-            Map<String, Object> prod = results.get(i);
+            Map<String, Object> prod =
+                    results.get(i);
 
-            String name = safeToString(prod.get("name"), "Без назви");
-            String price = safeToString(prod.get("price"), "");
-            String group = safeToString(prod.get("group"), "");
+            String name =
+                    safeToString(
+                            prod.get("name"),
+                            "Без назви"
+                    );
 
-            sb.append(i + 1).append(". ").append(name);
+            String price =
+                    safeToString(
+                            prod.get("price"),
+                            ""
+                    );
 
-            // 🔥 показ групи
-            if (!group.isBlank() && !"null".equalsIgnoreCase(group)) {
-                sb.append(" [").append(group).append("]");
+            String group =
+                    safeToString(
+                            prod.get("group"),
+                            ""
+                    );
+
+            sb.append(i + 1)
+                    .append(". ")
+                    .append(name);
+
+            if (!group.isBlank() &&
+                    !"null".equalsIgnoreCase(group)) {
+
+                sb.append(" [")
+                        .append(group)
+                        .append("]");
             }
 
-            // 🔥 показ ціни
             if (!price.isBlank()) {
-                sb.append(" | Ціна: ").append(price);
+
+                sb.append(" | Ціна: ")
+                        .append(price);
             }
 
             sb.append("\n");
         }
 
-        sendText(chatId, sb.toString());
+        sb.append("\nПриклад:\n");
+        sb.append("1\n");
+        sb.append("1-20\n");
+        sb.append("1,3,5");
 
-        userStates.put(userId, "choose_product");
+        sendText(chatId, sb.toString());
     }
 
     // Головний метод створення меню відгуку
