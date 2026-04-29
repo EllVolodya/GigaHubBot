@@ -8798,9 +8798,6 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 ГОЛОВНЕ — ставимо state вибору фільтра
-        userStates.put(chatId, "awaiting_filter");
-
         // 🔥 Прибираємо вимкнені фільтри
         List<String> activeFilters = new ArrayList<>();
 
@@ -8893,7 +8890,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         sendMessage(
                 chatId,
-                "👇 Оберіть фільтр кнопкою нижче (" + (page + 1) + "/" + totalPages + "):",
+                "🔎 Обери фільтр (" + (page + 1) + "/" + totalPages + "):",
                 markup
         );
     }
