@@ -246,6 +246,25 @@ public class StoreBot extends TelegramLongPollingBot {
             try {
                 clearUserState(userId);
 
+                userStates.remove(chatIdLong);
+
+                currentCategory.remove(chatIdLong);
+                currentSubcategory.remove(chatIdLong);
+
+                currentFilter.remove(chatIdLong);
+                currentSubfilter.remove(chatIdLong);
+
+                userFilters.remove(chatIdLong);
+                filterPage.remove(chatIdLong);
+
+                userProductLists.remove(chatIdLong);
+                productIndex.remove(chatIdLong);
+
+                selectedFilterForSubfilter.remove(chatIdLong);
+                editItemIndex.remove(chatIdLong);
+
+                userCart.remove(chatIdLong);
+
                 String inviteCode = text.replace("/start", "").trim();
 
                 UserManager userManager = new UserManager();
@@ -272,6 +291,7 @@ public class StoreBot extends TelegramLongPollingBot {
             } catch (SQLException e) {
                 e.printStackTrace();
                 sendText(chatIdStr, "❌ Помилка бази даних.");
+
             } catch (TelegramApiException e) {
                 e.printStackTrace();
                 sendText(chatIdStr, "❌ Помилка Telegram.");
