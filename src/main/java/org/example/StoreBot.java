@@ -6326,7 +6326,7 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
-        row2.add("🧮 Будівельний калькулятор");
+        //row2.add("🧮 Будівельний калькулятор");
         row2.add("💬 Залишити відгук");
         keyboard.add(row2);
 
