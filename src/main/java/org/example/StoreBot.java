@@ -1102,20 +1102,25 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 List<Map<String,Object>> cart = userCart.get(userId);
 
+                if (cart == null || cart.isEmpty()) {
+                    sendText(chatId,"🧺 Кошик порожній.");
+                    userStates.remove(userId);
+                    return;
+                }
+
                 if (index < 0 || index >= cart.size()) {
-                    sendText(chatId,"❌ Невірний номер товару.");
+                    sendText(chatId,
+                            "❌ Невірний номер товару.\n" +
+                                    "Введіть номер від 1 до " + cart.size());
                     return;
                 }
 
                 editItemIndex.put(userId,index);
-
                 userStates.put(userId,"awaiting_new_quantity");
 
-                sendText(chatId,
-                        "🔢 Введіть нову кількість:");
+                sendText(chatId,"🔢 Введіть нову кількість:");
 
             } catch (Exception e) {
-
                 sendText(chatId,"❌ Введіть номер товару цифрою.");
             }
 
@@ -6503,6 +6508,7 @@ public class StoreBot extends TelegramLongPollingBot {
         return s.replaceAll("[\\u00A0\\s]+", " ").trim().toLowerCase();
     }
 
+    //Текст по чат-боту
     private void handleText(Long chatId, String text) throws TelegramApiException {
 
         text = text.trim();
@@ -6641,7 +6647,24 @@ public class StoreBot extends TelegramLongPollingBot {
             } catch (NumberFormatException ignored) {}
         }
 
-        /* НЕВІДОМА КОМАНДА */
+        /* Підказка при вводі цифр */
+        if (text.matches("\\d+")) {
+
+            if ("awaiting_filter".equals(state)
+                    || "awaiting_filter_for_subfilter".equals(state)) {
+
+                sendText(chatId, "👇 Оберіть фільтр кнопкою нижче.");
+                return;
+            }
+
+            if ("awaiting_subfilter".equals(state)) {
+
+                sendText(chatId, "👇 Оберіть підфільтр кнопкою нижче.");
+                return;
+            }
+        }
+
+        /* Невідома команда */
         sendText(chatId, "Невідома команда 😅 Натисніть /start або виберіть із меню.");
     }
 
