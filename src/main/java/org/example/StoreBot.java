@@ -3002,6 +3002,20 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
+        // 🔥 0. ВИБІР ТОВАРУ (FIX)
+        if ("choose_product".equals(state)) {
+
+            userStates.remove(userId);
+            userProductLists.remove(userId);
+            userProductIndex.remove(userId);
+            lastShownProduct.remove(userId);
+
+            sendText(chatId, "↩️ Повертаємо вас до каталогу товарів.");
+
+            openCatalogBack(userId, chatId);
+            return;
+        }
+
         // 1. ОФОРМЛЕННЯ / ВВЕДЕННЯ КІЛЬКОСТІ
         if ("awaiting_delivery_choice".equals(state) ||
                 "order_pickup".equals(state) ||
