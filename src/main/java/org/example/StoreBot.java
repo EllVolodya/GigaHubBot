@@ -239,6 +239,29 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
+        // 1. STATE — ПЕРШИЙ!
+        if ("VIEW_PRODUCTS".equals(state)) {
+
+            if (text != null && text.matches("\\d+")) {
+
+                int index = Integer.parseInt(text) - 1;
+
+                List<Map<String, Object>> products = userProducts.get(userId);
+
+                if (products != null && index >= 0 && index < products.size()) {
+
+                    Map<String, Object> product = products.get(index);
+
+                    sendProductFromMap(realChatId, product); // ✅ ВИПРАВЛЕНО
+
+                } else {
+                    sendText(chatId, "❌ Невірний номер товару.");
+                }
+
+                return;
+            }
+        }
+
         if (text.startsWith("/start")) {
 
             Long chatIdLong = update.getMessage().getChatId();
@@ -300,30 +323,6 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             return;
-        }
-
-        // 👉 режим перегляду товарів
-        if ("VIEW_PRODUCTS".equals(state)) {
-
-            if (text != null && text.matches("\\d+")) {
-
-                int index = Integer.parseInt(text) - 1;
-
-                List<Map<String, Object>> products = userProducts.get(userId);
-
-                if (products != null && index >= 0 && index < products.size()) {
-
-                    Map<String, Object> product = products.get(index);
-
-                    Long chatIdLong = Long.valueOf(chatId);
-                    sendProductFromMap(chatIdLong, product); // ✅ правильно
-
-                } else {
-                    sendText(chatId, "❌ Невірний номер товару.");
-                }
-
-                return;
-            }
         }
 
         // 🔥 Обробка відповіді на питання
