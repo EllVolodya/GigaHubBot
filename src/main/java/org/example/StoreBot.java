@@ -5288,6 +5288,7 @@ public class StoreBot extends TelegramLongPollingBot {
         userStates.put(userId, "choose_search_source");
     }
 
+    // Вибір товару
     private void handleChooseProduct(
             Long userId,
             String chatId,
@@ -5300,6 +5301,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🔙 Назад
         if (BACK_BUTTON.equals(text)) {
             try {
                 handleBack(userId, chatId);
@@ -5309,6 +5311,23 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🛒 Замовити товар
+        if ("🛒 Замовити товар".equals(text)) {
+
+            Map<String, Object> product = lastShownProduct.get(userId);
+
+            if (product == null) {
+                sendText(chatId, "❌ Спочатку оберіть товар.");
+                return;
+            }
+
+            // 👉 тут запускається оформлення
+            startOrder(userId, chatId, product);
+
+            return;
+        }
+
+        // 📦 Список товарів
         List<Map<String, Object>> products = userProductLists.get(userId);
 
         if (products == null || products.isEmpty()) {
@@ -5316,6 +5335,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🔢 Якщо не число
         if (text == null || !text.matches("\\d+")) {
             sendText(chatId, "❌ Введіть номер товару.");
             return;
@@ -5328,23 +5348,26 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🔁 Логіка перегляду
         int lastIndex = userProductIndex.getOrDefault(userId, -1);
 
         int indexToShow;
 
         if (lastIndex == -1) {
-            // 👉 перший раз — показуємо вибраний
+            // 👉 перший вибір
             indexToShow = inputIndex;
         } else {
-            // 👉 далі — завжди наступний
+            // 👉 далі листаємо вперед
             indexToShow = (lastIndex + 1) % products.size();
         }
 
         Map<String, Object> product = products.get(indexToShow);
 
+        // 💾 Зберігаємо
         userProductIndex.put(userId, indexToShow);
         lastShownProduct.put(userId, product);
 
+        // 🚀 Відправка
         sendProductFromMap(Long.valueOf(chatId), product);
     }
 
