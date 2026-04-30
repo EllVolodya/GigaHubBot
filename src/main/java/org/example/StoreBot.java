@@ -5295,9 +5295,11 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         if (BACK_BUTTON.equals(text)) {
-            userStates.remove(userId);
-            userProductLists.remove(userId);
-            userProductIndex.remove(userId);
+            try {
+                handleBack(userId, chatId);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
             return;
         }
 
