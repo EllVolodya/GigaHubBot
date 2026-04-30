@@ -9635,4 +9635,20 @@ public class StoreBot extends TelegramLongPollingBot {
     public void sendTextSafe(Long chatId, String text) {
         sendText(chatId, text);
     }
+
+    private void startOrder(Long userId, String chatId, Map<String, Object> product) {
+
+        // зберігаємо товар
+        tempStorage.put(userId + "_product", product);
+
+        // міняємо стан
+        userStates.put(userId, "awaiting_quantity");
+
+        // беремо назву
+        String name = safeToString(product.get("name"), "Товар");
+
+        sendText(chatId,
+                "🛒 Ви обрали: " + name + "\n\n" +
+                        "👉 Введіть кількість:");
+    }
 }
