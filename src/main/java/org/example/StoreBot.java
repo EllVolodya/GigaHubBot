@@ -239,29 +239,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
-        // 1. STATE — ПЕРШИЙ!
-        if ("VIEW_PRODUCTS".equals(state)) {
-
-            if (text != null && text.matches("\\d+")) {
-
-                int index = Integer.parseInt(text) - 1;
-
-                List<Map<String, Object>> products = userProducts.get(userId);
-
-                if (products != null && index >= 0 && index < products.size()) {
-
-                    Map<String, Object> product = products.get(index);
-
-                    sendProductFromMap(realChatId, product); // ✅ ВИПРАВЛЕНО
-
-                } else {
-                    sendText(chatId, "❌ Невірний номер товару.");
-                }
-
-                return;
-            }
-        }
-
         if (text.startsWith("/start")) {
 
             Long chatIdLong = update.getMessage().getChatId();
@@ -323,6 +300,28 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             return;
+        }
+
+        // 1. STATE — ПЕРШИЙ!
+        if ("VIEW_PRODUCTS".equals(state)) {
+
+            if (text.matches("\\d+")) {
+
+                int index = Integer.parseInt(text) - 1;
+
+                List<Map<String, Object>> products = userProductLists.get(userId);
+
+                if (products != null && index >= 0 && index < products.size()) {
+
+                    Map<String, Object> product = products.get(index);
+
+                    sendProductFromMap(realChatId, product);
+                    return;
+                }
+
+                sendText(chatId, "❌ Невірний номер товару.");
+                return;
+            }
         }
 
         // 🔥 Обробка відповіді на питання
@@ -1525,13 +1524,16 @@ public class StoreBot extends TelegramLongPollingBot {
             text = update.getMessage().getText().trim();
         }
 
-        if (text.matches("\\d+") && userProductLists.containsKey(realChatId)) {
+        if (text.matches("\\d+") && userProductLists.containsKey(userId)) {
+
             try {
-                handleProductSelection(realChatId, Integer.parseInt(text));
+                handleProductSelection(userId, realChatId, Integer.parseInt(text)); // ✅
+
             } catch (TelegramApiException e) {
                 e.printStackTrace();
             }
-            return; // ❗ ОБОВʼЯЗКОВО
+
+            return;
         }
 
         //if (text.isBlank()) return;
@@ -3149,17 +3151,17 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     //Показ товара
-    private void handleProductSelection(Long chatId, int choice) throws TelegramApiException {
+    private void handleProductSelection(Long userId, Long chatId, int choice) throws TelegramApiException {
 
-        List<Map<String, Object>> products = userProductLists.get(chatId);
+        List<Map<String, Object>> products = userProductLists.get(userId);
 
         if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ Список порожній.");
+            sendText(chatId.toString(), "❌ Список порожній.");
             return;
         }
 
         if (choice < 1 || choice > products.size()) {
-            sendText(chatId, "❌ Невірний номер.");
+            sendText(chatId.toString(), "❌ Невірний номер.");
             return;
         }
 
@@ -3167,9 +3169,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // 🔥 зберігаємо товар
         lastShownProduct.put(chatId, product);
-
-        // видаляємо його зі списку
-        products.remove(choice - 1);
 
         // 🔹 СПОЧАТКУ список
         if (!products.isEmpty()) {
@@ -6654,26 +6653,6 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             return;
-        }
-
-        /* ВИБІР ТОВАРУ */
-        if (userProductLists.containsKey(chatId)) {
-
-            List<Map<String, Object>> list = userProductLists.get(chatId);
-
-            try {
-
-                int index = Integer.parseInt(text) - 1;
-
-                if (index >= 0 && index < list.size()) {
-
-                    Map<String, Object> product = list.get(index);
-
-                    sendProductFromMap(chatId, product);
-                    return;
-                }
-
-            } catch (NumberFormatException ignored) {}
         }
 
         /* Підказка при вводі цифр */
