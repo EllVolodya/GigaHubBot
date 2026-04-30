@@ -314,8 +314,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     Map<String, Object> product = products.get(index);
 
-                    Long chatIdLong = Long.valueOf(chatId); // 🔥 фікс типу
-                    sendProductFromMap(chatIdLong, product);
+                    Long chatIdLong = Long.valueOf(chatId);
+                    sendProductFromMap(chatIdLong, product); // ✅ правильно
 
                 } else {
                     sendText(chatId, "❌ Невірний номер товару.");
@@ -6953,7 +6953,6 @@ public class StoreBot extends TelegramLongPollingBot {
     public void sendProductFromMap(Long chatId, Map<String, Object> product) {
 
         try {
-
             String name = safeToString(product.get("name"), "Без назви");
             String price = safeToString(product.get("price"), "0");
             String unit = safeToString(product.get("unit"), "шт").toLowerCase();
@@ -6964,8 +6963,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
             StringBuilder sb = new StringBuilder();
 
+            // 📦 Назва
             sb.append("📦 ").append(name).append("\n");
 
+            // 💰 Ціна або під замовлення
             if (isCustomOrder) {
                 sb.append("💬 Товар доступний під замовлення.\n");
                 sb.append("📞 Для уточнення ціни — натисніть кнопку нижче.\n");
@@ -6973,12 +6974,15 @@ public class StoreBot extends TelegramLongPollingBot {
                 sb.append("💰 Ціна: ").append(price).append(" грн за ").append(unit).append("\n");
             }
 
+            // 📖 Опис
             if (!description.isBlank() && !"null".equalsIgnoreCase(description.trim())) {
                 sb.append("\n📖 ").append(description).append("\n");
             }
 
+            // 👉 UX підказка
             sb.append("\n👉 Введіть номер іншого товару для перегляду");
 
+            // 🔘 Кнопки
             List<KeyboardRow> keyboard = new ArrayList<>();
 
             KeyboardRow row1 = new KeyboardRow();
@@ -6997,18 +7001,17 @@ public class StoreBot extends TelegramLongPollingBot {
             markup.setKeyboard(keyboard);
             markup.setResizeKeyboard(true);
 
+            // 🚀 Відправка
             if (!photo.isBlank() && !"null".equalsIgnoreCase(photo.trim())) {
                 sendPhotoFromResources(String.valueOf(chatId), photo, sb.toString(), markup);
             } else {
                 sendTextWithMarkup(chatId, sb.toString(), markup);
             }
 
-            setUserState(chatId, "VIEW_PRODUCTS");
+            // ❗ ВАЖЛИВО: НІЯКОГО setUserState тут
 
         } catch (TelegramApiException e) {
             e.printStackTrace();
-
-            // fallback щоб бот не падав
             sendTextSafe(chatId, "⚠️ Помилка при відправці товару");
         }
     }
