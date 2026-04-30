@@ -5284,7 +5284,6 @@ public class StoreBot extends TelegramLongPollingBot {
             userStates.remove(userId);
             userProductLists.remove(userId);
             userProductIndex.remove(userId);
-            //handleBack(userId, chatId);
             return;
         }
 
@@ -5307,24 +5306,21 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 беремо останній показаний індекс
         int lastIndex = userProductIndex.getOrDefault(userId, -1);
 
         int indexToShow;
 
-        if (lastIndex == inputIndex) {
-            // 👉 якщо той самий — показуємо наступний
-            indexToShow = (inputIndex + 1) % products.size();
-        } else {
-            // 👉 якщо інший — показуємо вибраний
+        if (lastIndex == -1) {
+            // 👉 перший раз — показуємо вибраний
             indexToShow = inputIndex;
+        } else {
+            // 👉 далі — завжди наступний
+            indexToShow = (lastIndex + 1) % products.size();
         }
 
         Map<String, Object> product = products.get(indexToShow);
 
-        // 🔥 зберігаємо новий індекс
         userProductIndex.put(userId, indexToShow);
-
         lastShownProduct.put(userId, product);
 
         sendProductFromMap(Long.valueOf(chatId), product);
