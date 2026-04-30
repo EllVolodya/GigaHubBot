@@ -66,6 +66,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, List<Map<String, Object>>> userOrders = new HashMap<>();
     private Map<Long, String> userLastCategory = new HashMap<>();
     private final Map<Long, List<String>> userFilters = new HashMap<>();
+    private final Map<Long, List<Map<String, Object>>> userProducts = new HashMap<>();
 
     private final Map<Long, String> selectedSubcategoryForFilter = new HashMap<>();
     private Map<Long,String> selectedFilterForSubfilter = new HashMap<>();
@@ -298,6 +299,30 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             return;
+        }
+
+        // 👉 режим перегляду товарів
+        if ("VIEW_PRODUCTS".equals(state)) {
+
+            if (text != null && text.matches("\\d+")) {
+
+                int index = Integer.parseInt(text) - 1;
+
+                List<Map<String, Object>> products = userProducts.get(userId);
+
+                if (products != null && index >= 0 && index < products.size()) {
+
+                    Map<String, Object> product = products.get(index);
+
+                    Long chatIdLong = Long.valueOf(chatId); // 🔥 фікс типу
+                    sendProductFromMap(chatIdLong, product);
+
+                } else {
+                    sendText(chatId, "❌ Невірний номер товару.");
+                }
+
+                return;
+            }
         }
 
         // 🔥 Обробка відповіді на питання
@@ -6062,20 +6087,12 @@ public class StoreBot extends TelegramLongPollingBot {
         row1.add("🧱 Каталог товарів");
         row1.add("🎥 Відеоінструкція");
         row1.add("💬 Допомога");
-        //row1.add("🔍 Пошук товару");
-        //row1.add("\uD83D\uDED2 Кошик");
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
-        //row2.add("🎯 Хіт продажу");
         row2.add("📍 Адреси та Контакти");
         row2.add("\uD83C\uDF10 Соц-мережі");
         keyboard.add(row2);
-
-        /*KeyboardRow row3 = new KeyboardRow();
-        row3.add("🎥 Відеоінструкція");
-        row3.add("💬 Допомога");
-        keyboard.add(row3);*/
 
         if (ADMINS.contains(userId)) {
             KeyboardRow adminRow = new KeyboardRow();
@@ -6092,17 +6109,12 @@ public class StoreBot extends TelegramLongPollingBot {
         markup.setKeyboard(keyboard);
         return SendMessage.builder()
                 .chatId(chatId)
-                .text("\uD83D\uDC4B Радий бачити тебе знову, друже!\n" +
+                .text("\uD83D\uDC4B Привіт! Я — Митрофан \uD83E\uDD16\n" +
                         "\n" +
-                        "Я — Митрофан \uD83E\uDD16, твій особистий провідник у світі будматеріалів GigaHub.  \n" +
-                        "Готовий допомогти у всьому, що стосується ремонту та будівництва:\n" +
+                        "Допоможу швидко знайти потрібні товари для ремонту та будівництва.\n" +
+                        "Обирай категорію та переглядай доступні варіанти \uD83D\uDC47\n" +
                         "\n" +
-                        "\uD83D\uDCC2 Переглядай каталог  \n" +
-                        "\uD83D\uDD0D Шукай потрібні товари  \n" +
-                        "\uD83D\uDED2 Заглядай у свій кошик  \n" +
-                        "\uD83D\uDD25 Або дивись популярні хіти, які беруть найчастіше!\n" +
-                        "\n" +
-                        "Я поруч — зробимо твій вибір простим, а покупки приємними \uD83D\uDCAA✨")
+                        "Поїхали \uD83D\uDE80")
                 .replyMarkup(markup)
                 .build();
     }
@@ -6938,53 +6950,66 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     /// Показ товару після списку
-    public void sendProductFromMap(Long chatId, Map<String, Object> product) throws TelegramApiException {
+    public void sendProductFromMap(Long chatId, Map<String, Object> product) {
 
-        String name = safeToString(product.get("name"), "Без назви");
-        String price = safeToString(product.get("price"), "0");
-        String unit = safeToString(product.get("unit"), "шт").toLowerCase();
-        String description = safeToString(product.get("description"), "");
-        String photo = safeToString(product.get("photo"), "");
+        try {
 
-        boolean isCustomOrder = unit.equals("під замовлення");
+            String name = safeToString(product.get("name"), "Без назви");
+            String price = safeToString(product.get("price"), "0");
+            String unit = safeToString(product.get("unit"), "шт").toLowerCase();
+            String description = safeToString(product.get("description"), "");
+            String photo = safeToString(product.get("photo"), "");
 
-        StringBuilder sb = new StringBuilder();
-        sb.append("📦 ").append(name).append("\n");
+            boolean isCustomOrder = unit.equals("під замовлення");
 
-        if (isCustomOrder) {
-            sb.append("💬 Товар доступний під замовлення.\n")
-                    .append("📞 Для уточнення ціни — натисни кнопку консультанта.");
-        } else {
-            sb.append("💰 Ціна: ").append(price).append(" грн за ").append(unit);
-        }
+            StringBuilder sb = new StringBuilder();
 
-        if (!description.isEmpty() && !"null".equalsIgnoreCase(description.trim())) {
-            sb.append("\n📖 ").append(description);
-        }
+            sb.append("📦 ").append(name).append("\n");
 
-        List<KeyboardRow> keyboard = new ArrayList<>();
+            if (isCustomOrder) {
+                sb.append("💬 Товар доступний під замовлення.\n");
+                sb.append("📞 Для уточнення ціни — натисніть кнопку нижче.\n");
+            } else {
+                sb.append("💰 Ціна: ").append(price).append(" грн за ").append(unit).append("\n");
+            }
 
-        KeyboardRow row1 = new KeyboardRow();
-        if (!isCustomOrder) {
-            row1.add("🛒 Замовити товар");
-        } else {
-            row1.add("Написати консультанту");
-        }
-        keyboard.add(row1);
+            if (!description.isBlank() && !"null".equalsIgnoreCase(description.trim())) {
+                sb.append("\n📖 ").append(description).append("\n");
+            }
 
-        KeyboardRow row2 = new KeyboardRow();
-        row2.add(BACK_BUTTON);
-        keyboard.add(row2);
+            sb.append("\n👉 Введіть номер іншого товару для перегляду");
 
-        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
-        markup.setKeyboard(keyboard);
-        markup.setResizeKeyboard(true);
+            List<KeyboardRow> keyboard = new ArrayList<>();
 
-        // 🔥 Відправка
-        if (!photo.isEmpty() && !"null".equalsIgnoreCase(photo.trim())) {
-            sendPhotoFromResources(chatId.toString(), photo, sb.toString(), markup);
-        } else {
-            sendTextWithMarkup(chatId, sb.toString(), markup);
+            KeyboardRow row1 = new KeyboardRow();
+            if (!isCustomOrder) {
+                row1.add("🛒 Замовити товар");
+            } else {
+                row1.add("📞 Написати консультанту");
+            }
+            keyboard.add(row1);
+
+            KeyboardRow row2 = new KeyboardRow();
+            row2.add(BACK_BUTTON);
+            keyboard.add(row2);
+
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+            markup.setKeyboard(keyboard);
+            markup.setResizeKeyboard(true);
+
+            if (!photo.isBlank() && !"null".equalsIgnoreCase(photo.trim())) {
+                sendPhotoFromResources(String.valueOf(chatId), photo, sb.toString(), markup);
+            } else {
+                sendTextWithMarkup(chatId, sb.toString(), markup);
+            }
+
+            setUserState(chatId, "VIEW_PRODUCTS");
+
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
+
+            // fallback щоб бот не падав
+            sendTextSafe(chatId, "⚠️ Помилка при відправці товару");
         }
     }
 
@@ -9734,5 +9759,17 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         sendCategories(userId);
+    }
+
+    public void setUserState(Long userId, String state) {
+        userStates.put(userId, state);
+    }
+
+    public String getUserState(Long userId) {
+        return userStates.getOrDefault(userId, "");
+    }
+
+    public void sendTextSafe(Long chatId, String text) {
+        sendText(chatId, text);
     }
 }
