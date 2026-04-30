@@ -5267,23 +5267,20 @@ public class StoreBot extends TelegramLongPollingBot {
         userStates.put(userId, "choose_search_source");
     }
 
-    /// Вибрати товар по списку при редагуваня
     private void handleChooseProduct(
             Long userId,
             String chatId,
             String text
     ) {
 
-        // 🔥 Якщо користувач вже вийшов з каталогу вибору товару
-        String state = userStates.get(userId);
+        String state = userStates.getOrDefault(userId, "");
 
+        // ❗ якщо не в режимі вибору — вихід
         if (!"choose_product".equals(state)) {
             return;
         }
 
-        // =====================================
-        // 🔙 Кнопка Назад
-        // =====================================
+        // 🔙 Назад
         if (BACK_BUTTON.equals(text)) {
 
             try {
@@ -5299,194 +5296,47 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // =====================================
-        // Джерело списку
-        // =====================================
-        List<Map<String, Object>> matches =
-                adminMatchList.get(userId);
+        // 📦 Отримуємо список
+        List<Map<String, Object>> products = userProductLists.get(userId);
 
-        boolean adminMode = true;
-
-        if (matches == null || matches.isEmpty()) {
-
-            matches =
-                    userProductLists.get(userId);
-
-            adminMode = false;
-        }
-
-        if (matches == null || matches.isEmpty()) {
-
-            sendText(chatId,
-                    "❌ Список товарів порожній.");
-
-            userStates.remove(userId);
+        if (products == null || products.isEmpty()) {
+            sendText(chatId, "❌ Список товарів порожній.");
             return;
         }
 
-        text = text.trim()
-                .replace("–", "-")
-                .replace("—", "-");
+        // 🧠 тільки числа
+        if (text == null || !text.matches("\\d+")) {
+            sendText(chatId, "❌ Введіть номер товару.");
+            return;
+        }
 
         try {
 
-            // =====================================
-            // 👤 КЛІЄНТ
-            // =====================================
-            if (!adminMode) {
+            int index = Integer.parseInt(text) - 1;
 
-                int index =
-                        Integer.parseInt(text) - 1;
-
-                if (index < 0 ||
-                        index >= matches.size()) {
-
-                    sendText(chatId,
-                            "❌ Введіть номер товару.");
-                    return;
-                }
-
-                Map<String, Object> product =
-                        matches.get(index);
-
-                lastShownProduct.put(userId, product);
-
-                userStates.remove(userId);
-                userProductLists.remove(userId);
-
-                sendProductFromMap(
-                        Long.valueOf(chatId),
-                        product
-                );
-
+            if (index < 0 || index >= products.size()) {
+                sendText(chatId, "❌ Невірний номер товару.");
                 return;
             }
 
-            // =====================================
-            // 👑 АДМІН
-            // =====================================
-            List<Map<String, Object>> selectedProducts =
-                    new ArrayList<>();
+            Map<String, Object> product = products.get(index);
 
-            List<Integer> selectedIds =
-                    new ArrayList<>();
+            // 🔥 Запам’ятовуємо останній товар
+            lastShownProduct.put(userId, product);
 
-            if (text.contains("-")) {
+            // ❗ НІЧОГО НЕ ВИДАЛЯЄМО
+            // userStates.remove(userId); ❌
+            // userProductLists.remove(userId); ❌
 
-                String[] parts =
-                        text.split("\\s*-\\s*");
-
-                int start =
-                        Integer.parseInt(parts[0]) - 1;
-
-                int end =
-                        Integer.parseInt(parts[1]) - 1;
-
-                start = Math.max(start, 0);
-                end = Math.min(end, matches.size() - 1);
-
-                for (int i = start; i <= end; i++) {
-                    selectedProducts.add(matches.get(i));
-                }
-
-            } else if (text.contains(",")) {
-
-                String[] parts =
-                        text.split(",");
-
-                for (String part : parts) {
-
-                    int index =
-                            Integer.parseInt(part.trim()) - 1;
-
-                    if (index >= 0 &&
-                            index < matches.size()) {
-
-                        selectedProducts.add(
-                                matches.get(index)
-                        );
-                    }
-                }
-
-            } else {
-
-                int index =
-                        Integer.parseInt(text) - 1;
-
-                if (index >= 0 &&
-                        index < matches.size()) {
-
-                    selectedProducts.add(
-                            matches.get(index)
-                    );
-                }
-            }
-
-            if (selectedProducts.isEmpty()) {
-                sendText(chatId,
-                        "❌ Немає валідних номерів.");
-                return;
-            }
-
-            for (Map<String, Object> product :
-                    selectedProducts) {
-
-                Object rawId = product.get("id");
-
-                if (rawId != null) {
-
-                    try {
-                        selectedIds.add(
-                                Integer.parseInt(
-                                        rawId.toString()
-                                )
-                        );
-                    } catch (Exception ignored) {
-                    }
-                }
-            }
-
-            adminSelectedProducts.put(
-                    userId,
-                    selectedProducts
+            // 🚀 Показ товару
+            sendProductFromMap(
+                    Long.valueOf(chatId),
+                    product
             );
-
-            adminSelectedProductsIds.put(
-                    userId,
-                    selectedIds
-            );
-
-            Map<String, Object> first =
-                    selectedProducts.get(0);
-
-            adminSelectedProduct.put(
-                    userId,
-                    first
-            );
-
-            adminEditingProduct.put(
-                    userId,
-                    safeToString(
-                            first.get("name"),
-                            "Без назви"
-                    )
-            );
-
-            adminMatchList.remove(userId);
-
-            userStates.put(userId, "editing");
-
-            sendText(chatId,
-                    "✏️ Редагуємо "
-                            + selectedProducts.size()
-                            + " товар(ів)");
-
-            showEditMenuOnce(userId, chatId);
 
         } catch (Exception e) {
-
-            sendText(chatId,
-                    "❌ Введіть номер товару.");
+            e.printStackTrace();
+            sendText(chatId, "❌ Помилка при виборі товару.");
         }
     }
 
