@@ -67,6 +67,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private Map<Long, String> userLastCategory = new HashMap<>();
     private final Map<Long, List<String>> userFilters = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userProducts = new HashMap<>();
+    private final Map<Long, Integer> userProductIndex = new HashMap<>();
 
     private final Map<Long, String> selectedSubcategoryForFilter = new HashMap<>();
     private Map<Long,String> selectedFilterForSubfilter = new HashMap<>();
@@ -5275,28 +5276,18 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.getOrDefault(userId, "");
 
-        // ❗ якщо не в режимі вибору — вихід
         if (!"choose_product".equals(state)) {
             return;
         }
 
-        // 🔙 Назад
         if (BACK_BUTTON.equals(text)) {
-
-            try {
-                userStates.remove(userId);
-                userProductLists.remove(userId);
-
-                handleBack(userId, chatId);
-
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
+            userStates.remove(userId);
+            userProductLists.remove(userId);
+            userProductIndex.remove(userId);
+            //handleBack(userId, chatId);
             return;
         }
 
-        // 📦 Отримуємо список
         List<Map<String, Object>> products = userProductLists.get(userId);
 
         if (products == null || products.isEmpty()) {
@@ -5304,40 +5295,39 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🧠 тільки числа
         if (text == null || !text.matches("\\d+")) {
             sendText(chatId, "❌ Введіть номер товару.");
             return;
         }
 
-        try {
+        int inputIndex = Integer.parseInt(text) - 1;
 
-            int index = Integer.parseInt(text) - 1;
-
-            if (index < 0 || index >= products.size()) {
-                sendText(chatId, "❌ Невірний номер товару.");
-                return;
-            }
-
-            Map<String, Object> product = products.get(index);
-
-            // 🔥 Запам’ятовуємо останній товар
-            lastShownProduct.put(userId, product);
-
-            // ❗ НІЧОГО НЕ ВИДАЛЯЄМО
-            // userStates.remove(userId); ❌
-            // userProductLists.remove(userId); ❌
-
-            // 🚀 Показ товару
-            sendProductFromMap(
-                    Long.valueOf(chatId),
-                    product
-            );
-
-        } catch (Exception e) {
-            e.printStackTrace();
-            sendText(chatId, "❌ Помилка при виборі товару.");
+        if (inputIndex < 0 || inputIndex >= products.size()) {
+            sendText(chatId, "❌ Невірний номер товару.");
+            return;
         }
+
+        // 🔥 беремо останній показаний індекс
+        int lastIndex = userProductIndex.getOrDefault(userId, -1);
+
+        int indexToShow;
+
+        if (lastIndex == inputIndex) {
+            // 👉 якщо той самий — показуємо наступний
+            indexToShow = (inputIndex + 1) % products.size();
+        } else {
+            // 👉 якщо інший — показуємо вибраний
+            indexToShow = inputIndex;
+        }
+
+        Map<String, Object> product = products.get(indexToShow);
+
+        // 🔥 зберігаємо новий індекс
+        userProductIndex.put(userId, indexToShow);
+
+        lastShownProduct.put(userId, product);
+
+        sendProductFromMap(Long.valueOf(chatId), product);
     }
 
     // 🔧 Редагування товару
