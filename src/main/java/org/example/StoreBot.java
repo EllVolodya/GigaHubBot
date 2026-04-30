@@ -245,26 +245,27 @@ public class StoreBot extends TelegramLongPollingBot {
             String chatIdStr = chatIdLong.toString();
 
             try {
+                // 🔥 очищаємо ВСЕ по userId
                 clearUserState(userId);
 
-                userStates.remove(chatIdLong);
+                userStates.remove(userId);
 
-                currentCategory.remove(chatIdLong);
-                currentSubcategory.remove(chatIdLong);
+                currentCategory.remove(userId);
+                currentSubcategory.remove(userId);
 
-                currentFilter.remove(chatIdLong);
-                currentSubfilter.remove(chatIdLong);
+                currentFilter.remove(userId);
+                currentSubfilter.remove(userId);
 
-                userFilters.remove(chatIdLong);
-                filterPage.remove(chatIdLong);
+                userFilters.remove(userId);
+                filterPage.remove(userId);
 
-                userProductLists.remove(chatIdLong);
-                productIndex.remove(chatIdLong);
+                userProductLists.remove(userId);
+                productIndex.remove(userId);
 
-                selectedFilterForSubfilter.remove(chatIdLong);
-                editItemIndex.remove(chatIdLong);
+                selectedFilterForSubfilter.remove(userId);
+                editItemIndex.remove(userId);
 
-                userCart.remove(chatIdLong);
+                userCart.remove(userId);
 
                 String inviteCode = text.replace("/start", "").trim();
 
