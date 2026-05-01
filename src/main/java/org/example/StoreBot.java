@@ -5398,7 +5398,7 @@ public class StoreBot extends TelegramLongPollingBot {
         // 👤 USER
         try {
             sendProductFromMap(Long.parseLong(chatId), product);
-            userStates.put(userId, "viewing_product");
+            userStates.put(userId, "choose_product");
 
         } catch (Exception e) {
             sendText(chatId, "❌ Помилка відображення товару.");
