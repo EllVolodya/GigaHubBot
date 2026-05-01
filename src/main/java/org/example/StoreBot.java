@@ -2119,9 +2119,12 @@ public class StoreBot extends TelegramLongPollingBot {
                 // Меню розробника
                 case "👨‍💻 Меню розробника" -> {
                     if (DEVELOPERS.contains(userId)) {
-                        sendMessage(createDeveloperMenu(chatId));
+                        userStates.put(userId, "developer_menu"); // 🔥 КЛЮЧОВЕ
+                        sendMessageSafely(createDeveloperMenu(chatId));
+                        return;
                     } else {
                         sendText(chatId, "⛔ У вас немає доступу.");
+                        return;
                     }
                 }
 
