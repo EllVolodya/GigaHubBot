@@ -3152,17 +3152,18 @@ public class StoreBot extends TelegramLongPollingBot {
         if (adminEditingProduct.containsKey(userId) ||
                 adminSelectedProductsRange.containsKey(userId)) {
 
-            adminEditingProduct.remove(userId);
-            adminSelectedProductsRange.remove(userId);
+            // чистимо тільки редагування
             adminEditingField.remove(userId);
-            userStates.remove(userId);
 
-            sendText(chatId,
-                    "↩️ Ви повернулися до меню розробника.");
+            // 🔥 ПОВЕРТАЄМОСЬ ДО СПИСКУ
+            userStates.put(userId, "choose_product");
 
-            sendMessage(
-                    createDeveloperMenu(chatId)
-            );
+            try {
+                sendProductList(userId);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
             return;
         }
 
