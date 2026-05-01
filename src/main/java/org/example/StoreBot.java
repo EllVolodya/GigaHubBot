@@ -5476,7 +5476,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // 🔙 НАЗАД
-        if (text != null && text.contains("Назад")) {
+        if (BACK_BUTTON.equals(text)) {
 
             String state = userStates.getOrDefault(userId, "");
 
