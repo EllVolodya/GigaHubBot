@@ -7191,139 +7191,84 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    private void handleAdminSearchInput(Long userId, String chatId, String text)
-            throws TelegramApiException {
+    private void handleAdminSearchInput(
+            Long userId,
+            String chatId,
+            String text
+    ) throws TelegramApiException {
 
-        String source =
-                adminSearchSource.getOrDefault(
-                        userId,
-                        "mysql"
-                );
+        String source = adminSearchSource.getOrDefault(userId, "mysql");
 
-        List<Map<String, Object>> results =
-                new ArrayList<>();
+        List<Map<String, Object>> results;
 
         try {
 
-            switch (source) {
+            if ("excel".equals(source)) {
 
-                case "mysql" -> {
+                List<ExcelToMySqlImporter.ExcelProduct> excelResults =
+                        ExcelToMySqlImporter.searchInExcel(text);
 
-                    CatalogSearcher searcher =
-                            new CatalogSearcher();
+                results = new ArrayList<>();
 
-                    results =
-                            searcher.searchByKeywordsAdmin(text);
+                for (ExcelToMySqlImporter.ExcelProduct p : excelResults) {
+
+                    Map<String, Object> map = new HashMap<>();
+
+                    map.put("name", p.name);
+                    map.put("price", p.price);
+                    map.put("group", p.group);
+                    map.put("_excel", p);
+
+                    results.add(map);
                 }
 
-                case "excel" -> {
+            } else {
 
-                    List<ExcelToMySqlImporter.ExcelProduct> excelResults =
-                            ExcelToMySqlImporter.searchInExcel(text);
-
-                    for (ExcelToMySqlImporter.ExcelProduct p : excelResults) {
-
-                        Map<String, Object> map =
-                                new HashMap<>();
-
-                        // id не чіпаємо
-                        map.put("name", p.name);
-                        map.put("price", p.price);
-                        map.put("group", p.group);
-                        map.put("_excel", p);
-
-                        results.add(map);
-                    }
-                }
-
-                default -> {
-
-                    CatalogSearcher searcher =
-                            new CatalogSearcher();
-
-                    results =
-                            searcher.searchByKeywordsAdmin(text);
-                }
+                CatalogSearcher searcher = new CatalogSearcher();
+                results = searcher.searchByKeywordsAdmin(text);
             }
 
         } catch (Exception e) {
 
-            sendText(
-                    chatId,
-                    "❌ Помилка пошуку: "
-                            + e.getMessage()
-            );
-
+            sendText(chatId, "❌ Помилка пошуку: " + e.getMessage());
+            e.printStackTrace();
             return;
         }
 
-        if (results == null ||
-                results.isEmpty()) {
-
-            sendText(
-                    chatId,
-                    "❌ Товар не знайдено: "
-                            + text
-            );
-
+        if (results == null || results.isEmpty()) {
+            sendText(chatId, "❌ Товар не знайдено: " + text);
             return;
         }
 
-        adminMatchList.put(
-                userId,
-                results
-        );
+        // 🔥 ГОЛОВНИЙ ФІКС
+        userProductLists.put(userId, results);
 
-        userStates.put(
-                userId,
-                "choose_product"
-        );
+        // ❌ старе (прибрати!)
+        // adminMatchList.put(userId, results);
 
-        StringBuilder sb =
-                new StringBuilder();
+        userStates.put(userId, "choose_product");
+
+        StringBuilder sb = new StringBuilder();
 
         sb.append("🔎 Знайдено товари.\n");
-        sb.append("Введіть номер, діапазон або список:\n\n");
+        sb.append("Введіть номер товару:\n\n");
 
         for (int i = 0; i < results.size(); i++) {
 
-            Map<String, Object> prod =
-                    results.get(i);
+            Map<String, Object> prod = results.get(i);
 
-            String name =
-                    safeToString(
-                            prod.get("name"),
-                            "Без назви"
-                    );
+            String name = safeToString(prod.get("name"), "Без назви");
+            String price = safeToString(prod.get("price"), "");
+            String group = safeToString(prod.get("group"), "");
 
-            String price =
-                    safeToString(
-                            prod.get("price"),
-                            ""
-                    );
+            sb.append(i + 1).append(". ").append(name);
 
-            String group =
-                    safeToString(
-                            prod.get("group"),
-                            ""
-                    );
-
-            sb.append(i + 1)
-                    .append(". ")
-                    .append(name);
-
-            if (!group.isBlank() &&
-                    !"null".equalsIgnoreCase(group)) {
-
-                sb.append(" [")
-                        .append(group)
-                        .append("]");
+            if (!group.isBlank() && !"null".equalsIgnoreCase(group)) {
+                sb.append(" [").append(group).append("]");
             }
 
             if (!price.isBlank()) {
-
-                sb.append(" | Ціна: ")
-                        .append(price);
+                sb.append(" | Ціна: ").append(price);
             }
 
             sb.append("\n");
