@@ -5403,12 +5403,32 @@ public class StoreBot extends TelegramLongPollingBot {
 
         lastShownProduct.put(userId, product);
 
+        // 🔥 ВИТЯГУЄМО ID (ЦЕ ГОЛОВНИЙ ФІКС)
+        Object idObj = product.get("id");
+
+        if (idObj == null) {
+            sendText(chatId, "❌ У товару немає ID.");
+            return;
+        }
+
+        Integer productId;
+        try {
+            productId = Integer.parseInt(String.valueOf(idObj));
+        } catch (Exception e) {
+            sendText(chatId, "❌ Некоректний ID товару.");
+            return;
+        }
+
+        // 🔥 ЗБЕРІГАЄМО ВСЮДИ (щоб не було розсинхрону)
+        adminSelectedProduct.put(userId, product);
+        adminSelectedProductsIds.put(userId, List.of(productId));
+
         boolean isAdmin = adminMode.getOrDefault(userId, false)
                 && (ADMINS.contains(userId) || DEVELOPERS.contains(userId));
 
+        // 🔧 ADMIN
         if (isAdmin) {
 
-            adminSelectedProduct.put(userId, product);
             userStates.put(userId, "editing_product");
 
             sendText(chatId,
@@ -5419,11 +5439,13 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 👤 USER
         try {
             sendProductFromMap(Long.parseLong(chatId), product);
             userStates.put(userId, "choose_product");
         } catch (Exception e) {
             e.printStackTrace();
+            sendText(chatId, "❌ Помилка відображення товару.");
         }
     }
 
