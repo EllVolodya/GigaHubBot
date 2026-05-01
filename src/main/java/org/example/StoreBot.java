@@ -1694,7 +1694,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             switch (text) {
                 case "🧱 Каталог товарів" -> {
-                    adminMode.put(userId, false);
+                    adminMode.put(userId, false); // 🔥 ОСНОВНИЙ ФІКС
                     userStates.remove(userId);
                     sendCategories(userId);
                 }
@@ -5423,8 +5423,8 @@ public class StoreBot extends TelegramLongPollingBot {
         adminSelectedProduct.put(userId, product);
         adminSelectedProductsIds.put(userId, List.of(productId));
 
-        boolean isAdmin = adminMode.getOrDefault(userId, false)
-                && (ADMINS.contains(userId) || DEVELOPERS.contains(userId));
+        boolean isAdmin = (ADMINS.contains(userId) || DEVELOPERS.contains(userId))
+                && adminMode.getOrDefault(userId, false);
 
         // 🔧 ADMIN
         if (isAdmin) {
