@@ -1214,6 +1214,11 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if ("choose_product".equals(state)) {
+            handleChooseProduct(userId, chatId, text);
+            return;
+        }
+
         if (state != null) {
 
             System.out.println("[STATE] " + state + " TEXT=" + text);
