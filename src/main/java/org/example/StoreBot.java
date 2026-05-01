@@ -7244,7 +7244,7 @@ public class StoreBot extends TelegramLongPollingBot {
         adminMatchList.put(userId, results);
 
         // 🔥 ЧІТКИЙ STATE ДЛЯ АДМІНА
-        userStates.put(userId, "admin_choose_product");
+        userStates.put(userId, "choose_product");
 
         StringBuilder sb = new StringBuilder();
 
