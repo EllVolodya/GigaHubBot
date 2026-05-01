@@ -7210,7 +7210,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 for (ExcelToMySqlImporter.ExcelProduct p : excelResults) {
 
                     Map<String, Object> map = new HashMap<>();
-
                     map.put("name", p.name);
                     map.put("price", p.price);
                     map.put("group", p.group);
@@ -7237,16 +7236,20 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 АДМІН СПИСОК (ГОЛОВНЕ)
+        // 🔥 ОДИН СПИСОК
         userProductLists.put(userId, results);
 
-        // 🔥 ЧІТКИЙ STATE ДЛЯ АДМІНА
+        // 🔥 АДМІН РЕЖИМ ВКЛЮЧЕНИЙ
+        adminMode.put(userId, true);
+
+        // 🔥 STATE
         userStates.put(userId, "choose_product");
 
+        // 📄 список
         StringBuilder sb = new StringBuilder();
 
-        sb.append("🔎 Знайдено товари (ADMIN).\n");
-        sb.append("Введіть номер товару:\n\n");
+        sb.append("🔎 Знайдено товари.\n");
+        sb.append("Введіть номер товару для редагування:\n\n");
 
         for (int i = 0; i < results.size(); i++) {
 
