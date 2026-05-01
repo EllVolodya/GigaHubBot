@@ -2590,29 +2590,37 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // --- Категорії з MySQL ---
-    private void sendCategories(Long chatId) throws TelegramApiException {
-        CatalogSearcher searcher = new CatalogSearcher();
+    private void sendCategories(Long chatId) {
 
-        List<String> categories = searcher.getCategories();
-        if (categories.isEmpty()) {
-            sendText(chatId, "❌ Категорії не знайдено.");
-            return;
+        try {
+
+            CatalogSearcher searcher = new CatalogSearcher();
+
+            List<String> categories = searcher.getCategories();
+            if (categories.isEmpty()) {
+                sendText(chatId, "❌ Категорії не знайдено.");
+                return;
+            }
+
+            ReplyKeyboardMarkup markup = ReplyKeyboardMarkup.builder()
+                    .resizeKeyboard(true)
+                    .keyboard(buildKeyboard(categories, true))
+                    .build();
+
+            sendMessage(chatId,
+                    "\uD83D\uDCC2 Обирай категорію, друже!\n\n" +
+                            "Я вже підтягнув рукавички та готовий порпатись у наших складських полицях 😄🧱\n\n" +
+                            "Ти лише скажи, що шукаєш — і я миттю знайду найкращі варіанти!\n\n" +
+                            "Занурюйся в каталог — почнемо будувати разом 💪✨",
+                    markup
+            );
+
+            System.out.println("DEBUG: Categories sent in ID order: " + categories);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendText(chatId, "❌ Помилка при завантаженні категорій.");
         }
-
-        ReplyKeyboardMarkup markup = ReplyKeyboardMarkup.builder()
-                .resizeKeyboard(true)
-                .keyboard(buildKeyboard(categories, true))
-                .build();
-
-        sendMessage(chatId, "\uD83D\uDCC2 Обирай категорію, друже!  \n" +
-                "Я вже підтягнув рукавички та готовий порпатись у наших складських полицях \uD83D\uDE04\uD83E\uDDF1\n" +
-                "\n" +
-                "У нас усе акуратно розкладено: цемент тут, фарба там, інструменти під рукою, а хіти продажів — просто ближче до виходу.  \n" +
-                "Ти лише скажи, що шукаєш — і я миттю знайду найкращі варіанти!\n" +
-                "\n" +
-                "Занурюйся в каталог — почнемо будувати разом \uD83D\uDCAA✨", markup);
-
-        System.out.println("DEBUG: Categories sent in ID order: " + categories);
     }
 
     // 🔹    Показ кошика
