@@ -237,11 +237,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String text = update.getMessage().getText() != null
                 ? update.getMessage().getText().trim()
-                : "";
+                : null;
 
         String state = userStates.get(userId);
 
-        if (text != null && text.contains("Назад")) {
+        if (text != null && text.contains("Назад") && state == null) {
             System.out.println("🔥 BACK CLICKED");
 
             try {
@@ -1229,6 +1229,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if ("choose_product".equals(state)) {
             handleChooseProduct(userId, chatId, text);
+            return;
+        }
+
+        if ("editing_product".equals(state)) {
+            handleEditing(userId, chatId, text);
             return;
         }
 
