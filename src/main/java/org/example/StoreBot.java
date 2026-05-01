@@ -1707,13 +1707,18 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "🧹 Очистити кошик" -> clearCart(userId);
-                case BACK_BUTTON -> {
+                case "Назад", BACK_BUTTON -> {
+
                     try {
                         handleBack(userId, chatId);
-                    } catch (Exception e) { // 🔥 ВАЖЛИВО
-                        LOGGER.severe("[Back Button Error] Failed to handle BACK_BUTTON for chatId=" + chatId + ": " + e.getMessage());
-                        sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
+                    } catch (Exception e) {
+                        LOGGER.severe("[Back Button Error] Failed to handle BACK for chatId="
+                                + chatId + ": " + e.getMessage());
+
+                        sendText(chatId, "❌ Сталася помилка при поверненні назад.");
                     }
+
+                    return;
                 }
                 case ADD_TO_CART_BUTTON -> {
                     addToCartTool(userId);
@@ -1790,14 +1795,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "➡ Далі" -> showNextProduct(userId);
                 case "⬅ Назад" -> showPreviousProduct(userId);
-                case "Назад" -> {
-                    userStates.remove(userId);
-                    adminEditingProduct.remove(userId);
-                    adminSelectedProductsRange.remove(userId);
-                    adminEditingField.remove(userId);
 
-                    sendMessage(createDeveloperMenu(chatId));
-                }
                 case "🛒 Додати в кошик" -> addToCart(userId);
                 case "📍 Адреси та Контакти" -> {
                     SendMessage message = new SendMessage();
