@@ -5565,12 +5565,38 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔙 НАЗАД
         if (text != null && text.contains("Назад")) {
 
+            String state = userStates.getOrDefault(userId, "");
+
+            System.out.println("🔙 BACK FROM: " + state);
+
             adminEditingField.remove(userId);
-            userStates.put(userId, "choose_product");
 
             try {
-                sendProductList(userId);
-            } catch (TelegramApiException e) {
+
+                switch (state) {
+
+                    case "editing_field_value" -> {
+                        userStates.put(userId, "editing_product");
+                        sendMessageSafely(createEditMenu(chatId, userId));
+                    }
+
+                    case "editing_product" -> {
+                        userStates.put(userId, "developer_menu");
+                        sendMessageSafely(createDeveloperMenu(chatId));
+                    }
+
+                    case "choose_product" -> {
+                        userStates.remove(userId);
+                        sendCategories(userId);
+                    }
+
+                    default -> {
+                        userStates.remove(userId);
+                        sendCategories(userId);
+                    }
+                }
+
+            } catch (Exception e) {
                 e.printStackTrace();
                 sendText(chatId, "❌ Помилка при поверненні.");
             }
