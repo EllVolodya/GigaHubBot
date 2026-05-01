@@ -5294,23 +5294,9 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔙 BACK
+        // ❗ BACK ОБРОБЛЯЄТЬСЯ ГЛОБАЛЬНО (НЕ ТУТ)
         if (text != null && text.contains("Назад")) {
-
-            userStates.remove(userId);
-
-            sendText(chatId, "↩️ Повертаємо вас назад.");
-
-            try {
-                if (currentCategory.containsKey(userId)) {
-                    sendSubcategories(userId, currentCategory.get(userId));
-                } else {
-                    sendCategories(userId);
-                }
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
-
+            handleBack(userId, chatId);
             return;
         }
 
@@ -5330,7 +5316,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         lastShownProduct.put(userId, product);
 
-        // 🔥 ВИТЯГУЄМО ID (ЦЕ ГОЛОВНИЙ ФІКС)
+        // 🔥 ВИТЯГУЄМО ID
         Object idObj = product.get("id");
 
         if (idObj == null) {
@@ -5346,14 +5332,14 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 ЗБЕРІГАЄМО ВСЮДИ (щоб не було розсинхрону)
+        // 🔥 СИНХРОНІЗАЦІЯ ДАНИХ
         adminSelectedProduct.put(userId, product);
         adminSelectedProductsIds.put(userId, List.of(productId));
 
         boolean isAdmin = (ADMINS.contains(userId) || DEVELOPERS.contains(userId))
                 && adminMode.getOrDefault(userId, false);
 
-        // 🔧 ADMIN
+        // 🔧 ADMIN FLOW
         if (isAdmin) {
 
             userStates.put(userId, "editing_product");
@@ -5366,10 +5352,12 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 👤 USER
+        // 👤 USER FLOW
         try {
             sendProductFromMap(Long.parseLong(chatId), product);
+
             userStates.put(userId, "choose_product");
+
         } catch (Exception e) {
             e.printStackTrace();
             sendText(chatId, "❌ Помилка відображення товару.");
