@@ -7240,17 +7240,15 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 ГОЛОВНИЙ ФІКС
-        userProductLists.put(userId, results);
+        // 🔥 АДМІН СПИСОК (ГОЛОВНЕ)
+        adminMatchList.put(userId, results);
 
-        // ❌ старе (прибрати!)
-        // adminMatchList.put(userId, results);
-
-        userStates.put(userId, "choose_product");
+        // 🔥 ЧІТКИЙ STATE ДЛЯ АДМІНА
+        userStates.put(userId, "admin_choose_product");
 
         StringBuilder sb = new StringBuilder();
 
-        sb.append("🔎 Знайдено товари.\n");
+        sb.append("🔎 Знайдено товари (ADMIN).\n");
         sb.append("Введіть номер товару:\n\n");
 
         for (int i = 0; i < results.size(); i++) {
