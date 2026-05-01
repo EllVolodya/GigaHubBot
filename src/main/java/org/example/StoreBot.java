@@ -3027,99 +3027,97 @@ public class StoreBot extends TelegramLongPollingBot {
 
         System.out.println("[handleBack] User " + userId + " pressed Back.");
 
-        String state = userStates.get(userId);
+        String state = userStates.getOrDefault(userId, "main_menu");
         System.out.println("STATE: " + state);
 
         try {
 
-            // 🔥 1. РЕДАГУВАННЯ ПОЛЯ
-            if ("editing_field_value".equals(state)) {
+            switch (state) {
 
-                adminEditingField.remove(userId);
+                // 🔥 1. РЕДАГУВАННЯ ПОЛЯ
+                case "editing_field_value": {
+                    adminEditingField.remove(userId);
 
-                userStates.put(userId, "editing_product");
-
-                sendMessageSafely(createEditMenu(chatId, userId));
-                return;
-            }
-
-            // 🔥 2. РЕДАГУВАННЯ ТОВАРУ
-            if ("editing_product".equals(state)) {
-
-                adminEditingField.remove(userId);
-
-                userStates.put(userId, "developer_menu"); // 🔥 ОБОВʼЯЗКОВО
-                sendMessageSafely(createDeveloperMenu(chatId));
-                return;
-            }
-
-            // 🔥 3. МЕНЮ РОЗРОБНИКА
-            if ("developer_menu".equals(state)) {
-
-                userStates.remove(userId);
-
-                sendMessageSafely(createUserMenu(chatId, userId));
-                return;
-            }
-
-            // 🔥 4. ВИБІР ТОВАРУ
-            if ("choose_product".equals(state)) {
-
-                userStates.remove(userId);
-                userProductLists.remove(userId);
-                userProductIndex.remove(userId);
-                lastShownProduct.remove(userId);
-
-                sendText(chatId, "↩️ Повертаємо вас до категорій.");
-
-                if (currentCategory.containsKey(userId)) {
-                    sendSubcategories(userId, currentCategory.get(userId));
-                } else {
-                    sendCategories(userId);
+                    userStates.put(userId, "editing_product");
+                    sendMessageSafely(createEditMenu(chatId, userId));
+                    break;
                 }
 
-                return;
+                // 🔥 2. РЕДАГУВАННЯ ТОВАРУ
+                case "editing_product": {
+                    adminEditingField.remove(userId);
+
+                    userStates.put(userId, "developer_menu");
+                    sendMessageSafely(createDeveloperMenu(chatId));
+                    break;
+                }
+
+                // 🔥 3. МЕНЮ РОЗРОБНИКА
+                case "developer_menu": {
+                    userStates.put(userId, "main_menu"); // ❗ не remove, а контроль
+
+                    sendMessageSafely(createUserMenu(chatId, userId));
+                    break;
+                }
+
+                // 🔥 4. ВИБІР ТОВАРУ
+                case "choose_product": {
+                    userProductLists.remove(userId);
+                    userProductIndex.remove(userId);
+                    lastShownProduct.remove(userId);
+
+                    userStates.put(userId, "catalog");
+
+                    sendText(chatId, "↩️ Повертаємо вас до категорій.");
+
+                    if (currentCategory.containsKey(userId)) {
+                        sendSubcategories(userId, currentCategory.get(userId));
+                    } else {
+                        sendCategories(userId);
+                    }
+
+                    break;
+                }
+
+                // 🔥 5. ЗАМОВЛЕННЯ (всі awaiting + pickup)
+                default: {
+
+                    if (state.startsWith("awaiting_") || "order_pickup".equals(state)) {
+
+                        tempDeliveryType.remove(userId);
+                        tempAddress.remove(userId);
+                        tempFullname.remove(userId);
+                        tempPhone.remove(userId);
+                        tempCard.remove(userId);
+                        tempOrderCode.remove(userId);
+                        tempOrderItems.remove(userId);
+                        tempTotal.remove(userId);
+                        tempStorage.remove(userId + "_product");
+
+                        userStates.put(userId, "catalog");
+
+                        sendText(chatId, "↩️ Повертаємо вас до каталогу товарів.");
+                        openCatalogBack(userId, chatId);
+                        return;
+                    }
+
+                    // 🔥 6. КОШИК
+                    if ("in_cart".equals(state)) {
+                        userStates.put(userId, "catalog");
+
+                        sendText(chatId, "↩️ Повертаємо вас до каталогу товарів.");
+                        openCatalogBack(userId, chatId);
+                        return;
+                    }
+
+                    // 🔥 7. FALLBACK (завжди стабільний)
+                    userStates.put(userId, "main_menu");
+                    sendMessageSafely(createUserMenu(chatId, userId));
+                    break;
+                }
             }
 
-            // 🔥 5. ЗАМОВЛЕННЯ
-            if (state != null && (
-                    state.startsWith("awaiting_") ||
-                            state.equals("order_pickup")
-            )) {
-
-                tempDeliveryType.remove(userId);
-                tempAddress.remove(userId);
-                tempFullname.remove(userId);
-                tempPhone.remove(userId);
-                tempCard.remove(userId);
-                tempOrderCode.remove(userId);
-                tempOrderItems.remove(userId);
-                tempTotal.remove(userId);
-                tempStorage.remove(userId + "_product");
-
-                userStates.remove(userId);
-
-                sendText(chatId, "↩️ Повертаємо вас до каталогу товарів.");
-                openCatalogBack(userId, chatId);
-                return;
-            }
-
-            // 🔥 6. КОШИК
-            if ("in_cart".equals(state)) {
-
-                userStates.remove(userId);
-
-                sendText(chatId, "↩️ Повертаємо вас до каталогу товарів.");
-                openCatalogBack(userId, chatId);
-                return;
-            }
-
-            // 🔥 7. FALLBACK
-            userStates.remove(userId);
-
-            sendMessageSafely(createUserMenu(chatId, userId));
-
-        } catch (Exception e) { // ✅ ТІЛЬКИ Exception
+        } catch (Exception e) {
             e.printStackTrace();
             sendText(chatId, "❌ Помилка при поверненні назад.");
         }
