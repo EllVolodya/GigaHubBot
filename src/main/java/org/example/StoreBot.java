@@ -246,7 +246,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             try {
                 handleBack(userId, chatId);
-            } catch (TelegramApiException e) {
+            } catch (Exception e) { // 🔥 ВАЖЛИВО
                 e.printStackTrace();
             }
 
@@ -568,7 +568,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 try {
                     handleBack(userId, chatId);
-                } catch (TelegramApiException e) {
+                } catch (Exception e) { // 🔥 ВАЖЛИВО
                     e.printStackTrace();
                 }
 
@@ -1710,7 +1710,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 case BACK_BUTTON -> {
                     try {
                         handleBack(userId, chatId);
-                    } catch (TelegramApiException e) {
+                    } catch (Exception e) { // 🔥 ВАЖЛИВО
                         LOGGER.severe("[Back Button Error] Failed to handle BACK_BUTTON for chatId=" + chatId + ": " + e.getMessage());
                         sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
                     }
@@ -3032,7 +3032,38 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try {
 
-            // 🔥 1. ВИБІР ТОВАРУ (назад до списку/категорій)
+            // 🔥 1. РЕДАГУВАННЯ ПОЛЯ
+            if ("editing_field_value".equals(state)) {
+
+                adminEditingField.remove(userId);
+
+                userStates.put(userId, "editing_product");
+
+                sendMessageSafely(createEditMenu(chatId, userId));
+                return;
+            }
+
+            // 🔥 2. РЕДАГУВАННЯ ТОВАРУ
+            if ("editing_product".equals(state)) {
+
+                adminEditingField.remove(userId);
+
+                userStates.put(userId, "developer_menu");
+
+                sendMessageSafely(createDeveloperMenu(chatId));
+                return;
+            }
+
+            // 🔥 3. МЕНЮ РОЗРОБНИКА
+            if ("developer_menu".equals(state)) {
+
+                userStates.remove(userId);
+
+                sendMessageSafely(createUserMenu(chatId, userId));
+                return;
+            }
+
+            // 🔥 4. ВИБІР ТОВАРУ
             if ("choose_product".equals(state)) {
 
                 userStates.remove(userId);
@@ -3051,38 +3082,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 2. РЕДАГУВАННЯ ПОЛЯ → назад до редагування товару
-            if ("editing_field_value".equals(state)) {
-
-                adminEditingField.remove(userId);
-
-                userStates.put(userId, "editing_product");
-
-                sendMessageSafely(createEditMenu(chatId, userId));
-                return;
-            }
-
-            // 🔥 3. РЕДАГУВАННЯ ТОВАРУ → назад до меню розробника
-            if ("editing_product".equals(state)) {
-
-                adminEditingField.remove(userId);
-
-                userStates.put(userId, "developer_menu");
-
-                sendMessageSafely(createDeveloperMenu(chatId));
-                return;
-            }
-
-            // 🔥 4. МЕНЮ РОЗРОБНИКА → назад в головне меню
-            if ("developer_menu".equals(state)) {
-
-                userStates.remove(userId);
-
-                sendMessageSafely(createUserMenu(chatId, userId));
-                return;
-            }
-
-            // 🔥 5. ОФОРМЛЕННЯ / ЗАМОВЛЕННЯ
+            // 🔥 5. ЗАМОВЛЕННЯ
             if (state != null && (
                     state.startsWith("awaiting_") ||
                             state.equals("order_pickup")
@@ -3115,76 +3115,12 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 7. КАЛЬКУЛЯТОРИ
-            Set<String> MATERIAL_STATES = Set.of(
-                    "material_calc_menu",
-                    "paint_length", "paint_width",
-                    "calc_paint_layers",
-                    "calc_paint_consumption",
-                    "tile_length", "tile_width",
-                    "tile_size",
-                    "laminate_length",
-                    "laminate_width",
-                    "wall_length",
-                    "wall_width",
-                    "baseboard_length",
-                    "baseboard_width"
-            );
-
-            if (state != null && MATERIAL_STATES.contains(state)) {
-
-                tempLength.remove(userId);
-                tempWidth.remove(userId);
-                paintTemp.remove(userId);
-                paintLayers.remove(userId);
-
-                userStates.remove(userId);
-
-                sendMessageSafely(createUserMenu(chatId, userId));
-                return;
-            }
-
-            // 🔥 8. З ПІДКАТЕГОРІЇ → в категорію
-            if (currentSubcategory.containsKey(userId)) {
-
-                currentSubcategory.remove(userId);
-
-                if (currentCategory.containsKey(userId)) {
-                    sendSubcategories(userId, currentCategory.get(userId));
-                } else {
-                    sendCategories(userId);
-                }
-
-                return;
-            }
-
-            // 🔥 9. З КАТЕГОРІЇ → в головне меню
-            if (currentCategory.containsKey(userId)) {
-
-                currentCategory.remove(userId);
-
-                sendMessageSafely(createUserMenu(chatId, userId));
-                return;
-            }
-
-            // 🔥 10. АДМІН МЕНЮ
-            if (adminOrderIndex.containsKey(userId)) {
-
-                adminOrderIndex.remove(userId);
-
-                sendMessageSafely(createAdminMenu(chatId));
-                return;
-            }
-
-            // 🔥 11. FALLBACK (завжди безпечно)
+            // 🔥 7. FALLBACK
             userStates.remove(userId);
-            lastShownProduct.remove(userId);
-            adminMatchList.remove(userId);
-            productIndex.remove(userId);
 
             sendMessageSafely(createUserMenu(chatId, userId));
 
-        } catch (Exception e) {
+        } catch (Exception e) { // ✅ ТІЛЬКИ Exception
             e.printStackTrace();
             sendText(chatId, "❌ Помилка при поверненні назад.");
         }
@@ -4334,8 +4270,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 if (text.equals(BACK_BUTTON)) {
                     try {
                         handleBack(userId, chatId);
-                    } catch (TelegramApiException e) {
-                        e.printStackTrace();
+                    } catch (Exception e) { // 🔥 ВАЖЛИВО
+                        LOGGER.severe("[Back Button Error] Failed to handle BACK_BUTTON for chatId=" + chatId + ": " + e.getMessage());
+                        sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
                     }
                     return;
                 }
@@ -4450,8 +4387,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 if (text.equals("⬅️ Назад")) {
                     try {
                         handleBack(userId, chatId);
-                    } catch (TelegramApiException e) {
-                        e.printStackTrace();
+                    } catch (Exception e) { // 🔥 ВАЖЛИВО
+                        LOGGER.severe("[Back Button Error] Failed to handle BACK_BUTTON for chatId=" + chatId + ": " + e.getMessage());
+                        sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
                     }
                     return;
                 }
@@ -4480,8 +4418,9 @@ public class StoreBot extends TelegramLongPollingBot {
                 if (BACK_BUTTON.equals(text)) {
                     try {
                         handleBack(userId, chatId);
-                    } catch (TelegramApiException e) {
-                        e.printStackTrace();
+                    } catch (Exception e) { // 🔥 ВАЖЛИВО
+                        LOGGER.severe("[Back Button Error] Failed to handle BACK_BUTTON for chatId=" + chatId + ": " + e.getMessage());
+                        sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
                     }
                     return;
                 }
