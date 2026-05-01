@@ -5454,7 +5454,6 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 ФОТО
         if (text != null && text.toLowerCase().contains("фото")) {
 
             if (productsToEdit != null && productsToEdit.size() > 1) {
@@ -5463,7 +5462,11 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             if (singleProduct != null) {
-                startPhotoUpload(userId, chatId, singleProduct);
+
+                String productId = String.valueOf(singleProduct.get("id"));
+
+                startPhotoUpload(userId, chatId, productId);
+
             } else {
                 sendText(chatId, "⚠️ Спочатку виберіть товар.");
             }
