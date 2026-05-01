@@ -5294,15 +5294,15 @@ public class StoreBot extends TelegramLongPollingBot {
             String text
     ) {
 
-        // 📦 Беремо список (адмін + юзер)
+        String state = userStates.getOrDefault(userId, "");
+
+        // 📦 ЄДИНЕ ДЖЕРЕЛО
         List<Map<String, Object>> products = userProductLists.get(userId);
 
         if (products == null || products.isEmpty()) {
             sendText(chatId, "❌ Список товарів порожній.");
             return;
         }
-
-        String state = userStates.getOrDefault(userId, "");
 
         // 🔙 Назад
         if (BACK_BUTTON.equals(text)) {
@@ -5314,7 +5314,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🛒 Замовлення (тільки для користувача)
+        // 🛒 Замовлення
         if ("🛒 Замовити товар".equals(text)) {
 
             Map<String, Object> product = lastShownProduct.get(userId);
@@ -5328,62 +5328,52 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔢 Перевірка числа
+        // 🔢 Валідація вводу
         if (text == null || !text.matches("\\d+")) {
             sendText(chatId, "❌ Введіть номер товару.");
             return;
         }
 
-        int inputIndex;
+        int index = Integer.parseInt(text) - 1;
 
-        try {
-            inputIndex = Integer.parseInt(text) - 1;
-        } catch (NumberFormatException e) {
-            sendText(chatId, "❌ Невірний формат числа.");
-            return;
-        }
-
-        if (inputIndex < 0 || inputIndex >= products.size()) {
+        if (index < 0 || index >= products.size()) {
             sendText(chatId, "❌ Невірний номер товару.");
             return;
         }
 
-        // ✅ ВИПРАВЛЕНО: більше ніяких "переключень"
-        Map<String, Object> product = products.get(inputIndex);
+        Map<String, Object> product = products.get(index);
 
-        // 💾 Зберігаємо
-        userProductIndex.put(userId, inputIndex);
+        // 💾 Зберігаємо вибір
         lastShownProduct.put(userId, product);
 
-        // 🔥 РЕЖИМ (адмін / користувач)
-        boolean isAdminMode =
-                state != null &&
-                        (state.startsWith("admin") || state.contains("edit"));
+        boolean isAdmin =
+                state.startsWith("admin") ||
+                        state.contains("edit");
 
-        if (isAdminMode) {
+        // 🔥 АДМІН
+        if (isAdmin) {
 
-            // 👉 ЗБЕРІГАЄМО ВИБРАНИЙ ТОВАР
             adminSelectedProduct.put(userId, product);
-
-            // 👉 ПЕРЕХОДИМО В РЕЖИМ РЕДАГУВАННЯ
             userStates.put(userId, "editing_product");
 
             sendText(chatId,
                     "✏️ Ви обрали товар:\n\n" +
                             safeToString(product.get("name"), "Без назви"));
 
-            // 👉 ВІДКРИВАЄМО ГОТОВЕ МЕНЮ
             sendMessageSafely(createEditMenu(chatId, userId));
+            return;
+        }
 
-        } else {
+        // 👤 КОРИСТУВАЧ
+        try {
+            sendProductFromMap(Long.valueOf(chatId), product);
 
-            // 👤 Користувач
-            try {
-                sendProductFromMap(Long.valueOf(chatId), product);
-            } catch (Exception e) {
-                sendText(chatId, "❌ Помилка відображення товару.");
-                e.printStackTrace();
-            }
+            // 👉 тепер ми в режимі перегляду товару
+            userStates.put(userId, "viewing_product");
+
+        } catch (Exception e) {
+            sendText(chatId, "❌ Помилка відображення товару.");
+            e.printStackTrace();
         }
     }
 
