@@ -5331,13 +5331,9 @@ public class StoreBot extends TelegramLongPollingBot {
         userStates.put(userId, "choose_search_source");
     }
 
-    private void handleChooseProduct(
-            Long userId,
-            String chatId,
-            String text
-    ) {
+    private void handleChooseProduct(Long userId, String chatId, String text) {
 
-        System.out.println("DEBUG handleChooseProduct userId=" + userId);
+        System.out.println("DEBUG handleChooseProduct userId=" + userId + " TEXT=" + text);
 
         List<Map<String, Object>> products = userProductLists.get(userId);
 
@@ -5346,10 +5342,9 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔙 НАЗАД (ЛОКАЛЬНО, БЕЗ handleBack)
-        if (BACK_BUTTON.equals(text)) {
+        // 🔙 BACK
+        if (text != null && text.contains("Назад")) {
 
-            // повертаємось до попереднього меню (категорії)
             userStates.remove(userId);
 
             sendText(chatId, "↩️ Повертаємо вас назад.");
@@ -5362,28 +5357,13 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             } catch (TelegramApiException e) {
                 e.printStackTrace();
-                sendText(chatId, "❌ Помилка при поверненні назад.");
             }
 
             return;
         }
-        // 🛒 Замовлення
-        if ("🛒 Замовити товар".equals(text)) {
 
-            Map<String, Object> product = lastShownProduct.get(userId);
-
-            if (product == null) {
-                sendText(chatId, "❌ Спочатку оберіть товар.");
-                return;
-            }
-
-            startOrder(userId, chatId, product);
-            return;
-        }
-
-        // 🔢 Валідація
+        // ❗ ІГНОР ВСЬОГО НЕ ЧИСЛА
         if (text == null || !text.matches("\\d+")) {
-            sendText(chatId, "❌ Введіть номер товару.");
             return;
         }
 
@@ -5398,9 +5378,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
         lastShownProduct.put(userId, product);
 
-        boolean isAdmin = adminMode.getOrDefault(userId, false);
+        boolean isAdmin = adminMode.getOrDefault(userId, false)
+                && (ADMINS.contains(userId) || DEVELOPERS.contains(userId));
 
-        // 🔧 ADMIN
         if (isAdmin) {
 
             adminSelectedProduct.put(userId, product);
@@ -5414,13 +5394,10 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 👤 USER
         try {
             sendProductFromMap(Long.parseLong(chatId), product);
             userStates.put(userId, "choose_product");
-
         } catch (Exception e) {
-            sendText(chatId, "❌ Помилка відображення товару.");
             e.printStackTrace();
         }
     }
