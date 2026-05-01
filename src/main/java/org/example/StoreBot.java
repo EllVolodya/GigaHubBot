@@ -3619,6 +3619,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "choose_excel_product" -> {
 
+                // 🔙 Назад
+                if (BACK_BUTTON.equals(text)) {
+                    userStates.put(userId, "choose_search_source"); // або той state, звідки прийшов
+                    sendText(chatId, "🔙 Оберіть джерело пошуку:");
+                    return;
+                }
+
                 int index;
                 try {
                     index = Integer.parseInt(text.trim()) - 1;
@@ -3643,7 +3650,17 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     adminEditingProduct.put(userId, String.valueOf(productId));
 
-                    // переходимо в режим редагування товару
+                    List<Map<String, Object>> mapped = new ArrayList<>();
+                    for (ExcelToMySqlImporter.ExcelProduct p : list) {
+                        Map<String, Object> m = new HashMap<>();
+                        m.put("name", p.name);
+                        m.put("price", p.price);
+                        m.put("group", p.group);
+                        mapped.add(m);
+                    }
+                    userProductLists.put(userId, mapped);
+
+                    // режим редагування
                     userStates.put(userId, "editing_product");
 
                     execute(createEditMenu(chatId, userId));
