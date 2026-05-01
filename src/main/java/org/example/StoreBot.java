@@ -5443,7 +5443,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "Введіть нову ціну:");
             }
 
-            case "📖 Опис" -> {
+            case "📖 Опис", "📘 Опис", "Опис" -> {
                 if ((productsToEdit == null || productsToEdit.isEmpty()) && singleProduct == null) {
                     sendText(chatId, "❌ Спочатку виберіть товар.");
                     return;
