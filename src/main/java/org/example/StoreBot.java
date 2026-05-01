@@ -3048,8 +3048,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 adminEditingField.remove(userId);
 
-                userStates.put(userId, "developer_menu");
-
+                userStates.put(userId, "developer_menu"); // 🔥 ОБОВʼЯЗКОВО
                 sendMessageSafely(createDeveloperMenu(chatId));
                 return;
             }
