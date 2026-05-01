@@ -1688,7 +1688,11 @@ public class StoreBot extends TelegramLongPollingBot {
             if (text == null) return;
 
             switch (text) {
-                case "🧱 Каталог товарів" -> sendCategories(userId);
+                case "🧱 Каталог товарів" -> {
+                    adminMode.put(userId, false);
+                    userStates.remove(userId);
+                    sendCategories(userId);
+                }
                 case "\uD83D\uDED2 Кошик" -> {
                     try {
                         showCart(userId);
