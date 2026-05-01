@@ -5320,7 +5320,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         System.out.println("DEBUG handleChooseProduct userId=" + userId);
 
-        // 📦 список
         List<Map<String, Object>> products = userProductLists.get(userId);
 
         if (products == null || products.isEmpty()) {
@@ -5328,16 +5327,27 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔙 Назад
+        // 🔙 НАЗАД (ЛОКАЛЬНО, БЕЗ handleBack)
         if (BACK_BUTTON.equals(text)) {
+
+            // повертаємось до попереднього меню (категорії)
+            userStates.remove(userId);
+
+            sendText(chatId, "↩️ Повертаємо вас назад.");
+
             try {
-                handleBack(userId, chatId);
+                if (currentCategory.containsKey(userId)) {
+                    sendSubcategories(userId, currentCategory.get(userId));
+                } else {
+                    sendCategories(userId);
+                }
             } catch (TelegramApiException e) {
                 e.printStackTrace();
+                sendText(chatId, "❌ Помилка при поверненні назад.");
             }
+
             return;
         }
-
         // 🛒 Замовлення
         if ("🛒 Замовити товар".equals(text)) {
 
@@ -5367,15 +5377,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
         Map<String, Object> product = products.get(index);
 
-        // 💾 запамʼятали
         lastShownProduct.put(userId, product);
 
-        // 🔥 ПРАВИЛЬНЕ ВИЗНАЧЕННЯ АДМІНА
         boolean isAdmin = adminMode.getOrDefault(userId, false);
 
-        // =========================
-        // 🔧 ADMIN FLOW
-        // =========================
+        // 🔧 ADMIN
         if (isAdmin) {
 
             adminSelectedProduct.put(userId, product);
@@ -5389,9 +5395,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // =========================
-        // 👤 USER FLOW
-        // =========================
+        // 👤 USER
         try {
             sendProductFromMap(Long.parseLong(chatId), product);
             userStates.put(userId, "viewing_product");
