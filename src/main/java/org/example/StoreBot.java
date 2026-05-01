@@ -241,6 +241,18 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
+        if (text != null && text.contains("Назад")) {
+            System.out.println("🔥 BACK CLICKED");
+
+            try {
+                handleBack(userId, chatId);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+
+            return;
+        }
+
         if (text.startsWith("/start")) {
 
             Long chatIdLong = update.getMessage().getChatId();
@@ -1459,7 +1471,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
         // 🔹 DEFAULT DELEGATION TO PHOTO HANDLER
         System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
-        photoHandler.handleUpdate(userId, chatId, update);
+        if ("awaiting_photo".equals(state)) {
+            photoHandler.handleUpdate(userId, chatId, update);
+            return;
+        }
 
         if (text == null || text.isBlank()) {
             return;
