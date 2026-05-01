@@ -3030,13 +3030,6 @@ public class StoreBot extends TelegramLongPollingBot {
         String state = userStates.get(userId);
         System.out.println("STATE: " + state);
 
-        if (state == null) {
-            System.out.println("⚠️ STATE NULL → fallback");
-
-            sendMessageSafely(createUserMenu(chatId, userId));
-            return;
-        }
-
         try {
 
             // 🔥 1. РЕДАГУВАННЯ ПОЛЯ
@@ -3056,6 +3049,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 adminEditingField.remove(userId);
 
                 userStates.put(userId, "developer_menu");
+
                 sendMessageSafely(createDeveloperMenu(chatId));
                 return;
             }
@@ -5492,6 +5486,53 @@ public class StoreBot extends TelegramLongPollingBot {
 
             sendText(chatId, "🔽 Оберіть фільтр:");
             sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
+            return;
+        }
+
+        // 🔙 НАЗАД
+        if (text != null && text.contains("Назад")) {
+
+            String state = userStates.getOrDefault(userId, "");
+
+            System.out.println("🔙 BACK FROM: " + state);
+
+            adminEditingField.remove(userId);
+
+            try {
+
+                switch (state) {
+
+                    case "editing_field_value" -> {
+                        userStates.put(userId, "editing_product");
+                        sendMessageSafely(createEditMenu(chatId, userId));
+                    }
+
+                    case "editing_product" -> {
+                        userStates.put(userId, "developer_menu");
+                        sendMessageSafely(createDeveloperMenu(chatId));
+                    }
+
+                    case "choose_product" -> {
+                        userStates.remove(userId);
+                        sendCategories(userId);
+                    }
+
+                    case "developer_menu" -> {
+                        userStates.remove(userId);
+                        sendMessageSafely(createUserMenu(chatId, userId));
+                    }
+
+                    default -> {
+                        userStates.remove(userId);
+                        sendCategories(userId);
+                    }
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Помилка при поверненні.");
+            }
+
             return;
         }
 
