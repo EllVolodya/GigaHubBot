@@ -4862,16 +4862,37 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "editing_field_value" -> {
 
+                // 🔙 BACK (ПЕРШИМ!)
+                if (text != null && text.contains("Назад")) {
+
+                    System.out.println("🔙 BACK FROM editing_field_value");
+
+                    adminEditingField.remove(userId);
+
+                    userStates.put(userId, "editing_product");
+
+                    sendText(chatId, "↩️ Повернулись до редагування товару");
+
+                    sendMessageSafely(createEditMenu(chatId, userId));
+                    return;
+                }
+
                 String field = adminEditingField.get(userId);
 
-                List<Integer> productIds =
-                        adminSelectedProductsIds.get(userId);
+                List<Integer> productIds = adminSelectedProductsIds.get(userId);
 
-                if (field == null ||
-                        productIds == null ||
-                        productIds.isEmpty()) {
+                // ❌ Перевірка
+                if (field == null || productIds == null || productIds.isEmpty()) {
+
+                    System.out.println("❌ ERROR: field=" + field + " ids=" + productIds);
 
                     sendText(chatId, "❌ Помилка вибору товару.");
+                    return;
+                }
+
+                // ❗ захист від null
+                if (text == null || text.trim().isEmpty()) {
+                    sendText(chatId, "❌ Введіть значення.");
                     return;
                 }
 
@@ -4881,12 +4902,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 for (Integer productId : productIds) {
 
-                    boolean updated =
-                            CatalogEditor.updateFieldById(
-                                    productId,
-                                    field,
-                                    newValue
-                            );
+                    boolean updated = CatalogEditor.updateFieldById(
+                            productId,
+                            field,
+                            newValue
+                    );
 
                     if (updated) {
                         successCount++;
@@ -4900,13 +4920,13 @@ public class StoreBot extends TelegramLongPollingBot {
                                 + productIds.size()
                                 + " товарів.");
 
+                // 🧹 очистка
                 adminEditingField.remove(userId);
 
-                userStates.put(userId, "editing");
+                // 🔁 повернення назад в редагування
+                userStates.put(userId, "editing_product");
 
-                sendMessageSafely(
-                        createEditMenu(chatId, userId)
-                );
+                sendMessageSafely(createEditMenu(chatId, userId));
             }
 
             case "changelog_menu" -> {
