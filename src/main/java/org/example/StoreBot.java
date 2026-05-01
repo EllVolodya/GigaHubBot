@@ -558,6 +558,37 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if ("developer_menu".equals(state)) {
+
+            if (BACK_BUTTON.equals(text)) {
+                userStates.remove(userId);
+
+                try {
+                    sendCategories(userId);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                return;
+            }
+
+            // ❗ ОБРОБКА КНОПОК МЕНЮ
+            if (text.contains("Редагувати товар")) {
+                userStates.put(userId, "admin_search");
+                sendText(chatId, "🔎 Введіть назву товару:");
+                return;
+            }
+
+            if (text.contains("Оновити каталог")) {
+                sendText(chatId, "♻️ Каталог оновлено.");
+                return;
+            }
+
+            // fallback
+            sendText(chatId, "❓ Невідома дія.");
+            return;
+        }
+
         // 🔥 ОБРОБКА КОШИКА
         if ("in_cart".equals(state)) {
 
@@ -2124,10 +2155,6 @@ public class StoreBot extends TelegramLongPollingBot {
                         return;
                     }
 
-                    if ("developer_menu".equals(state)) {
-                        return;
-                    }
-
                     userStates.put(userId, "developer_menu");
                     sendMessageSafely(createDeveloperMenu(chatId));
                     return;
@@ -3053,7 +3080,8 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "editing_product": {
                     adminEditingField.remove(userId);
 
-                    userStates.remove(userId);
+                    userStates.put(userId, "developer_menu");
+
                     sendMessageSafely(createDeveloperMenu(chatId));
                     break;
                 }
