@@ -5407,19 +5407,21 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // 🔧 Редагування товару
     private void handleEditing(Long userId, String chatId, String text) {
 
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
-        String singleProduct = adminEditingProduct.get(userId);
+        Map<String, Object> singleProduct = adminSelectedProduct.get(userId);
 
-        // 🔥 ОБРОБКА ОПИСУ (ВИНЕСЕНА З SWITCH)
+        System.out.println("[EDIT] TEXT=" + text + " PRODUCT=" + singleProduct);
+
+        // ❌ якщо реально нічого не вибрано
+        if ((productsToEdit == null || productsToEdit.isEmpty()) && singleProduct == null) {
+            sendText(chatId, "❌ Спочатку виберіть товар.");
+            return;
+        }
+
+        // 🔥 ОПИС (НЕ ЗАЛЕЖИТЬ ВІД EMOJI)
         if (text != null && text.toLowerCase().contains("опис")) {
-
-            if ((productsToEdit == null || productsToEdit.isEmpty()) && singleProduct == null) {
-                sendText(chatId, "❌ Спочатку виберіть товар.");
-                return;
-            }
 
             adminEditingField.put(userId, "description");
             userStates.put(userId, "editing_field_value");
@@ -5436,128 +5438,103 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 ДАЛІ NORMAL SWITCH
-        switch (text) {
-
-            case "✏️ Назву" -> {
-                adminEditingField.put(userId, "name");
-                userStates.put(userId, "awaiting_field_value");
-                sendText(chatId, "Введіть нову назву товару:");
-            }
-
-            case "💰 Ціну" -> {
-                adminEditingField.put(userId, "price");
-                userStates.put(userId, "awaiting_field_value");
-                sendText(chatId, "Введіть нову ціну:");
-            }
-
-            case "🗂️ Додати в підкатегорію" -> {
-
-                List<Map<String, Object>> products = adminSelectedProducts.get(userId);
-
-                if (products == null || products.isEmpty()) {
-                    Map<String, Object> single = adminSelectedProduct.get(userId);
-
-                    if (single != null) {
-                        products = new ArrayList<>();
-                        products.add(single);
-                    }
-                }
-
-                if (products == null || products.isEmpty()) {
-                    sendText(chatId, "❌ Немає вибраних товарів.");
-                    return;
-                }
-
-                userStates.put(userId, "awaiting_subcategory");
-                sendText(chatId, "📁 Введіть назву підкатегорії або оберіть:");
-                return;
-            }
-
-            case "🧩 Додати в підфільтр" -> {
-
-                List<Map<String, Object>> selectedProducts = adminSelectedProducts.get(userId);
-
-                if ((selectedProducts == null || selectedProducts.isEmpty()) && singleProduct == null) {
-                    sendText(chatId, "⚠️ Спочатку виберіть товар.");
-                    return;
-                }
-
-                userStates.put(userId, "awaiting_filter_for_product_subfilter");
-
-                sendText(chatId, "🔽 Оберіть або введіть фільтр:");
-                sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0));
-                return;
-            }
-
-            case "🖼️ Додати фотографію" -> {
-                if (productsToEdit != null && productsToEdit.size() > 1) {
-                    sendText(chatId, "⚠️ Масове додавання фотографій не підтримується.");
-                } else if (singleProduct != null) {
-                    startPhotoUpload(userId, chatId, singleProduct);
-                } else {
-                    sendText(chatId, "⚠️ Спочатку виберіть товар.");
-                }
-                return;
-            }
-
-            case "📏 Одиниця виміру" -> {
-                adminEditingField.put(userId, "unit");
-                userStates.put(userId, "awaiting_field_value");
-
-                sendText(chatId,
-                        "Введіть одиницю виміру:\n\n" +
-                                "• шт\n" +
-                                "• метр\n" +
-                                "• м2\n" +
-                                "• під замовлення");
-            }
-
-            case "🏭 Виробник" -> {
-                adminEditingField.put(userId, "manufacturer");
-                userStates.put(userId, "awaiting_field_value");
-                sendText(chatId,
-                        "✏️ Введіть виробника (або ❌ щоб видалити):");
-            }
-
-            case "⚙️ Додати в фільтр" -> {
-
-                Map<String, Object> product = adminSelectedProduct.get(userId);
-
-                if (product == null) {
-                    sendText(chatId, "⚠️ Спочатку виберіть товар.");
-                    return;
-                }
-
-                tempStorage.put(userId + "_filter_product", product);
-                userStates.put(userId, "awaiting_filter_select");
-
-                sendText(chatId, "🔽 Оберіть фільтр:");
-                sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
-
-                return;
-            }
-
-            case BACK_BUTTON -> {
-
-                adminEditingField.remove(userId);
-                userStates.put(userId, "choose_product");
-
-                try {
-                    sendProductList(userId);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                    sendText(chatId, "❌ Помилка при відправці списку.");
-                }
-
-                return;
-            }
-
-            default -> {
-                sendText(chatId, "Невідома опція редагування.");
-            }
+        // 🔥 НАЗВА
+        if (text != null && text.toLowerCase().contains("назв")) {
+            adminEditingField.put(userId, "name");
+            userStates.put(userId, "awaiting_field_value");
+            sendText(chatId, "✏️ Введіть нову назву товару:");
+            return;
         }
 
+        // 🔥 ЦІНА
+        if (text != null && text.toLowerCase().contains("цін")) {
+            adminEditingField.put(userId, "price");
+            userStates.put(userId, "awaiting_field_value");
+            sendText(chatId, "💰 Введіть нову ціну:");
+            return;
+        }
+
+        // 🔥 ФОТО
+        if (text != null && text.toLowerCase().contains("фото")) {
+
+            if (productsToEdit != null && productsToEdit.size() > 1) {
+                sendText(chatId, "⚠️ Масове додавання фото не підтримується.");
+                return;
+            }
+
+            if (singleProduct != null) {
+                startPhotoUpload(userId, chatId, singleProduct);
+            } else {
+                sendText(chatId, "⚠️ Спочатку виберіть товар.");
+            }
+
+            return;
+        }
+
+        // 🔥 ОДИНИЦЯ ВИМІРУ
+        if (text != null && text.toLowerCase().contains("одиниц")) {
+            adminEditingField.put(userId, "unit");
+            userStates.put(userId, "awaiting_field_value");
+
+            sendText(chatId,
+                    "📏 Введіть одиницю виміру:\n\n" +
+                            "• шт\n" +
+                            "• метр\n" +
+                            "• м2\n" +
+                            "• під замовлення");
+            return;
+        }
+
+        // 🔥 ВИРОБНИК
+        if (text != null && text.toLowerCase().contains("виробник")) {
+            adminEditingField.put(userId, "manufacturer");
+            userStates.put(userId, "awaiting_field_value");
+            sendText(chatId, "🏭 Введіть виробника:");
+            return;
+        }
+
+        // 🔥 ПІДКАТЕГОРІЯ
+        if (text != null && text.toLowerCase().contains("підкатег")) {
+
+            userStates.put(userId, "awaiting_subcategory");
+            sendText(chatId, "📁 Введіть підкатегорію:");
+            return;
+        }
+
+        // 🔥 ФІЛЬТР
+        if (text != null && text.toLowerCase().contains("фільтр")) {
+
+            if (singleProduct == null) {
+                sendText(chatId, "⚠️ Спочатку виберіть товар.");
+                return;
+            }
+
+            tempStorage.put(userId + "_filter_product", singleProduct);
+            userStates.put(userId, "awaiting_filter_select");
+
+            sendText(chatId, "🔽 Оберіть фільтр:");
+            sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
+            return;
+        }
+
+        // 🔙 НАЗАД
+        if (text != null && text.contains("Назад")) {
+
+            adminEditingField.remove(userId);
+            userStates.put(userId, "choose_product");
+
+            try {
+                sendProductList(userId);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Помилка при поверненні.");
+            }
+
+            return;
+        }
+
+        // ❓ fallback
+        sendText(chatId, "❓ Невідома дія.");
         sendMessageSafely(createEditMenu(chatId, userId));
     }
 
