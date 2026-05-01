@@ -5294,7 +5294,7 @@ public class StoreBot extends TelegramLongPollingBot {
             String text
     ) {
 
-        // 📦 Беремо список
+        // 📦 Беремо список (адмін + юзер)
         List<Map<String, Object>> products = userProductLists.get(userId);
 
         if (products == null || products.isEmpty()) {
@@ -5334,34 +5334,31 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        int inputIndex = Integer.parseInt(text) - 1;
+        int inputIndex;
+
+        try {
+            inputIndex = Integer.parseInt(text) - 1;
+        } catch (NumberFormatException e) {
+            sendText(chatId, "❌ Невірний формат числа.");
+            return;
+        }
 
         if (inputIndex < 0 || inputIndex >= products.size()) {
             sendText(chatId, "❌ Невірний номер товару.");
             return;
         }
 
-        // 🔁 Логіка перегляду (переключення)
-        int lastIndex = userProductIndex.getOrDefault(userId, -1);
-
-        int indexToShow;
-
-        if (lastIndex == -1) {
-            indexToShow = inputIndex;
-        } else {
-            indexToShow = (lastIndex + 1) % products.size();
-        }
-
-        Map<String, Object> product = products.get(indexToShow);
+        // ✅ ВИПРАВЛЕНО: більше ніяких "переключень"
+        Map<String, Object> product = products.get(inputIndex);
 
         // 💾 Зберігаємо
-        userProductIndex.put(userId, indexToShow);
+        userProductIndex.put(userId, inputIndex);
         lastShownProduct.put(userId, product);
 
         // 🔥 РЕЖИМ (адмін / користувач)
         boolean isAdminMode =
-                state.startsWith("admin") ||
-                        state.contains("edit");
+                state != null &&
+                        (state.startsWith("admin") || state.contains("edit"));
 
         if (isAdminMode) {
 
@@ -5381,7 +5378,12 @@ public class StoreBot extends TelegramLongPollingBot {
         } else {
 
             // 👤 Користувач
-            sendProductFromMap(Long.valueOf(chatId), product);
+            try {
+                sendProductFromMap(Long.valueOf(chatId), product);
+            } catch (Exception e) {
+                sendText(chatId, "❌ Помилка відображення товару.");
+                e.printStackTrace();
+            }
         }
     }
 
