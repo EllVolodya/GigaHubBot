@@ -3053,7 +3053,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "editing_product": {
                     adminEditingField.remove(userId);
 
-                    userStates.put(userId, "developer_menu");
+                    userStates.remove(userId);
                     sendMessageSafely(createDeveloperMenu(chatId));
                     break;
                 }
