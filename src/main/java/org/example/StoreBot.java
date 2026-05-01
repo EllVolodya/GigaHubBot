@@ -119,6 +119,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private Map<Long, Map<String, Object>> adminSelectedProduct = new HashMap<>(); // 🔹 один товар
     private Map<Long, List<Map<String, Object>>> adminSelectedProducts = new HashMap<>();// 🔹 список товарів
     private final Map<Long, List<Integer>> adminSelectedProductsIds = new HashMap<>();
+    private Map<Long, Boolean> adminMode = new HashMap<>();
 
     private final CatalogSearcher catalogSearcher = new CatalogSearcher();
     protected Map<Long, List<Map<String, Object>>> searchResults = new HashMap<>();
@@ -5299,21 +5300,13 @@ public class StoreBot extends TelegramLongPollingBot {
             String text
     ) {
 
-        // 🔍 DEBUG (залиш, поки не переконаєшся що все ок)
         System.out.println("DEBUG handleChooseProduct userId=" + userId);
 
-        String state = userStates.getOrDefault(userId, "");
-
-        // 📦 Отримуємо список
+        // 📦 список
         List<Map<String, Object>> products = userProductLists.get(userId);
 
-        if (products == null) {
-            sendText(chatId, "❌ DEBUG: список = NULL (userId=" + userId + ")");
-            return;
-        }
-
-        if (products.isEmpty()) {
-            sendText(chatId, "❌ DEBUG: список пустий (userId=" + userId + ")");
+        if (products == null || products.isEmpty()) {
+            sendText(chatId, "❌ Список товарів порожній.");
             return;
         }
 
@@ -5347,13 +5340,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        int index;
-        try {
-            index = Integer.parseInt(text) - 1;
-        } catch (Exception e) {
-            sendText(chatId, "❌ Невірне число.");
-            return;
-        }
+        int index = Integer.parseInt(text) - 1;
 
         if (index < 0 || index >= products.size()) {
             sendText(chatId, "❌ Невірний номер товару.");
@@ -5362,14 +5349,15 @@ public class StoreBot extends TelegramLongPollingBot {
 
         Map<String, Object> product = products.get(index);
 
-        // 💾 Запамʼятали
+        // 💾 запамʼятали
         lastShownProduct.put(userId, product);
 
-        boolean isAdmin =
-                state != null &&
-                        (state.startsWith("admin") || state.contains("edit"));
+        // 🔥 ПРАВИЛЬНЕ ВИЗНАЧЕННЯ АДМІНА
+        boolean isAdmin = adminMode.getOrDefault(userId, false);
 
-        // 🔥 АДМІН
+        // =========================
+        // 🔧 ADMIN FLOW
+        // =========================
         if (isAdmin) {
 
             adminSelectedProduct.put(userId, product);
@@ -5383,7 +5371,9 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 👤 КОРИСТУВАЧ
+        // =========================
+        // 👤 USER FLOW
+        // =========================
         try {
             sendProductFromMap(Long.parseLong(chatId), product);
             userStates.put(userId, "viewing_product");
