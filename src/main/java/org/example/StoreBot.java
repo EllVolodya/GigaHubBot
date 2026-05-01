@@ -5427,10 +5427,36 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔧 Редагування товару
     private void handleEditing(Long userId, String chatId, String text) {
+
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
         String singleProduct = adminEditingProduct.get(userId);
 
+        // 🔥 ОБРОБКА ОПИСУ (ВИНЕСЕНА З SWITCH)
+        if (text != null && text.toLowerCase().contains("опис")) {
+
+            if ((productsToEdit == null || productsToEdit.isEmpty()) && singleProduct == null) {
+                sendText(chatId, "❌ Спочатку виберіть товар.");
+                return;
+            }
+
+            adminEditingField.put(userId, "description");
+            userStates.put(userId, "editing_field_value");
+
+            if (productsToEdit != null && !productsToEdit.isEmpty()) {
+                sendText(chatId,
+                        "✏️ Введіть новий опис для "
+                                + productsToEdit.size()
+                                + " товар(ів):");
+            } else {
+                sendText(chatId, "✏️ Введіть новий опис:");
+            }
+
+            return;
+        }
+
+        // 🔥 ДАЛІ NORMAL SWITCH
         switch (text) {
+
             case "✏️ Назву" -> {
                 adminEditingField.put(userId, "name");
                 userStates.put(userId, "awaiting_field_value");
@@ -5441,27 +5467,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 adminEditingField.put(userId, "price");
                 userStates.put(userId, "awaiting_field_value");
                 sendText(chatId, "Введіть нову ціну:");
-            }
-
-            case "📖 Опис", "📘 Опис", "Опис" -> {
-                if ((productsToEdit == null || productsToEdit.isEmpty()) && singleProduct == null) {
-                    sendText(chatId, "❌ Спочатку виберіть товар.");
-                    return;
-                }
-
-                adminEditingField.put(userId, "description");
-                userStates.put(userId, "editing_field_value");
-
-                if (productsToEdit != null && !productsToEdit.isEmpty()) {
-                    sendText(chatId,
-                            "✏️ Введіть новий опис для "
-                                    + productsToEdit.size()
-                                    + " товар(ів):");
-                } else {
-                    sendText(chatId, "✏️ Введіть новий опис:");
-                }
-
-                return;
             }
 
             case "🗂️ Додати в підкатегорію" -> {
@@ -5535,35 +5540,18 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "⚙️ Додати в фільтр" -> {
 
-                Map<String, Object> product =
-                        adminSelectedProduct.get(userId);
+                Map<String, Object> product = adminSelectedProduct.get(userId);
 
                 if (product == null) {
-                    sendText(chatId,
-                            "⚠️ Спочатку виберіть товар.");
+                    sendText(chatId, "⚠️ Спочатку виберіть товар.");
                     return;
                 }
 
-                tempStorage.put(
-                        userId + "_filter_product",
-                        product
-                );
+                tempStorage.put(userId + "_filter_product", product);
+                userStates.put(userId, "awaiting_filter_select");
 
-                userStates.put(
-                        userId,
-                        "awaiting_filter_select"
-                );
-
-                sendText(chatId,
-                        "🔽 Оберіть фільтр:");
-
-                sendMessageSafely(
-                        createFilterSelectMenu(
-                                userId,
-                                chatId,
-                                0
-                        )
-                );
+                sendText(chatId, "🔽 Оберіть фільтр:");
+                sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
 
                 return;
             }
@@ -5571,7 +5559,6 @@ public class StoreBot extends TelegramLongPollingBot {
             case BACK_BUTTON -> {
 
                 adminEditingField.remove(userId);
-
                 userStates.put(userId, "choose_product");
 
                 try {
@@ -5583,6 +5570,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 return;
             }
+
             default -> {
                 sendText(chatId, "Невідома опція редагування.");
             }
