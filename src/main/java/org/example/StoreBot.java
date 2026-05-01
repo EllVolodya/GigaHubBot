@@ -5494,7 +5494,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     case "editing_product" -> {
-                        userStates.put(userId, "developer_menu");
+                        userStates.remove(userId);
                         sendMessageSafely(createDeveloperMenu(chatId));
                     }
 
