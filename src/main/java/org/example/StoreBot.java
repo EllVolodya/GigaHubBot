@@ -5590,6 +5590,11 @@ public class StoreBot extends TelegramLongPollingBot {
                         sendCategories(userId);
                     }
 
+                    case "developer_menu" -> {
+                        userStates.remove(userId);
+                        sendMessageSafely(createUserMenu(chatId, userId));
+                    }
+
                     default -> {
                         userStates.remove(userId);
                         sendCategories(userId);
