@@ -5545,16 +5545,20 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             case BACK_BUTTON -> {
-                adminEditingField.remove(userId);
-                adminEditingProduct.remove(userId);
-                adminSelectedProductsRange.remove(userId);
-                userStates.remove(userId);
 
-                sendText(chatId, "↩️ Ви повернулися до меню розробника.");
-                sendMessageSafely(createDeveloperMenu(chatId));
+                adminEditingField.remove(userId);
+
+                userStates.put(userId, "choose_product");
+
+                try {
+                    sendProductList(userId);
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при відправці списку.");
+                }
+
                 return;
             }
-
             default -> {
                 sendText(chatId, "Невідома опція редагування.");
             }
