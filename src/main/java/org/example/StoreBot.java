@@ -3023,183 +3023,171 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // Метод повернення назад
-    private void handleBack(Long userId, String chatId)
-            throws TelegramApiException {
+    private void handleBack(Long userId, String chatId) {
 
-        System.out.println(
-                "[handleBack] User " + userId + " pressed Back."
-        );
+        System.out.println("[handleBack] User " + userId + " pressed Back.");
 
         String state = userStates.get(userId);
+        System.out.println("STATE: " + state);
 
-        // 🔥 0. ВИБІР ТОВАРУ (FIX)
-        if ("choose_product".equals(state)) {
+        try {
 
+            // 🔥 1. ВИБІР ТОВАРУ (назад до списку/категорій)
+            if ("choose_product".equals(state)) {
+
+                userStates.remove(userId);
+                userProductLists.remove(userId);
+                userProductIndex.remove(userId);
+                lastShownProduct.remove(userId);
+
+                sendText(chatId, "↩️ Повертаємо вас до категорій.");
+
+                if (currentCategory.containsKey(userId)) {
+                    sendSubcategories(userId, currentCategory.get(userId));
+                } else {
+                    sendCategories(userId);
+                }
+
+                return;
+            }
+
+            // 🔥 2. РЕДАГУВАННЯ ПОЛЯ → назад до редагування товару
+            if ("editing_field_value".equals(state)) {
+
+                adminEditingField.remove(userId);
+
+                userStates.put(userId, "editing_product");
+
+                sendMessageSafely(createEditMenu(chatId, userId));
+                return;
+            }
+
+            // 🔥 3. РЕДАГУВАННЯ ТОВАРУ → назад до меню розробника
+            if ("editing_product".equals(state)) {
+
+                adminEditingField.remove(userId);
+
+                userStates.put(userId, "developer_menu");
+
+                sendMessageSafely(createDeveloperMenu(chatId));
+                return;
+            }
+
+            // 🔥 4. МЕНЮ РОЗРОБНИКА → назад в головне меню
+            if ("developer_menu".equals(state)) {
+
+                userStates.remove(userId);
+
+                sendMessageSafely(createUserMenu(chatId, userId));
+                return;
+            }
+
+            // 🔥 5. ОФОРМЛЕННЯ / ЗАМОВЛЕННЯ
+            if (state != null && (
+                    state.startsWith("awaiting_") ||
+                            state.equals("order_pickup")
+            )) {
+
+                tempDeliveryType.remove(userId);
+                tempAddress.remove(userId);
+                tempFullname.remove(userId);
+                tempPhone.remove(userId);
+                tempCard.remove(userId);
+                tempOrderCode.remove(userId);
+                tempOrderItems.remove(userId);
+                tempTotal.remove(userId);
+                tempStorage.remove(userId + "_product");
+
+                userStates.remove(userId);
+
+                sendText(chatId, "↩️ Повертаємо вас до каталогу товарів.");
+                openCatalogBack(userId, chatId);
+                return;
+            }
+
+            // 🔥 6. КОШИК
+            if ("in_cart".equals(state)) {
+
+                userStates.remove(userId);
+
+                sendText(chatId, "↩️ Повертаємо вас до каталогу товарів.");
+                openCatalogBack(userId, chatId);
+                return;
+            }
+
+            // 🔥 7. КАЛЬКУЛЯТОРИ
+            Set<String> MATERIAL_STATES = Set.of(
+                    "material_calc_menu",
+                    "paint_length", "paint_width",
+                    "calc_paint_layers",
+                    "calc_paint_consumption",
+                    "tile_length", "tile_width",
+                    "tile_size",
+                    "laminate_length",
+                    "laminate_width",
+                    "wall_length",
+                    "wall_width",
+                    "baseboard_length",
+                    "baseboard_width"
+            );
+
+            if (state != null && MATERIAL_STATES.contains(state)) {
+
+                tempLength.remove(userId);
+                tempWidth.remove(userId);
+                paintTemp.remove(userId);
+                paintLayers.remove(userId);
+
+                userStates.remove(userId);
+
+                sendMessageSafely(createUserMenu(chatId, userId));
+                return;
+            }
+
+            // 🔥 8. З ПІДКАТЕГОРІЇ → в категорію
+            if (currentSubcategory.containsKey(userId)) {
+
+                currentSubcategory.remove(userId);
+
+                if (currentCategory.containsKey(userId)) {
+                    sendSubcategories(userId, currentCategory.get(userId));
+                } else {
+                    sendCategories(userId);
+                }
+
+                return;
+            }
+
+            // 🔥 9. З КАТЕГОРІЇ → в головне меню
+            if (currentCategory.containsKey(userId)) {
+
+                currentCategory.remove(userId);
+
+                sendMessageSafely(createUserMenu(chatId, userId));
+                return;
+            }
+
+            // 🔥 10. АДМІН МЕНЮ
+            if (adminOrderIndex.containsKey(userId)) {
+
+                adminOrderIndex.remove(userId);
+
+                sendMessageSafely(createAdminMenu(chatId));
+                return;
+            }
+
+            // 🔥 11. FALLBACK (завжди безпечно)
             userStates.remove(userId);
-            userProductLists.remove(userId);
-            userProductIndex.remove(userId);
             lastShownProduct.remove(userId);
+            adminMatchList.remove(userId);
+            productIndex.remove(userId);
 
-            sendText(chatId, "↩️ Повертаємо вас до категорій.");
+            sendMessageSafely(createUserMenu(chatId, userId));
 
-            // 🔥 просто показуємо попередній рівень
-            if (currentCategory.containsKey(userId)) {
-                sendSubcategories(userId, currentCategory.get(userId));
-            } else {
-                sendCategories(userId);
-            }
-
-            return;
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendText(chatId, "❌ Помилка при поверненні назад.");
         }
-
-        // 1. ОФОРМЛЕННЯ / ВВЕДЕННЯ КІЛЬКОСТІ
-        if ("awaiting_delivery_choice".equals(state) ||
-                "order_pickup".equals(state) ||
-                "awaiting_city_delivery".equals(state) ||
-                "awaiting_payment_method".equals(state) ||
-                "awaiting_phone".equals(state) ||
-                "awaiting_quantity".equals(state)) {
-
-            tempDeliveryType.remove(userId);
-            tempAddress.remove(userId);
-            tempFullname.remove(userId);
-            tempPhone.remove(userId);
-            tempCard.remove(userId);
-            tempOrderCode.remove(userId);
-            tempOrderItems.remove(userId);
-            tempTotal.remove(userId);
-            tempStorage.remove(userId + "_product");
-
-            userStates.remove(userId);
-
-            sendText(chatId,
-                    "↩️ Повертаємо вас до каталогу товарів.");
-
-            openCatalogBack(userId, chatId);
-            return;
-        }
-
-        // 2. КОШИК
-        if ("in_cart".equals(state)) {
-
-            userStates.remove(userId);
-
-            sendText(chatId,
-                    "↩️ Повертаємо вас до каталогу товарів.");
-
-            openCatalogBack(userId, chatId);
-            return;
-        }
-
-        // 3. КАЛЬКУЛЯТОР
-        Set<String> MATERIAL_STATES = Set.of(
-                "material_calc_menu",
-                "paint_length", "paint_width",
-                "calc_paint_layers",
-                "calc_paint_consumption",
-                "tile_length", "tile_width",
-                "tile_size",
-                "laminate_length",
-                "laminate_width",
-                "wall_length",
-                "wall_width",
-                "baseboard_length",
-                "baseboard_width"
-        );
-
-        if (state != null &&
-                MATERIAL_STATES.contains(state)) {
-
-            tempLength.remove(userId);
-            tempWidth.remove(userId);
-            paintTemp.remove(userId);
-            paintLayers.remove(userId);
-
-            userStates.remove(userId);
-
-            sendMessage(
-                    createUserMenu(chatId, userId)
-            );
-            return;
-        }
-
-        // 4. З ПІДКАТЕГОРІЇ
-        if (currentSubcategory.containsKey(userId)) {
-
-            currentSubcategory.remove(userId);
-
-            if (currentCategory.containsKey(userId)) {
-                sendSubcategories(
-                        userId,
-                        currentCategory.get(userId)
-                );
-            } else {
-                sendCategories(userId);
-            }
-
-            return;
-        }
-
-        // 5. З КАТЕГОРІЇ
-        if (currentCategory.containsKey(userId)) {
-
-            currentCategory.remove(userId);
-
-            sendMessage(
-                    createUserMenu(chatId, userId)
-            );
-            return;
-        }
-
-        // 6. АДМІН
-        if (adminOrderIndex.containsKey(userId)) {
-
-            adminOrderIndex.remove(userId);
-
-            sendMessage(
-                    createAdminMenu(chatId)
-            );
-            return;
-        }
-
-        // 7. РОЗРОБНИК
-        if (DEVELOPERS.contains(userId) &&
-                isInDeveloperMenu(userId)) {
-
-            sendMessage(
-                    createDeveloperMenu(chatId)
-            );
-            return;
-        }
-
-        // 8. РЕДАГУВАННЯ
-        if (adminEditingProduct.containsKey(userId) ||
-                adminSelectedProductsRange.containsKey(userId)) {
-
-            // чистимо тільки редагування
-            adminEditingField.remove(userId);
-
-            // 🔥 ПОВЕРТАЄМОСЬ ДО СПИСКУ
-            userStates.put(userId, "choose_product");
-
-            try {
-                sendProductList(userId);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            return;
-        }
-
-        // 9. FALLBACK
-        userStates.remove(userId);
-        lastShownProduct.remove(userId);
-        adminMatchList.remove(userId);
-        productIndex.remove(userId);
-
-        sendMessage(
-                createUserMenu(chatId, userId)
-        );
     }
 
     //Показ товара
