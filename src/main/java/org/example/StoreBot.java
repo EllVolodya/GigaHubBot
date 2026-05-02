@@ -3189,7 +3189,6 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    //Показ товара
     private void handleProductSelection(Long userId, Long chatId, int choice) throws TelegramApiException {
 
         List<Map<String, Object>> products = userProductLists.get(userId);
@@ -3207,25 +3206,25 @@ public class StoreBot extends TelegramLongPollingBot {
         Map<String, Object> product = products.get(choice - 1);
 
         // 🔥 зберігаємо товар
-        lastShownProduct.put(chatId, product);
+        lastShownProduct.put(userId, product);
 
-        // 🔹 СПОЧАТКУ список
-        if (!products.isEmpty()) {
+        // 🔹 список
+        StringBuilder sb = new StringBuilder("\n📦 Інші товари:\n\n");
 
-            StringBuilder sb = new StringBuilder("\n📦 Інші товари:\n\n");
-
-            for (int i = 0; i < products.size(); i++) {
-                sb.append(i + 1)
-                        .append(". ")
-                        .append(products.get(i).get("name"))
-                        .append("\n");
-            }
-
-            sendText(chatId, sb.toString());
+        for (int i = 0; i < products.size(); i++) {
+            sb.append(i + 1)
+                    .append(". ")
+                    .append(products.get(i).get("name"))
+                    .append("\n");
         }
 
-        // 🔹 ПОТІМ товар
+        sendText(chatId, sb.toString());
+
+        // 🔹 товар
         sendProductFromMap(chatId, product);
+
+        // 🔥 КЛЮЧОВИЙ ФІКС
+        userStates.put(userId, "choose_product");
     }
 
     private void showNextProduct(Long chatId) throws TelegramApiException {
