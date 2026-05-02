@@ -8659,17 +8659,16 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // Показ фільтрів
-    private void sendFilters(Long chatId, int page) throws TelegramApiException {
+    //Показ фільтрів
+    private void sendFilters(Long userId, Long chatId, int page) {
 
-        List<String> filters = userFilters.get(chatId);
+        List<String> filters = userFilters.get(userId);
 
         if (filters == null || filters.isEmpty()) {
             sendText(chatId, "❌ Фільтри не знайдено.");
             return;
         }
 
-        // 🔥 Прибираємо вимкнені фільтри
         List<String> activeFilters = new ArrayList<>();
 
         try (Connection conn = DatabaseManager.getConnection()) {
@@ -8714,7 +8713,7 @@ public class StoreBot extends TelegramLongPollingBot {
         if (page < 0) page = 0;
         if (page >= totalPages) page = totalPages - 1;
 
-        filterPage.put(chatId, page);
+        filterPage.put(userId, page);
 
         int start = page * pageSize;
         int end = Math.min(start + pageSize, activeFilters.size());
