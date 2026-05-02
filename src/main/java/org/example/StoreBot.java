@@ -3127,18 +3127,18 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     System.out.println("🔙 BACK FROM CATALOG");
 
-                    // якщо користувач в підкатегорії
                     if (currentCategory.containsKey(userId)) {
 
                         currentCategory.remove(userId);
+
+                        userStates.put(userId, "catalog");
 
                         sendText(chatId, "↩️ Повертаємо вас до категорій.");
                         sendCategories(Long.parseLong(chatId));
 
                     } else {
-
-                        // якщо вже в категоріях → головне меню
                         userStates.remove(userId);
+
                         sendMessageSafely(createUserMenu(chatId, userId));
                     }
 
