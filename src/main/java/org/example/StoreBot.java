@@ -3066,7 +3066,7 @@ public class StoreBot extends TelegramLongPollingBot {
         return Math.round(v * 100.0) / 100.0;
     }
 
-    // Метод повернення назад
+    // Метод повернення назад (без помилки типів)
     private void handleBack(Long userId, String chatId) {
 
         System.out.println("[handleBack] User " + userId + " pressed Back.");
@@ -3084,7 +3084,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     userStates.put(userId, "editing_product");
                     sendMessageSafely(createEditMenu(chatId, userId));
-                    break;
+                    return;
                 }
 
                 // 🔥 2. РЕДАГУВАННЯ ТОВАРУ
@@ -3092,16 +3092,15 @@ public class StoreBot extends TelegramLongPollingBot {
                     adminEditingField.remove(userId);
 
                     userStates.put(userId, "developer_menu");
-
                     sendMessageSafely(createDeveloperMenu(chatId));
-                    break;
+                    return;
                 }
 
                 // 🔥 3. МЕНЮ РОЗРОБНИКА
                 case "developer_menu": {
                     userStates.remove(userId);
                     sendMessageSafely(createUserMenu(chatId, userId));
-                    break;
+                    return;
                 }
 
                 // 🔥 4. ВИБІР ТОВАРУ
@@ -3117,38 +3116,34 @@ public class StoreBot extends TelegramLongPollingBot {
                     if (currentCategory.containsKey(userId)) {
                         sendSubcategories(Long.parseLong(chatId), currentCategory.get(userId));
                     } else {
-                        sendCategories(userId);
+                        sendCategories(Long.parseLong(chatId));
                     }
 
-                    break;
+                    return;
                 }
 
+                // 🔥 5. КАТАЛОГ
                 case "catalog": {
 
                     System.out.println("🔙 BACK FROM CATALOG");
 
-                    // 🔥 якщо є підкатегорія
                     if (currentCategory.containsKey(userId)) {
 
-                        // ❗ ВАЖЛИВО: очищаємо
                         currentCategory.remove(userId);
 
                         sendText(chatId, "↩️ Повертаємо вас до категорій.");
                         sendCategories(Long.parseLong(chatId));
-
                         return;
                     }
 
-                    // 🔥 якщо вже в категоріях → в головне меню
                     userStates.remove(userId);
-
                     currentCategory.remove(userId);
 
                     sendMessageSafely(createUserMenu(chatId, userId));
                     return;
                 }
 
-                // 🔥 5. ЗАМОВЛЕННЯ (всі awaiting + pickup)
+                // 🔥 6. ІНШІ СТАНИ
                 default: {
 
                     if (state.startsWith("awaiting_") || "order_pickup".equals(state)) {
@@ -3166,23 +3161,30 @@ public class StoreBot extends TelegramLongPollingBot {
                         userStates.put(userId, "catalog");
 
                         sendText(chatId, "↩️ Повертаємо вас до каталогу товарів.");
-                        openCatalogBack(userId, chatId);
+
+                        // 🔥 ФІКС ТУТ
+                        openCatalogBack(userId, Long.parseLong(chatId));
+
                         return;
                     }
 
-                    // 🔥 6. КОШИК
+                    // 🔥 КОШИК
                     if ("in_cart".equals(state)) {
+
                         userStates.put(userId, "catalog");
 
                         sendText(chatId, "↩️ Повертаємо вас до каталогу товарів.");
-                        openCatalogBack(userId, chatId);
+
+                        // 🔥 ФІКС ТУТ
+                        openCatalogBack(userId, Long.parseLong(chatId));
+
                         return;
                     }
 
-                    // 🔥 7. FALLBACK (завжди стабільний)
+                    // 🔥 FALLBACK
                     userStates.remove(userId);
                     sendMessageSafely(createUserMenu(chatId, userId));
-                    break;
+                    return;
                 }
             }
 
