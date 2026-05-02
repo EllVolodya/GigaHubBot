@@ -575,8 +575,24 @@ public class StoreBot extends TelegramLongPollingBot {
 
             // ❗ ОБРОБКА КНОПОК МЕНЮ
             if (text.contains("Редагувати товар")) {
-                userStates.put(userId, "admin_search");
-                sendText(chatId, "🔎 Введіть назву товару:");
+
+                userStates.put(userId, "admin_search_source");
+
+                ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+                markup.setResizeKeyboard(true);
+
+                KeyboardRow row1 = new KeyboardRow();
+                row1.add("🔍 Пошук у MySQL");
+
+                KeyboardRow row2 = new KeyboardRow();
+                row2.add("🔍 Пошук з EXCEL");
+
+                KeyboardRow row3 = new KeyboardRow();
+                row3.add("⬅️ Назад");
+
+                markup.setKeyboard(List.of(row1, row2, row3));
+
+                sendMessage(chatId, "🔎 Оберіть джерело пошуку:", markup);
                 return;
             }
 
