@@ -3096,7 +3096,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 // 🔥 3. МЕНЮ РОЗРОБНИКА
                 case "developer_menu": {
-                    userStates.put(userId, "main_menu");
+                    userStates.remove(userId);
 
                     sendMessageSafely(createUserMenu(chatId, userId));
                     break;
@@ -3153,7 +3153,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     // 🔥 7. FALLBACK (завжди стабільний)
-                    userStates.put(userId, "main_menu");
+                    userStates.remove(userId);
                     sendMessageSafely(createUserMenu(chatId, userId));
                     break;
                 }
