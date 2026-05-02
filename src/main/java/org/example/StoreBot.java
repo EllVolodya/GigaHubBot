@@ -2432,14 +2432,49 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "замовити товар":
                 case "замовити": {
 
+                    List<Map<String, Object>> cart = userCart.get(userId);
                     Map<String, Object> product = lastShownProduct.get(userId);
 
                     if (product == null) {
-                        sendText(chatId, "❌ Спочатку оберіть товар.");
+                        sendText(chatId, "❌ Спочатку відкрийте товар.");
                         return;
                     }
 
-                    startOrder(userId, chatId, product);
+                    if (cart != null && !cart.isEmpty()) {
+
+                        boolean alreadyInCart = cart.stream().anyMatch(item ->
+                                String.valueOf(item.get("id"))
+                                        .equals(String.valueOf(product.get("id")))
+                        );
+
+                        if (alreadyInCart) {
+
+                            showCartNice(userId, chatId);
+
+                            userStates.put(userId, "in_cart");
+
+                            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+                            markup.setResizeKeyboard(true);
+
+                            KeyboardRow row1 = new KeyboardRow();
+                            row1.add("🚛 Оформити замовлення");
+
+                            KeyboardRow row2 = new KeyboardRow();
+                            row2.add(BACK_BUTTON);
+
+                            markup.setKeyboard(List.of(row1, row2));
+
+                            sendMessage(chatId, "📦 Ваш кошик:", markup);
+                            return;
+                        }
+                    }
+
+                    // 🔥 ДОДАВАННЯ
+                    tempStorage.put(userId + "_product", product);
+
+                    userStates.put(userId, "awaiting_quantity");
+
+                    sendText(chatId, "🔢 Введіть кількість (наприклад: 1, 2, 5):");
                     return;
                 }
 
