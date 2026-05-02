@@ -317,6 +317,13 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🔹 DEFAULT DELEGATION TO PHOTO HANDLER
+        System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
+        if ("awaiting_photo".equals(state)) {
+            photoHandler.handleUpdate(userId, chatId, update);
+            return;
+        }
+
         // 1. STATE — ПЕРШИЙ!
         if ("VIEW_PRODUCTS".equals(state)) {
 
@@ -1530,13 +1537,6 @@ public class StoreBot extends TelegramLongPollingBot {
         if ("awaiting_photo".equals(state)) {
             System.out.println("[DEBUG] User is in awaiting_photo state, delegating to PhotoHandler...");
             photoHandler.handleAwaitingPhoto(userId, chatId, update);
-            return;
-        }
-
-        // 🔹 DEFAULT DELEGATION TO PHOTO HANDLER
-        System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
-        if ("awaiting_photo".equals(state)) {
-            photoHandler.handleUpdate(userId, chatId, update);
             return;
         }
 
