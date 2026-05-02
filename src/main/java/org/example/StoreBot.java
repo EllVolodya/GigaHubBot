@@ -1511,15 +1511,18 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // 🖼️ Button "Add Photo"
-        if (normalizedText.contains("Додати фотографію") || normalizedText.contains("Add Photo")) {
-            System.out.println("[DEBUG] Button 'Add Photo' detected for userId=" + userId);
+        if (normalizedText.contains("додати фотографію")) {
+
+            System.out.println("[DEBUG] Add Photo clicked userId=" + userId);
 
             String productName = adminEditingProduct.get(userId);
+
             if (productName != null) {
-                photoHandler.requestPhotoUpload(userId, chatId, productName); // set state & ask for URL
+                photoHandler.requestPhotoUpload(userId, chatId, productName);
             } else {
-                sendText(chatId, "⚠️ Please select a product first.");
+                sendText(chatId, "⚠️ Спочатку оберіть товар.");
             }
+
             return;
         }
 
