@@ -3127,22 +3127,25 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     System.out.println("🔙 BACK FROM CATALOG");
 
+                    // 🔥 якщо є підкатегорія
                     if (currentCategory.containsKey(userId)) {
 
+                        // ❗ ВАЖЛИВО: очищаємо
                         currentCategory.remove(userId);
-
-                        userStates.put(userId, "catalog");
 
                         sendText(chatId, "↩️ Повертаємо вас до категорій.");
                         sendCategories(Long.parseLong(chatId));
 
-                    } else {
-                        userStates.remove(userId);
-
-                        sendMessageSafely(createUserMenu(chatId, userId));
+                        return;
                     }
 
-                    break;
+                    // 🔥 якщо вже в категоріях → в головне меню
+                    userStates.remove(userId);
+
+                    currentCategory.remove(userId);
+
+                    sendMessageSafely(createUserMenu(chatId, userId));
+                    return;
                 }
 
                 // 🔥 5. ЗАМОВЛЕННЯ (всі awaiting + pickup)
