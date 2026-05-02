@@ -573,9 +573,12 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             // ❗ ОБРОБКА КНОПОК МЕНЮ
-            if (text.contains("Редагувати товар")) {
-                userStates.put(userId, "admin_search");
-                sendText(chatId, "🔎 Введіть назву товару:");
+            if ("admin_search".equals(state)) {
+                try {
+                    handleAdminSearchSource(userId, chatId, text);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 return;
             }
 
