@@ -2473,9 +2473,26 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             String normalized = text == null ? "" : text.toLowerCase().trim();
-            
+
             switch (normalized) {
 
+                // 🛒 ЗАМОВИТИ ТОВАР
+                case "🛒 замовити товар":
+                case "замовити товар":
+                case "замовити": {
+
+                    Map<String, Object> product = lastShownProduct.get(userId);
+
+                    if (product == null) {
+                        sendText(chatId, "❌ Спочатку оберіть товар.");
+                        return;
+                    }
+
+                    startOrder(userId, chatId, product);
+                    return;
+                }
+
+                // 🔙 НАЗАД
                 case "назад":
                 case "⬅️ назад":
                 case "⬅ назад":
@@ -2485,10 +2502,28 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
 
                 default:
-                    // 🔥 якщо текст кривий (???? або emoji баг)
-                    if (text != null && text.toLowerCase().contains("назад")) {
-                        handleBack(userId, chatId);
-                        return;
+                    // 🔥 fallback для кривого тексту
+                    if (text != null) {
+
+                        String lower = text.toLowerCase();
+
+                        if (text != null && text.toLowerCase().contains("замовити")) {
+
+                            Map<String, Object> product = lastShownProduct.get(userId);
+
+                            if (product == null) {
+                                sendText(chatId, "❌ Спочатку оберіть товар.");
+                                return;
+                            }
+
+                            startOrder(userId, chatId.toString(), product);
+                            return;
+                        }
+
+                        if (lower.contains("назад")) {
+                            handleBack(userId, chatId);
+                            return;
+                        }
                     }
             }
 
