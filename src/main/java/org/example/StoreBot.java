@@ -6555,6 +6555,11 @@ public class StoreBot extends TelegramLongPollingBot {
                     userFilters.put(userId, filters);
                     filterPage.put(userId, 0);
 
+                    // 🔥 КЛЮЧОВЕ
+                    currentFilter.remove(userId);
+                    currentSubfilter.remove(userId);
+
+                    // 🔥 ЩЕ КЛЮЧОВЕ
                     userStates.put(userId, "catalog");
 
                     sendFilters(chatId, 0);
