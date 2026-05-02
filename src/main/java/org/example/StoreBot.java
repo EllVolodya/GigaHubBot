@@ -3102,23 +3102,19 @@ public class StoreBot extends TelegramLongPollingBot {
                     break;
                 }
 
-                // 🔥 4. ВИБІР ТОВАРУ
                 case "choose_product": {
-                    userProductLists.remove(userId);
-                    userProductIndex.remove(userId);
-                    lastShownProduct.remove(userId);
 
                     userStates.put(userId, "catalog");
 
                     sendText(chatId, "↩️ Повертаємо вас до категорій.");
 
                     if (currentCategory.containsKey(userId)) {
-                        sendSubcategories(userId, currentCategory.get(userId));
+                        sendSubcategories(Long.parseLong(chatId), currentCategory.get(userId));
                     } else {
-                        sendCategories(userId);
+                        sendCategories(Long.parseLong(chatId));
                     }
 
-                    break;
+                    return;
                 }
 
                 // 🔥 5. ЗАМОВЛЕННЯ (всі awaiting + pickup)
