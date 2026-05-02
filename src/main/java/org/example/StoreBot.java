@@ -2423,6 +2423,53 @@ public class StoreBot extends TelegramLongPollingBot {
                 default -> handleText(userId, text);
             }
 
+            if (text != null && text.toLowerCase().contains("замовити")) {
+
+                System.out.println("🛒 ORDER CLICKED RAW: " + text);
+
+                List<Map<String, Object>> cart = userCart.get(userId);
+                Map<String, Object> product = lastShownProduct.get(userId);
+
+                if (product == null) {
+                    sendText(chatId, "❌ Спочатку відкрийте товар.");
+                    return;
+                }
+
+                if (cart != null && !cart.isEmpty()) {
+
+                    boolean alreadyInCart = cart.stream().anyMatch(item ->
+                            String.valueOf(item.get("id"))
+                                    .equals(String.valueOf(product.get("id")))
+                    );
+
+                    if (alreadyInCart) {
+
+                        showCartNice(userId, chatId);
+                        userStates.put(userId, "in_cart");
+
+                        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+                        markup.setResizeKeyboard(true);
+
+                        KeyboardRow row1 = new KeyboardRow();
+                        row1.add("🚛 Оформити замовлення");
+
+                        KeyboardRow row2 = new KeyboardRow();
+                        row2.add(BACK_BUTTON);
+
+                        markup.setKeyboard(List.of(row1, row2));
+
+                        sendMessage(chatId, "📦 Ваш кошик:", markup);
+                        return;
+                    }
+                }
+
+                tempStorage.put(userId + "_product", product);
+                userStates.put(userId, "awaiting_quantity");
+
+                sendText(chatId, "🔢 Введіть кількість:");
+                return;
+            }
+
             String normalized = text == null ? "" : text.toLowerCase().trim();
 
             switch (normalized) {
