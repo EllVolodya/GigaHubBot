@@ -6503,12 +6503,12 @@ public class StoreBot extends TelegramLongPollingBot {
                 int page = filterPage.getOrDefault(userId, 0);
 
                 if ("Продовжити".equals(text)) {
-                    sendFilters(chatId, page + 1);
+                    sendFilters(userId, chatId, page + 1);
                     return;
                 }
 
                 if ("Попередні".equals(text)) {
-                    sendFilters(chatId, page - 1);
+                    sendFilters(userId, chatId, page - 1);
                     return;
                 }
 
@@ -6562,7 +6562,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     // 🔥 ЩЕ КЛЮЧОВЕ
                     userStates.put(userId, "catalog");
 
-                    sendFilters(chatId, 0);
+                    sendFilters(userId, chatId, 0);
                     return;
                 }
             }
