@@ -241,12 +241,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
-        if (text != null && text.contains("Назад") && state == null) {
+        if (text != null && text.toLowerCase().contains("назад")) {
+
             System.out.println("🔥 BACK CLICKED");
 
             try {
-                handleBack(userId, chatId);
-            } catch (Exception e) { // 🔥 ВАЖЛИВО
+                handleBack(userId, chatId.toString());
+            } catch (Exception e) {
                 e.printStackTrace();
             }
 
@@ -1539,9 +1540,14 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 // ⬅️ Назад
-                if (text.equals(BACK_BUTTON) || text.equals("⬅️ Назад")) {
-                    userStates.remove(userId);
-                    sendUserMenu(userId);
+                if (text != null && (
+                        text.equals(BACK_BUTTON) ||
+                                text.equals("⬅️ Назад") ||
+                                text.toLowerCase().contains("назад")
+                )) {
+                    System.out.println("🔥 BACK CLICKED");
+
+                    handleBack(userId, chatId.toString());
                     return;
                 }
 
@@ -1738,19 +1744,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "🧹 Очистити кошик" -> clearCart(userId);
-                case "Назад", BACK_BUTTON -> {
-
-                    try {
-                        handleBack(userId, chatId);
-                    } catch (Exception e) {
-                        LOGGER.severe("[Back Button Error] Failed to handle BACK for chatId="
-                                + chatId + ": " + e.getMessage());
-
-                        sendText(chatId, "❌ Сталася помилка при поверненні назад.");
-                    }
-
-                    return;
-                }
                 case ADD_TO_CART_BUTTON -> {
                     addToCartTool(userId);
                     return;
@@ -2477,6 +2470,26 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 default -> handleText(userId, text);
+            }
+
+            String normalized = text == null ? "" : text.toLowerCase().trim();
+            
+            switch (normalized) {
+
+                case "назад":
+                case "⬅️ назад":
+                case "⬅ назад":
+                case "← назад":
+                case "back":
+                    handleBack(userId, chatId);
+                    return;
+
+                default:
+                    // 🔥 якщо текст кривий (???? або emoji баг)
+                    if (text != null && text.toLowerCase().contains("назад")) {
+                        handleBack(userId, chatId);
+                        return;
+                    }
             }
 
             // Якщо користувач пише відгук
