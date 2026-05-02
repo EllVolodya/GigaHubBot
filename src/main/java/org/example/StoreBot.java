@@ -574,7 +574,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             // ❗ ОБРОБКА КНОПОК МЕНЮ
-            if ("Редагувати товар".equals(text)) {
+            if (text != null && text.contains("Редагувати товар")) {
                 try {
                     handleAdminSearchSource(userId, chatId, "🔍 Пошук у MySQL");
                 } catch (TelegramApiException e) {
