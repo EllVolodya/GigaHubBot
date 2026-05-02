@@ -3279,7 +3279,7 @@ public class StoreBot extends TelegramLongPollingBot {
         Map<String, Object> product = products.get(choice - 1);
 
         // 🔥 зберігаємо товар
-        lastShownProduct.put(chatId, product);
+        lastShownProduct.put(userId, product);
 
         // 🔹 СПОЧАТКУ список
         if (!products.isEmpty()) {
