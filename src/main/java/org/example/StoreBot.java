@@ -1259,6 +1259,26 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        String normalized = text == null ? "" : text.toLowerCase().trim();
+
+        if (normalized.contains("замов")) {
+
+            System.out.println("🛒 ORDER CLICKED");
+
+            Map<String, Object> product = lastShownProduct.get(userId);
+
+            if (product == null) {
+                sendText(chatId, "❌ Спочатку відкрийте товар.");
+                return;
+            }
+
+            tempStorage.put(userId + "_product", product);
+            userStates.put(userId, "awaiting_quantity");
+
+            sendText(chatId, "🔢 Введіть кількість:");
+            return;
+        }
+
         if ("choose_product".equals(state)) {
             handleChooseProduct(userId, chatId, text);
             return;
