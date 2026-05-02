@@ -3106,14 +3106,33 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     userStates.put(userId, "catalog");
 
-                    sendText(chatId, "↩️ Повертаємо вас до категорій.");
+                    sendText(chatId, "↩️ Назад");
 
-                    if (currentCategory.containsKey(userId)) {
-                        sendSubcategories(Long.parseLong(chatId), currentCategory.get(userId));
-                    } else {
-                        sendCategories(Long.parseLong(chatId));
+                    // 🔥 якщо є підкатегорія → йдемо до підкатегорій
+                    if (currentSubcategory.containsKey(userId)) {
+
+                        currentSubcategory.remove(userId); // ❗ ВАЖЛИВО
+
+                        sendSubcategories(
+                                Long.parseLong(chatId),
+                                currentCategory.get(userId)
+                        );
+
+                        return;
                     }
 
+                    // 🔥 якщо є категорія → йдемо до категорій
+                    if (currentCategory.containsKey(userId)) {
+
+                        currentCategory.remove(userId); // ❗ ВАЖЛИВО
+
+                        sendCategories(Long.parseLong(chatId));
+                        return;
+                    }
+
+                    // 🔥 якщо нічого нема → головне меню
+                    userStates.remove(userId);
+                    sendMessageSafely(createUserMenu(chatId, userId));
                     return;
                 }
 
