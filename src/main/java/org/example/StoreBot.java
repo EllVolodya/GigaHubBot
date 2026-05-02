@@ -2490,8 +2490,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            String normalized = text == null ? "" : text.toLowerCase().trim();
-
             switch (normalized) {
 
                 // 🛒 ЗАМОВИТИ ТОВАР
