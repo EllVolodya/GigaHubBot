@@ -1753,55 +1753,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                case "🛒 Замовити товар" -> {
-
-                    List<Map<String, Object>> cart = userCart.get(userId);
-                    Map<String, Object> product = lastShownProduct.get(userId);
-
-                    if (product == null) {
-                        sendText(chatId, "❌ Спочатку відкрийте товар.");
-                        return;
-                    }
-
-                    // 🔥 якщо вже є в кошику → показуємо
-                    if (cart != null && !cart.isEmpty()) {
-
-                        boolean alreadyInCart = cart.stream().anyMatch(item ->
-                                item.get("id").toString().equals(product.get("id").toString())
-                        );
-
-                        if (alreadyInCart) {
-
-                            showCartNice(userId, chatId);
-
-                            // 🔥 ФІКС: обовʼязково ставимо state
-                            userStates.put(userId, "in_cart");
-
-                            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
-                            markup.setResizeKeyboard(true);
-
-                            KeyboardRow row1 = new KeyboardRow();
-                            row1.add("🚛 Оформити замовлення");
-
-                            KeyboardRow row2 = new KeyboardRow();
-                            row2.add(BACK_BUTTON);
-
-                            markup.setKeyboard(List.of(row1, row2));
-
-                            sendMessage(chatId, "📦 Ваш кошик:", markup);
-                            return;
-                        }
-                    }
-
-                    // 🔥 додаємо новий товар → питаємо кількість
-                    tempStorage.put(userId + "_product", product);
-
-                    // 🔥 залишаємо логіку як була
-                    userStates.put(userId, "awaiting_quantity");
-
-                    sendText(chatId, "🔢 Введіть кількість (наприклад: 1, 2, 5):");
-                }
-
                 case "🚛 Оформити замовлення" -> {
 
                     List<Map<String, Object>> cart = userCart.get(userId);
