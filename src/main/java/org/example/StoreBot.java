@@ -5637,6 +5637,32 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if ("awaiting_subfilter".equals(userStates.get(userId))) {
+
+            if ("⬅️ Назад".equals(text)) {
+                userStates.put(userId, "awaiting_filter_select");
+                sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
+                return;
+            }
+
+            String subfilter = text;
+
+            Map<String, Object> product =
+                    (Map<String, Object>) tempStorage.get(userId + "_filter_product");
+
+            if (product != null) {
+
+                String productId = String.valueOf(product.get("id"));
+
+                updateProductSubfilter(productId, subfilter);
+
+                sendText(chatId, "✅ Підфільтр встановлено: " + subfilter);
+            }
+
+            userStates.remove(userId);
+            return;
+        }
+
         // 🔙 НАЗАД
         if (BACK_BUTTON.equals(text)) {
 
@@ -9752,5 +9778,23 @@ public class StoreBot extends TelegramLongPollingBot {
         sendText(chatId,
                 "🛒 Ви обрали: " + name + "\n\n" +
                         "👉 Введіть кількість:");
+    }
+
+    private void updateProductSubfilter(String productId, String subfilterName) {
+
+        try (Connection conn = DatabaseManager.getConnection()) {
+
+            PreparedStatement ps = conn.prepareStatement(
+                    "UPDATE products SET subfilter = ? WHERE id = ?"
+            );
+
+            ps.setString(1, subfilterName);
+            ps.setString(2, productId);
+
+            ps.executeUpdate();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
