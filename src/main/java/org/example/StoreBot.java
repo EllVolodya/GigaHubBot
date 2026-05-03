@@ -874,7 +874,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             sendMessageSafely(createFiltersAdminMenu(chatId));
-            return; // 🔥 ОБОВЯЗКОВО
+            return;
         }
 
         // 🔹 Увімкнути підфільтр
@@ -4491,7 +4491,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 userStates.put(userId,"awaiting_payment_method");
             }
 
-            //Доставка по місту
             case "awaiting_city_delivery" -> {
 
                 if (text.equals(BACK_BUTTON)) {
@@ -4637,7 +4636,6 @@ public class StoreBot extends TelegramLongPollingBot {
                         "ORD-" +
                                 (System.currentTimeMillis() % 10000);
 
-                // Дані доставки
                 String deliveryType =
                         tempDeliveryType.getOrDefault(
                                 userId,
@@ -4744,8 +4742,6 @@ public class StoreBot extends TelegramLongPollingBot {
                             "❌ Помилка при створенні замовлення.");
                     return;
                 }
-
-                // Очистка даних
                 userCart.remove(userId);
                 userPhones.remove(userId);
                 userStates.remove(userId);
@@ -5460,7 +5456,6 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // ❗ ІГНОР ВСЬОГО НЕ ЧИСЛА
         if (text == null || !text.matches("\\d+")) {
             return;
         }
@@ -6303,7 +6298,6 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔥 Пріоритет масовому редагуванню
         if (productsToEdit != null && !productsToEdit.isEmpty()) {
 
-            // прибираємо конфлікт одиночного режиму
             adminEditingProduct.remove(userId);
 
             menuTitle = "✏️ Редагуємо " + productsToEdit.size() + " товар(ів)\n\n";
@@ -9289,7 +9283,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         Map<String,String> data = new HashMap<>();
 
-        // вставляємо пробіли між буквами і цифрами
         text = text.replaceAll("([\\p{L}])([0-9])", "$1 $2");
         text = text.replaceAll("([0-9])([\\p{L}])", "$1 $2");
 
@@ -9400,7 +9393,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             String name = product.get("name").toString().trim();
 
-            // 🔥 1. шукаємо НЕ по точному співпадінню
+            // 🔥 1. шукаємо НЕ по точному співпадіня
             String findSql = "SELECT id FROM products WHERE LOWER(name) LIKE ? LIMIT 1";
 
             try (PreparedStatement ps = conn.prepareStatement(findSql)) {
