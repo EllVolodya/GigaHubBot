@@ -5499,7 +5499,7 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔥 ВИБІР ФІЛЬТРА
         if ("awaiting_filter_select".equals(state)) {
 
-            if ("⬅️ Назад".equals(text)) {
+            if (BACK_BUTTON.equals(text)) {
                 userStates.remove(userId);
                 sendMessageSafely(createEditMenu(chatId, userId));
                 return;
@@ -5510,9 +5510,20 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 зберігаємо фільтр
+            CatalogSearcher searcher = new CatalogSearcher();
+
+            // 🔥 перевіряємо що це реально існуючий фільтр
+            List<String> allowedFilters = searcher.getFiltersAdmin();
+
+            if (allowedFilters == null || !allowedFilters.contains(text)) {
+                sendText(chatId, "❌ Обери фільтр з кнопок.");
+                return;
+            }
+
+            // 🔥 зберігаємо вибраний фільтр
             tempStorage.put(userId + "_selected_filter_name", text);
 
+            // 🔥 беремо товари
             List<Map<String, Object>> products = adminSelectedProducts.get(userId);
 
             if (products == null || products.isEmpty()) {
@@ -5528,21 +5539,39 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            CatalogSearcher searcher = new CatalogSearcher();
             int successCount = 0;
 
             for (Map<String, Object> product : products) {
                 try {
                     boolean success = searcher.addProductToFilter(product, text, null);
-                    if (success) successCount++;
-                } catch (Exception ignored) {}
+
+                    if (success) {
+                        successCount++;
+                    } else {
+                        System.out.println("❌ Не додано: " + text);
+                    }
+
+                } catch (Exception e) {
+                    e.printStackTrace(); // 🔥 тепер ти бачиш реальну помилку
+                }
             }
 
             userStates.remove(userId);
 
-            sendText(chatId,
-                    "✅ Додано у фільтр \"" + text + "\" : " +
-                            successCount + " з " + products.size());
+            if (successCount == 0) {
+                sendText(chatId, "❌ Не вдалося додати у фільтр \"" + text + "\"");
+                return;
+            }
+
+            sendText(
+                    chatId,
+                    "✅ Додано у фільтр \"" +
+                            text +
+                            "\" : " +
+                            successCount +
+                            " з " +
+                            products.size()
+            );
 
             sendMessageSafely(createEditMenu(chatId, userId));
             return;
