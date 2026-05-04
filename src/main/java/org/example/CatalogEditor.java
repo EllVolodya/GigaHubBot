@@ -430,32 +430,64 @@ public class CatalogEditor {
         return out;
     }
 
-    public static boolean updateFieldById(
-            int productId,
-            String field,
-            Object value
-    ) {
+    public static boolean updateFieldById(int productId, String field, Object value) {
 
-        try (Connection conn =
-                     DatabaseManager.getConnection()) {
+        if (field == null || field.trim().isEmpty()) {
+            System.out.println("❌ Поле не вказано.");
+            return false;
+        }
 
-            String sql =
-                    "UPDATE products SET "
-                            + field
-                            + "=? WHERE id=?";
+        field = field.trim().toLowerCase();
 
-            try (PreparedStatement stmt =
-                         conn.prepareStatement(sql)) {
+        Set<String> allowedFields = Set.of(
+                "price",
+                "description",
+                "photo",
+                "unit",
+                "name",
+                "manufacturer"
+        );
 
-                stmt.setString(1,
-                        value == null ? "" : value.toString());
+        if (!allowedFields.contains(field)) {
+            System.out.println("❌ Заборонене поле: " + field);
+            return false;
+        }
 
-                stmt.setInt(2, productId);
+        boolean isBlobField = field.equals("manufacturer");
 
-                int rows = stmt.executeUpdate();
+        String sql = "UPDATE products SET " + field + " = ? WHERE id = ?";
 
-                return rows > 0;
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            if (isBlobField) {
+
+                if (value == null || value.toString().trim().isEmpty()) {
+                    ps.setNull(1, Types.BLOB);
+                } else {
+                    ps.setBytes(1, value.toString().getBytes(StandardCharsets.UTF_8));
+                }
+
+            } else if ("price".equals(field)) {
+
+                double price = value instanceof Number
+                        ? ((Number) value).doubleValue()
+                        : Double.parseDouble(value.toString().replace(",", "."));
+
+                ps.setDouble(1, price);
+
+            } else {
+
+                ps.setString(1, value == null ? "" : value.toString());
             }
+
+            ps.setInt(2, productId);
+
+            int rows = ps.executeUpdate();
+
+            System.out.println("UPDATED ROWS = " + rows);
+
+            return rows > 0;
 
         } catch (Exception e) {
             e.printStackTrace();
