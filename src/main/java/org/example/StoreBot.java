@@ -5639,7 +5639,12 @@ public class StoreBot extends TelegramLongPollingBot {
             String filterName = (String) tempStorage.get(userId + "_selected_filter_name");
 
             if (filterName == null) {
-                sendText(chatId, "❌ Спочатку обери фільтр");
+
+                userStates.put(userId, "awaiting_filter_select");
+
+                sendText(chatId, "🔽 Спочатку обери фільтр:");
+                sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
+
                 return;
             }
 
