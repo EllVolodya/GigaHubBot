@@ -229,6 +229,23 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if (update.hasMessage() && update.getMessage().hasPhoto()) {
+
+            Message message = update.getMessage();
+            Long userId = message.getFrom().getId();
+            String chatId = message.getChatId().toString();
+
+            String state = userStates.get(userId);
+
+            // 🔥 ЯКЩО ЧЕКАЄМО ФОТО
+            if ("awaiting_photo".equals(state)) {
+                System.out.println("[DEBUG] PHOTO RECEIVED → forwarding to PhotoHandler");
+
+                photoHandler.handleAwaitingPhoto(userId, chatId, update);
+                return;
+            }
+        }
+
         Long userId = update.getMessage().getFrom().getId();
 
         String chatId = update.getMessage().getChatId().toString();
@@ -314,13 +331,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatIdStr, "❌ Помилка Telegram.");
             }
 
-            return;
-        }
-
-        // 🔹 DEFAULT DELEGATION TO PHOTO HANDLER
-        System.out.println("[DEBUG] Passing message to PhotoHandler for userId=" + userId);
-        if ("awaiting_photo".equals(state)) {
-            photoHandler.handleUpdate(userId, chatId, update);
             return;
         }
 
