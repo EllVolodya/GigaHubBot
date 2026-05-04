@@ -5563,6 +5563,44 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🔥 ПІДФІЛЬТР — СТАВИМО ПЕРШИМ (ВАЖЛИВО)
+        if ("awaiting_subfilter".equals(userStates.get(userId))) {
+
+            if ("⬅️ Назад".equals(text)) {
+                userStates.put(userId, "awaiting_filter_select");
+                sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
+                return;
+            }
+
+            String filterName = (String) tempStorage.get(userId + "_selected_filter_name");
+
+            CatalogSearcher searcher = new CatalogSearcher();
+            List<String> allowed = searcher.getSubfilters(filterName);
+
+            if (!allowed.contains(text)) {
+                sendText(chatId, "❌ Обери підфільтр з кнопок");
+                return;
+            }
+
+            Map<String, Object> product =
+                    (Map<String, Object>) tempStorage.get(userId + "_filter_product");
+
+            if (product != null) {
+
+                String productId = String.valueOf(product.get("id"));
+
+                updateProductSubfilter(productId, text);
+
+                sendText(chatId, "✅ Підфільтр встановлено: " + text);
+
+            } else {
+                sendText(chatId, "❌ Помилка: товар не знайдено");
+            }
+
+            userStates.remove(userId);
+            return;
+        }
+
         // 🔥 ОПИС (НЕ ЗАЛЕЖИТЬ ВІД EMOJI)
         if (text != null && text.toLowerCase().contains("опис")) {
 
@@ -5663,29 +5701,36 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        if ("awaiting_subfilter".equals(userStates.get(userId))) {
-
-            if ("⬅️ Назад".equals(text)) {
-                userStates.put(userId, "awaiting_filter_select");
-                sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
-                return;
-            }
-
-            String subfilter = text;
+        // 🔥 ДОДАТИ В ПІДФІЛЬТР
+        if ("🧩 Додати в підфільтр".equals(text)) {
 
             Map<String, Object> product =
                     (Map<String, Object>) tempStorage.get(userId + "_filter_product");
 
-            if (product != null) {
-
-                String productId = String.valueOf(product.get("id"));
-
-                updateProductSubfilter(productId, subfilter);
-
-                sendText(chatId, "✅ Підфільтр встановлено: " + subfilter);
+            if (product == null) {
+                sendText(chatId, "❌ Спочатку обери товар");
+                return;
             }
 
-            userStates.remove(userId);
+            // беремо збережений фільтр (ти вже це робиш)
+            String filterName = (String) tempStorage.get(userId + "_selected_filter_name");
+
+            if (filterName == null) {
+                sendText(chatId, "❌ Спочатку обери фільтр");
+                return;
+            }
+
+            CatalogSearcher searcher = new CatalogSearcher();
+            List<String> subfilters = searcher.getSubfilters(filterName);
+
+            if (subfilters.isEmpty()) {
+                sendText(chatId, "❌ У цього фільтра немає підфільтрів");
+                return;
+            }
+
+            userStates.put(userId, "awaiting_subfilter");
+
+            sendMessageSafely(createSubfilterMenu(filterName, chatId));
             return;
         }
 
