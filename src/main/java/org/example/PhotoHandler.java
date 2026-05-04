@@ -11,132 +11,140 @@ public class PhotoHandler {
     private final StoreBot bot;
     private final Map<Long, String> userStates;
     private final Map<Long, String> adminEditingProduct;
+    private final Map<Long, Map<String, Object>> adminSelectedProduct;
 
-    public PhotoHandler(StoreBot bot, Map<Long, String> userStates, Map<Long, String> adminEditingProduct) {
+    public PhotoHandler(
+            StoreBot bot,
+            Map<Long, String> userStates,
+            Map<Long, String> adminEditingProduct,
+            Map<Long, Map<String, Object>> adminSelectedProduct
+    ) {
         this.bot = bot;
         this.userStates = userStates;
         this.adminEditingProduct = adminEditingProduct;
+        this.adminSelectedProduct = adminSelectedProduct;
     }
 
     // === ENTRY POINT ===
     public void handleUpdate(Long userId, String chatId, Update update) {
+
         String state = userStates.get(userId);
-        System.out.println("[DEBUG] handleUpdate() called for userId=" + userId + ", state=" + state);
+
+        System.out.println("[DEBUG] handleUpdate userId=" + userId + " state=" + state);
 
         if ("awaiting_photo".equals(state)) {
-            System.out.println("[DEBUG] User is in 'awaiting_photo' state, delegating to handleAwaitingPhoto...");
             handleAwaitingPhoto(userId, chatId, update);
-        } else {
-            System.out.println("[DEBUG] User not in 'awaiting_photo', waiting for other actions.");
         }
     }
 
     // === START PHOTO UPLOAD ===
     public void requestPhotoUpload(Long userId, String chatId, String productName) {
-        System.out.println("[DEBUG] requestPhotoUpload called: userId=" + userId + ", productName=" + productName);
+
+        System.out.println("[DEBUG] requestPhotoUpload userId=" + userId + " product=" + productName);
 
         userStates.put(userId, "awaiting_photo");
         adminEditingProduct.put(userId, productName);
 
-        bot.sendText(chatId, "📷 Please send a photo, document, or an image URL for the product '" + productName + "'.");
+        bot.sendText(chatId,
+                "📷 Надішліть фото, документ або URL зображення для товару:\n" +
+                        "\"" + productName + "\"");
     }
 
-    // === HANDLE AWAITING PHOTO ===
+    // === HANDLE PHOTO ===
     public void handleAwaitingPhoto(Long userId, String chatId, Update update) {
-        System.out.println("[DEBUG] handleAwaitingPhoto triggered for userId=" + userId);
 
-        String productName = adminEditingProduct.get(userId);
+        System.out.println("[DEBUG] handleAwaitingPhoto userId=" + userId);
 
-        if (productName == null || productName.isEmpty()) {
-            bot.sendText(chatId, "⚠️ No product selected.");
+        Map<String, Object> product = adminSelectedProduct.get(userId);
+
+        if (product == null) {
+            bot.sendText(chatId, "❌ Товар не знайдено.");
             userStates.remove(userId);
             return;
         }
 
+        int productId = (int) product.get("id");
+        String productName = String.valueOf(product.get("name"));
+
         if (!update.hasMessage()) {
-            bot.sendText(chatId, "❌ Please send a valid photo, document, or image URL.");
+            bot.sendText(chatId, "❌ Надішліть фото або URL.");
             return;
         }
 
         Message msg = update.getMessage();
 
         try {
+
             String imageUrl = null;
 
             // === PHOTO ===
             if (msg.hasPhoto()) {
-                var photos = msg.getPhoto();
-                var largestPhoto = photos.get(photos.size() - 1);
 
-                File file = bot.downloadTelegramFile(largestPhoto.getFileId());
+                var photos = msg.getPhoto();
+                var largest = photos.get(photos.size() - 1);
+
+                File file = bot.downloadTelegramFile(largest.getFileId());
+
                 imageUrl = CloudinaryManager.uploadImage(file, "products");
 
-                System.out.println("[DEBUG] Photo uploaded for userId=" + userId);
+                System.out.println("[DEBUG] PHOTO uploaded");
             }
 
             // === DOCUMENT ===
             else if (msg.hasDocument()) {
+
                 File file = bot.downloadTelegramFile(msg.getDocument().getFileId());
+
                 imageUrl = CloudinaryManager.uploadImage(file, "products");
 
-                System.out.println("[DEBUG] Document uploaded for userId=" + userId);
+                System.out.println("[DEBUG] DOCUMENT uploaded");
             }
 
-            // === TEXT URL ===
+            // === URL ===
             else if (msg.hasText()) {
+
                 imageUrl = msg.getText().trim();
 
                 if (imageUrl.isEmpty()) {
-                    bot.sendText(chatId, "❌ Please send a non-empty image URL.");
-                    return;
-                }
-
-                if (imageUrl.startsWith("blob:") || imageUrl.startsWith("file://") || imageUrl.matches("^[a-zA-Z]:\\\\.*")) {
-                    bot.sendText(chatId, "❌ Local or blob URLs are not supported.");
+                    bot.sendText(chatId, "❌ Пустий URL.");
                     return;
                 }
 
                 if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
-                    bot.sendText(chatId, "❌ Invalid URL.");
+                    bot.sendText(chatId, "❌ Невірний URL.");
                     return;
                 }
 
-                System.out.println("[DEBUG] Text URL received: " + imageUrl);
+                System.out.println("[DEBUG] URL = " + imageUrl);
             }
 
             else {
-                bot.sendText(chatId, "📎 Please send a photo, document, or an image URL.");
+                bot.sendText(chatId, "📎 Надішліть фото, документ або URL.");
                 return;
             }
 
-            // === SAVE IMAGE ===
+            // === SAVE ===
             if (imageUrl != null) {
 
-                // 🔥 ВАЖЛИВО: отримуємо ID через пошук
-                CatalogSearcher searcher = new CatalogSearcher();
-                String productId = searcher.getProductIdByName(productName);
+                System.out.println("DEBUG ID = " + productId);
 
-                System.out.println("DEBUG ProductName = " + productName);
-                System.out.println("DEBUG ProductId = " + productId);
-
-                if (productId == null) {
-                    bot.sendText(chatId, "❌ Product not found in DB.");
-                    return;
-                }
-
-                boolean updated = CatalogEditor.updateField(productId, "photo", imageUrl);
+                boolean updated =
+                        CatalogEditor.updateFieldById(productId, "photo", imageUrl);
 
                 if (updated) {
-                    bot.sendText(chatId, "✅ Photo successfully updated for product '" + productName + "'.");
+                    bot.sendText(chatId, "✅ Фото збережено для \"" + productName + "\"");
                 } else {
-                    bot.sendText(chatId, "⚠️ Failed to update database.");
+                    bot.sendText(chatId, "⚠️ Не вдалося зберегти фото.");
                 }
             }
 
         } catch (Exception e) {
+
             e.printStackTrace();
-            bot.sendText(chatId, "❌ Error processing the image: " + e.getMessage());
+            bot.sendText(chatId, "❌ Помилка: " + e.getMessage());
+
         } finally {
+
             userStates.remove(userId);
             adminEditingProduct.remove(userId);
         }
