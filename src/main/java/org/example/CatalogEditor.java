@@ -198,7 +198,6 @@ public class CatalogEditor {
         }
     }
 
-    // --- Оновити будь-яке поле товару
     public static boolean updateField(String productName, String field, Object value) {
 
         if (productName == null || productName.trim().isEmpty()) {
@@ -211,11 +210,8 @@ public class CatalogEditor {
             return false;
         }
 
-        // Нормалізація назви
-        productName = productName
-                .replaceAll("\\s+", " ")
-                .trim();
-
+        // 🔧 Нормалізація
+        productName = productName.replaceAll("\\s+", " ").trim();
         field = field.trim().toLowerCase();
 
         System.out.println("========== updateField() ==========");
@@ -223,7 +219,7 @@ public class CatalogEditor {
         System.out.println("DEBUG Field   = " + field);
         System.out.println("DEBUG Value   = " + value);
 
-        // Дозволені поля
+        // 🔒 Дозволені поля
         Set<String> allowedFields = Set.of(
                 "price",
                 "description",
@@ -240,30 +236,27 @@ public class CatalogEditor {
 
         boolean isBlobField = field.equals("manufacturer");
 
-        String checkSql = """
-        SELECT id, name
+        String findSql = """
+        SELECT id
         FROM products
         WHERE BINARY TRIM(name) = TRIM(?)
         LIMIT 1
-        """;
+    """;
 
         String updateSql =
-                "UPDATE products SET " + field + " = ? " +
-                        "WHERE BINARY TRIM(name) = TRIM(?)";
+                "UPDATE products SET " + field + " = ? WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
             conn.setAutoCommit(true);
 
-            int productId = -1;
-            String dbName = null;
+            int productId;
 
-            // Перевіряємо чи товар існує
-            try (PreparedStatement checkStmt = conn.prepareStatement(checkSql)) {
+            try (PreparedStatement ps = conn.prepareStatement(findSql)) {
 
-                checkStmt.setString(1, productName);
+                ps.setString(1, productName);
 
-                try (ResultSet rs = checkStmt.executeQuery()) {
+                try (ResultSet rs = ps.executeQuery()) {
 
                     if (!rs.next()) {
                         System.out.println("⚠️ Товар не знайдено: " + productName);
@@ -271,15 +264,11 @@ public class CatalogEditor {
                     }
 
                     productId = rs.getInt("id");
-                    dbName = rs.getString("name");
-
-                    System.out.println("DEBUG Знайдено ID   = " + productId);
-                    System.out.println("DEBUG Знайдено Name = " + dbName);
+                    System.out.println("DEBUG Found ID = " + productId);
                 }
             }
 
-            // Оновлення
-            try (PreparedStatement stmt = conn.prepareStatement(updateSql)) {
+            try (PreparedStatement ps = conn.prepareStatement(updateSql)) {
 
                 if (isBlobField) {
 
@@ -287,7 +276,7 @@ public class CatalogEditor {
                             value.toString().trim().isEmpty() ||
                             value.toString().equals("❌")) {
 
-                        stmt.setNull(1, Types.BLOB);
+                        ps.setNull(1, Types.BLOB);
                         System.out.println("DEBUG manufacturer = NULL");
 
                     } else {
@@ -296,51 +285,48 @@ public class CatalogEditor {
                                 .trim()
                                 .getBytes(StandardCharsets.UTF_8);
 
-                        stmt.setBytes(1, bytes);
+                        ps.setBytes(1, bytes);
                         System.out.println("DEBUG manufacturer bytes saved");
                     }
 
+                } else if ("price".equals(field)) {
+
+                    double price;
+
+                    if (value instanceof Number) {
+                        price = ((Number) value).doubleValue();
+                    } else {
+                        price = Double.parseDouble(
+                                value.toString()
+                                        .replace(",", ".")
+                                        .trim()
+                        );
+                    }
+
+                    ps.setDouble(1, price);
+
                 } else {
 
-                    if (field.equals("price")) {
-
-                        if (value instanceof Number) {
-                            stmt.setDouble(1, ((Number) value).doubleValue());
-                        } else {
-                            stmt.setDouble(1,
-                                    Double.parseDouble(
-                                            value.toString()
-                                                    .replace(",", ".")
-                                                    .trim()
-                                    )
-                            );
-                        }
-
-                    } else {
-
-                        stmt.setString(1,
-                                value == null ? "" : value.toString().trim());
-                    }
+                    ps.setString(1,
+                            value == null ? "" : value.toString().trim());
                 }
 
-                stmt.setString(2, productName);
+                ps.setInt(2, productId);
 
-                int rows = stmt.executeUpdate();
+                int rows = ps.executeUpdate();
 
                 System.out.println("DEBUG Rows updated = " + rows);
 
                 if (rows > 0) {
-                    System.out.println("✅ Поле '" + field +
-                            "' успішно оновлено для товару ID=" + productId);
+                    System.out.println("✅ Успішно оновлено поле '" + field + "' для ID=" + productId);
                     return true;
                 } else {
-                    System.out.println("⚠️ Оновлення не виконано.");
+                    System.out.println("⚠️ UPDATE не спрацював.");
                     return false;
                 }
             }
 
         } catch (Exception e) {
-
             System.out.println("❌ updateField ERROR: " + e.getMessage());
             e.printStackTrace();
             return false;
