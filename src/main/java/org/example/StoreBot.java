@@ -5524,16 +5524,18 @@ public class StoreBot extends TelegramLongPollingBot {
         List<String> productsToEdit = adminSelectedProductsRange.get(userId);
         Map<String, Object> singleProduct = adminSelectedProduct.get(userId);
 
-        System.out.println("[EDIT] TEXT=" + text + " PRODUCT=" + singleProduct);
+        String state = userStates.get(userId);
 
-        // ❌ якщо реально нічого не вибрано
+        System.out.println("[EDIT] TEXT=" + text + " STATE=" + state);
+
+        // ❌ якщо нічого не вибрано
         if ((productsToEdit == null || productsToEdit.isEmpty()) && singleProduct == null) {
             sendText(chatId, "❌ Спочатку виберіть товар.");
             return;
         }
 
-        // 🔥 ПІДФІЛЬТР — СТАВИМО ПЕРШИМ (ВАЖЛИВО)
-        if ("awaiting_subfilter".equals(userStates.get(userId))) {
+        // 🔥 ПІДФІЛЬТР
+        if ("awaiting_subfilter".equals(state)) {
 
             if ("⬅️ Назад".equals(text)) {
                 userStates.put(userId, "awaiting_filter_select");
@@ -5543,6 +5545,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
             String filterName = (String) tempStorage.get(userId + "_selected_filter_name");
 
+            if (filterName == null) {
+                sendText(chatId, "❌ Спочатку обери фільтр");
+                return;
+            }
+
             CatalogSearcher searcher = new CatalogSearcher();
             List<String> allowed = searcher.getSubfilters(filterName);
 
@@ -5551,145 +5558,84 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            Map<String, Object> product =
-                    (Map<String, Object>) tempStorage.get(userId + "_filter_product");
+            Map<String, Object> product = adminSelectedProduct.get(userId);
 
-            if (product != null) {
-
-                String productId = String.valueOf(product.get("id"));
-
-                updateProductSubfilter(productId, text);
-
-                sendText(chatId, "✅ Підфільтр встановлено: " + text);
-
-            } else {
+            if (product == null) {
                 sendText(chatId, "❌ Помилка: товар не знайдено");
+                return;
             }
+
+            String productId = String.valueOf(product.get("id"));
+            updateProductSubfilter(productId, text);
+
+            sendText(chatId, "✅ Підфільтр встановлено: " + text);
 
             userStates.remove(userId);
             return;
         }
 
-        // 🔥 ОПИС (НЕ ЗАЛЕЖИТЬ ВІД EMOJI)
-        if (text != null && text.toLowerCase().contains("опис")) {
+        // 🔥 ВИБІР ФІЛЬТРА
+        if ("awaiting_filter_select".equals(state)) {
 
-            adminEditingField.put(userId, "description");
-            userStates.put(userId, "editing_field_value");
-
-            if (productsToEdit != null && !productsToEdit.isEmpty()) {
-                sendText(chatId,
-                        "✏️ Введіть новий опис для "
-                                + productsToEdit.size()
-                                + " товар(ів):");
-            } else {
-                sendText(chatId, "✏️ Введіть новий опис:");
-            }
-
-            return;
-        }
-
-        // 🔥 НАЗВА
-        if (text != null && text.toLowerCase().contains("назв")) {
-            adminEditingField.put(userId, "name");
-            userStates.put(userId, "awaiting_field_value");
-            sendText(chatId, "✏️ Введіть нову назву товару:");
-            return;
-        }
-
-        // 🔥 ЦІНА
-        if (text != null && text.toLowerCase().contains("цін")) {
-            adminEditingField.put(userId, "price");
-            userStates.put(userId, "awaiting_field_value");
-            sendText(chatId, "💰 Введіть нову ціну:");
-            return;
-        }
-
-        if (text != null && text.toLowerCase().contains("фото")) {
-
-            if (productsToEdit != null && productsToEdit.size() > 1) {
-                sendText(chatId, "⚠️ Масове додавання фото не підтримується.");
+            if ("⬅️ Назад".equals(text)) {
+                userStates.remove(userId);
+                sendMessageSafely(createEditMenu(chatId, userId));
                 return;
             }
 
-            if (singleProduct != null) {
-
-                String productId = String.valueOf(singleProduct.get("id"));
-
-                startPhotoUpload(userId, chatId, productId);
-
-            } else {
-                sendText(chatId, "⚠️ Спочатку виберіть товар.");
+            if (text == null || text.isBlank()) {
+                sendText(chatId, "❌ Оберіть фільтр.");
+                return;
             }
 
-            return;
-        }
+            // 🔥 зберігаємо фільтр
+            tempStorage.put(userId + "_selected_filter_name", text);
 
-        // 🔥 ОДИНИЦЯ ВИМІРУ
-        if (text != null && text.toLowerCase().contains("одиниц")) {
-            adminEditingField.put(userId, "unit");
-            userStates.put(userId, "awaiting_field_value");
+            List<Map<String, Object>> products = adminSelectedProducts.get(userId);
+
+            if (products == null || products.isEmpty()) {
+                Map<String, Object> one = adminSelectedProduct.get(userId);
+                if (one != null) {
+                    products = List.of(one);
+                }
+            }
+
+            if (products == null || products.isEmpty()) {
+                sendText(chatId, "❌ Товари не знайдені.");
+                userStates.remove(userId);
+                return;
+            }
+
+            CatalogSearcher searcher = new CatalogSearcher();
+            int successCount = 0;
+
+            for (Map<String, Object> product : products) {
+                try {
+                    boolean success = searcher.addProductToFilter(product, text, null);
+                    if (success) successCount++;
+                } catch (Exception ignored) {}
+            }
+
+            userStates.remove(userId);
 
             sendText(chatId,
-                    "📏 Введіть одиницю виміру:\n\n" +
-                            "• шт\n" +
-                            "• метр\n" +
-                            "• м2\n" +
-                            "• під замовлення");
+                    "✅ Додано у фільтр \"" + text + "\" : " +
+                            successCount + " з " + products.size());
+
+            sendMessageSafely(createEditMenu(chatId, userId));
             return;
         }
 
-        // 🔥 ВИРОБНИК
-        if (text != null && text.toLowerCase().contains("виробник")) {
-            adminEditingField.put(userId, "manufacturer");
-            userStates.put(userId, "awaiting_field_value");
-            sendText(chatId, "🏭 Введіть виробника:");
-            return;
-        }
-
-        // 🔥 ПІДКАТЕГОРІЯ
-        if (text != null && text.toLowerCase().contains("підкатег")) {
-
-            userStates.put(userId, "awaiting_subcategory");
-            sendText(chatId, "📁 Введіть підкатегорію:");
-            return;
-        }
-
-        // 🔥 ФІЛЬТР
-        if (text != null && text.equals("🔽 Оберіть фільтр")) {
-
-            if (singleProduct == null) {
-                sendText(chatId, "⚠️ Спочатку виберіть товар.");
-                return;
-            }
-
-            tempStorage.put(userId + "_filter_product", singleProduct);
-            userStates.put(userId, "awaiting_filter_select");
-
-            sendText(chatId, "🔽 Оберіть фільтр:");
-            sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
-            return;
-        }
-
-        // 🔥 ДОДАТИ В ПІДФІЛЬТР
+        // 🔥 КНОПКА "ДОДАТИ В ПІДФІЛЬТР"
         if ("🧩 Додати в підфільтр".equals(text)) {
 
-            // 1. беремо товар (спочатку з основного сховища)
             Map<String, Object> product = adminSelectedProduct.get(userId);
-
-            // 2. fallback — якщо вже десь поклав у tempStorage
-            if (product == null) {
-                product = (Map<String, Object>) tempStorage.get(userId + "_filter_product");
-            }
 
             if (product == null) {
                 sendText(chatId, "❌ Спочатку обери товар");
                 return;
             }
 
-            // 🔥 гарантуємо, що він є в tempStorage для наступних кроків
-            tempStorage.put(userId + "_filter_product", product);
-
-            // 3. беремо вибраний фільтр
             String filterName = (String) tempStorage.get(userId + "_selected_filter_name");
 
             if (filterName == null) {
@@ -5705,18 +5651,14 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 4. ставимо стан
             userStates.put(userId, "awaiting_subfilter");
 
-            // 5. показуємо меню
             sendMessageSafely(createSubfilterMenu(filterName, chatId));
             return;
         }
 
         // 🔙 НАЗАД
         if (BACK_BUTTON.equals(text)) {
-
-            String state = userStates.getOrDefault(userId, "");
 
             System.out.println("🔙 BACK FROM: " + state);
 
