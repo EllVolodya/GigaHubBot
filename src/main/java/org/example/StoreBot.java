@@ -2271,17 +2271,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                case "🖼️ Додати фотографію" -> {
-                    System.out.println("[DEBUG] Button 'Add Photo' clicked by userId=" + userId);
-
-                    String productName = adminEditingProduct.get(userId);
-                    if (productName != null) {
-                        photoHandler.requestPhotoUpload(userId, chatId, productName);
-                    } else {
-                        sendText(chatId, "⚠️ Please select a product first.");
-                    }
-                }
-
                 case "Редагувати категорії" -> {
                     if (ADMINS.contains(userId)) {
                         userStates.put(userId, "category_management");
@@ -5632,6 +5621,23 @@ public class StoreBot extends TelegramLongPollingBot {
             userStates.put(userId, "awaiting_subfilter");
 
             sendMessageSafely(createSubfilterMenu(filterName, chatId));
+            return;
+        }
+
+        // 🖼️ ДОДАТИ ФОТО
+        if ("🖼️ Додати фотографію".equals(text)) {
+
+            Map<String, Object> product = adminSelectedProduct.get(userId);
+
+            if (product == null) {
+                sendText(chatId, "❌ Спочатку обери товар");
+                return;
+            }
+
+            String productName = String.valueOf(product.get("name"));
+
+            photoHandler.requestPhotoUpload(userId, chatId, productName);
+
             return;
         }
 
