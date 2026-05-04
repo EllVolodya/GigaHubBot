@@ -2400,6 +2400,37 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendText(chatId, "Ви хочете додати креатив з описом чи тільки медіа?\nНапишіть 'З описом' або 'Тільки медіа':");
                 }
 
+                case "🧩 Додати в підфільтр" -> {
+                    System.out.println("[DEBUG] Add to subfilter clicked: " + userId);
+
+                    Map<String, Object> product =
+                            (Map<String, Object>) tempStorage.get(userId + "_filter_product");
+
+                    if (product == null) {
+                        sendText(chatId, "❌ Спочатку обери товар");
+                        return;
+                    }
+
+                    String filterName = (String) tempStorage.get(userId + "_selected_filter_name");
+
+                    if (filterName == null) {
+                        sendText(chatId, "❌ Спочатку обери фільтр");
+                        return;
+                    }
+
+                    CatalogSearcher searcher = new CatalogSearcher();
+                    List<String> subfilters = searcher.getSubfilters(filterName);
+
+                    if (subfilters.isEmpty()) {
+                        sendText(chatId, "❌ У цього фільтра немає підфільтрів");
+                        return;
+                    }
+
+                    userStates.put(userId, "awaiting_subfilter");
+
+                    sendMessageSafely(createSubfilterMenu(filterName, chatId));
+                }
+
                 case "🎥 Відеоінструкція" -> {
                     SendVideo video = new SendVideo();
                     video.setChatId(chatId);
