@@ -431,7 +431,12 @@ public class CatalogSearcher {
 
         List<String> filters = new ArrayList<>();
 
-        String sql = "SELECT name FROM filters ORDER BY id";
+        String sql = """
+        SELECT name FROM filters
+        WHERE parent_id IS NULL
+        AND active = 1
+        ORDER BY sort_order
+    """;
 
         try(Connection conn = DatabaseManager.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql);
