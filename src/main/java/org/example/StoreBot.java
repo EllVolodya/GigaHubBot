@@ -1102,13 +1102,13 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 Беремо ВСІ вибрані товари
+            tempStorage.put(userId + "_selected_filter_name", text);
+
             List<Map<String, Object>> products =
                     adminSelectedProducts.get(userId);
 
             if (products == null || products.isEmpty()) {
 
-                // fallback якщо один товар
                 Map<String, Object> one =
                         adminSelectedProduct.get(userId);
 
