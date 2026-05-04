@@ -5704,15 +5704,23 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔥 ДОДАТИ В ПІДФІЛЬТР
         if ("🧩 Додати в підфільтр".equals(text)) {
 
-            Map<String, Object> product =
-                    (Map<String, Object>) tempStorage.get(userId + "_filter_product");
+            // 1. беремо товар (спочатку з основного сховища)
+            Map<String, Object> product = adminSelectedProduct.get(userId);
+
+            // 2. fallback — якщо вже десь поклав у tempStorage
+            if (product == null) {
+                product = (Map<String, Object>) tempStorage.get(userId + "_filter_product");
+            }
 
             if (product == null) {
                 sendText(chatId, "❌ Спочатку обери товар");
                 return;
             }
 
-            // беремо збережений фільтр (ти вже це робиш)
+            // 🔥 гарантуємо, що він є в tempStorage для наступних кроків
+            tempStorage.put(userId + "_filter_product", product);
+
+            // 3. беремо вибраний фільтр
             String filterName = (String) tempStorage.get(userId + "_selected_filter_name");
 
             if (filterName == null) {
@@ -5723,13 +5731,15 @@ public class StoreBot extends TelegramLongPollingBot {
             CatalogSearcher searcher = new CatalogSearcher();
             List<String> subfilters = searcher.getSubfilters(filterName);
 
-            if (subfilters.isEmpty()) {
+            if (subfilters == null || subfilters.isEmpty()) {
                 sendText(chatId, "❌ У цього фільтра немає підфільтрів");
                 return;
             }
 
+            // 4. ставимо стан
             userStates.put(userId, "awaiting_subfilter");
 
+            // 5. показуємо меню
             sendMessageSafely(createSubfilterMenu(filterName, chatId));
             return;
         }
