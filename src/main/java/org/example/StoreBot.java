@@ -5565,7 +5565,8 @@ public class StoreBot extends TelegramLongPollingBot {
                 userStates.put(userId, "awaiting_filter_select");
 
                 sendText(chatId, "🔽 Спочатку обери фільтр:");
-                sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
+
+                sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0));
 
                 return;
             }
