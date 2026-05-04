@@ -432,12 +432,22 @@ public class CatalogEditor {
 
     public static boolean updateFieldById(int productId, String field, Object value) {
 
+        if (productId <= 0) {
+            System.out.println("❌ Невірний productId.");
+            return false;
+        }
+
         if (field == null || field.trim().isEmpty()) {
             System.out.println("❌ Поле не вказано.");
             return false;
         }
 
         field = field.trim().toLowerCase();
+
+        System.out.println("========== updateFieldById() ==========");
+        System.out.println("DEBUG ProductId = " + productId);
+        System.out.println("DEBUG Field     = " + field);
+        System.out.println("DEBUG Value     = " + value);
 
         Set<String> allowedFields = Set.of(
                 "price",
@@ -465,31 +475,40 @@ public class CatalogEditor {
                 if (value == null || value.toString().trim().isEmpty()) {
                     ps.setNull(1, Types.BLOB);
                 } else {
-                    ps.setBytes(1, value.toString().getBytes(StandardCharsets.UTF_8));
+                    ps.setBytes(1,
+                            value.toString().getBytes(StandardCharsets.UTF_8));
                 }
 
             } else if ("price".equals(field)) {
 
-                double price = value instanceof Number
-                        ? ((Number) value).doubleValue()
-                        : Double.parseDouble(value.toString().replace(",", "."));
+                double price;
+
+                if (value instanceof Number) {
+                    price = ((Number) value).doubleValue();
+                } else {
+                    price = Double.parseDouble(
+                            value.toString().replace(",", ".").trim()
+                    );
+                }
 
                 ps.setDouble(1, price);
 
             } else {
 
-                ps.setString(1, value == null ? "" : value.toString());
+                ps.setString(1,
+                        value == null ? "" : value.toString().trim());
             }
 
             ps.setInt(2, productId);
 
             int rows = ps.executeUpdate();
 
-            System.out.println("UPDATED ROWS = " + rows);
+            System.out.println("DEBUG Rows updated = " + rows);
 
             return rows > 0;
 
         } catch (Exception e) {
+            System.out.println("❌ updateFieldById ERROR: " + e.getMessage());
             e.printStackTrace();
             return false;
         }
