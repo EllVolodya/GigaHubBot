@@ -5459,9 +5459,9 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔥 ПІДФІЛЬТР
         if ("awaiting_subfilter".equals(state)) {
 
-            if ("⬅️ Назад".equals(text)) {
+            if (BACK_BUTTON.equals(text)) {
                 userStates.put(userId, "awaiting_filter_select");
-                sendMessageSafely(createFilterSelectMenu(userId, chatId, 0));
+                sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0));
                 return;
             }
 
@@ -5475,7 +5475,23 @@ public class StoreBot extends TelegramLongPollingBot {
             CatalogSearcher searcher = new CatalogSearcher();
             List<String> allowed = searcher.getSubfilters(filterName);
 
-            if (!allowed.contains(text)) {
+            if (allowed == null || allowed.isEmpty()) {
+                sendText(chatId, "❌ Підфільтри не знайдені");
+                return;
+            }
+
+            // 🔥 НОРМАЛІЗАЦІЯ ТЕКСТУ
+            String cleanText = text.trim();
+            String matchedSubfilter = null;
+
+            for (String sub : allowed) {
+                if (sub.equalsIgnoreCase(cleanText)) {
+                    matchedSubfilter = sub; // беремо точний варіант з БД
+                    break;
+                }
+            }
+
+            if (matchedSubfilter == null) {
                 sendText(chatId, "❌ Обери підфільтр з кнопок");
                 return;
             }
@@ -5488,11 +5504,21 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             String productId = String.valueOf(product.get("id"));
-            updateProductSubfilter(productId, text);
 
-            sendText(chatId, "✅ Підфільтр встановлено: " + text);
+            try {
+                updateProductSubfilter(productId, matchedSubfilter);
+            } catch (Exception e) {
+                e.printStackTrace();
+                sendText(chatId, "❌ Помилка при збереженні підфільтра");
+                return;
+            }
+
+            sendText(chatId, "✅ Підфільтр встановлено: " + matchedSubfilter);
 
             userStates.remove(userId);
+
+            sendMessageSafely(createEditMenu(chatId, userId));
+
             return;
         }
 
