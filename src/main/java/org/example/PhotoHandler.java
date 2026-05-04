@@ -46,6 +46,7 @@ public class PhotoHandler {
         System.out.println("[DEBUG] handleAwaitingPhoto triggered for userId=" + userId);
 
         String productName = adminEditingProduct.get(userId);
+
         if (productName == null || productName.isEmpty()) {
             bot.sendText(chatId, "⚠️ No product selected.");
             userStates.remove(userId);
@@ -66,18 +67,21 @@ public class PhotoHandler {
             if (msg.hasPhoto()) {
                 var photos = msg.getPhoto();
                 var largestPhoto = photos.get(photos.size() - 1);
+
                 File file = bot.downloadTelegramFile(largestPhoto.getFileId());
                 imageUrl = CloudinaryManager.uploadImage(file, "products");
-                System.out.println("[DEBUG] Photo uploaded for userId=" + userId);
 
+                System.out.println("[DEBUG] Photo uploaded for userId=" + userId);
             }
+
             // === DOCUMENT ===
             else if (msg.hasDocument()) {
                 File file = bot.downloadTelegramFile(msg.getDocument().getFileId());
                 imageUrl = CloudinaryManager.uploadImage(file, "products");
-                System.out.println("[DEBUG] Document uploaded for userId=" + userId);
 
+                System.out.println("[DEBUG] Document uploaded for userId=" + userId);
             }
+
             // === TEXT URL ===
             else if (msg.hasText()) {
                 imageUrl = msg.getText().trim();
@@ -88,18 +92,18 @@ public class PhotoHandler {
                 }
 
                 if (imageUrl.startsWith("blob:") || imageUrl.startsWith("file://") || imageUrl.matches("^[a-zA-Z]:\\\\.*")) {
-                    bot.sendText(chatId, "❌ Local or blob URLs are not supported. Please send a proper internet URL.");
+                    bot.sendText(chatId, "❌ Local or blob URLs are not supported.");
                     return;
                 }
 
                 if (!imageUrl.startsWith("http://") && !imageUrl.startsWith("https://")) {
-                    bot.sendText(chatId, "❌ This does not look like a valid URL. Please send a proper image URL.");
+                    bot.sendText(chatId, "❌ Invalid URL.");
                     return;
                 }
 
                 System.out.println("[DEBUG] Text URL received: " + imageUrl);
             }
-            // === NOTHING VALID ===
+
             else {
                 bot.sendText(chatId, "📎 Please send a photo, document, or an image URL.");
                 return;
@@ -107,11 +111,25 @@ public class PhotoHandler {
 
             // === SAVE IMAGE ===
             if (imageUrl != null) {
-                boolean updated = CatalogEditor.updateField(productName, "photo", imageUrl);
+
+                // 🔥 ВАЖЛИВО: отримуємо ID через пошук
+                CatalogSearcher searcher = new CatalogSearcher();
+                String productId = searcher.getProductIdByName(productName);
+
+                System.out.println("DEBUG ProductName = " + productName);
+                System.out.println("DEBUG ProductId = " + productId);
+
+                if (productId == null) {
+                    bot.sendText(chatId, "❌ Product not found in DB.");
+                    return;
+                }
+
+                boolean updated = CatalogEditor.updateField(productId, "photo", imageUrl);
+
                 if (updated) {
                     bot.sendText(chatId, "✅ Photo successfully updated for product '" + productName + "'.");
                 } else {
-                    bot.sendText(chatId, "⚠️ Received the image, but failed to update the database.");
+                    bot.sendText(chatId, "⚠️ Failed to update database.");
                 }
             }
 

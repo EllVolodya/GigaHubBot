@@ -940,4 +940,26 @@ public class CatalogSearcher {
 
         return products;
     }
+
+    public String getProductIdByName(String productName) {
+
+        String sql = "SELECT id FROM products WHERE name = ? LIMIT 1";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, productName);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return String.valueOf(rs.getInt("id"));
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
 }
