@@ -5512,7 +5512,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             CatalogSearcher searcher = new CatalogSearcher();
 
-            // 🔥 перевіряємо що це реально існуючий фільтр
             List<String> allowedFilters = searcher.getFiltersAdmin();
 
             if (allowedFilters == null || !allowedFilters.contains(text)) {
@@ -5520,10 +5519,8 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔥 зберігаємо вибраний фільтр
             tempStorage.put(userId + "_selected_filter_name", text);
 
-            // 🔥 беремо товари
             List<Map<String, Object>> products = adminSelectedProducts.get(userId);
 
             if (products == null || products.isEmpty()) {
@@ -5544,36 +5541,25 @@ public class StoreBot extends TelegramLongPollingBot {
             for (Map<String, Object> product : products) {
                 try {
                     boolean success = searcher.addProductToFilter(product, text, null);
-
-                    if (success) {
-                        successCount++;
-                    } else {
-                        System.out.println("❌ Не додано: " + text);
-                    }
-
+                    if (success) successCount++;
                 } catch (Exception e) {
-                    e.printStackTrace(); // 🔥 тепер ти бачиш реальну помилку
+                    e.printStackTrace();
                 }
             }
-
-            userStates.remove(userId);
 
             if (successCount == 0) {
                 sendText(chatId, "❌ Не вдалося додати у фільтр \"" + text + "\"");
                 return;
             }
 
-            sendText(
-                    chatId,
-                    "✅ Додано у фільтр \"" +
-                            text +
-                            "\" : " +
-                            successCount +
-                            " з " +
-                            products.size()
-            );
+            sendText(chatId,
+                    "✅ Фільтр \"" + text + "\" встановлено\n" +
+                            "🧩 Тепер обери підфільтр:");
 
-            sendMessageSafely(createEditMenu(chatId, userId));
+            userStates.put(userId, "awaiting_subfilter");
+
+            sendMessageSafely(createSubfilterMenu(text, chatId));
+
             return;
         }
 
