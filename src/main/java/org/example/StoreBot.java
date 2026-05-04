@@ -5496,7 +5496,7 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 ВИБІР ФІЛЬТРА
+        // 🔥 ВИБІР ФІЛЬТРА → ПЕРЕХІД ДО ПІДФІЛЬТРА
         if ("awaiting_filter_select".equals(state)) {
 
             if (BACK_BUTTON.equals(text)) {
@@ -5514,13 +5514,31 @@ public class StoreBot extends TelegramLongPollingBot {
 
             List<String> allowedFilters = searcher.getFiltersAdmin();
 
-            if (allowedFilters == null || !allowedFilters.contains(text)) {
+            if (allowedFilters == null || allowedFilters.isEmpty()) {
+                sendText(chatId, "❌ Фільтри не знайдені.");
+                return;
+            }
+
+            // 🔥 НОРМАЛІЗАЦІЯ ТЕКСТУ (ключ до вирішення твоєї проблеми)
+            String cleanText = text.trim();
+            String matchedFilter = null;
+
+            for (String f : allowedFilters) {
+                if (f.equalsIgnoreCase(cleanText)) {
+                    matchedFilter = f; // беремо точне значення з БД
+                    break;
+                }
+            }
+
+            if (matchedFilter == null) {
                 sendText(chatId, "❌ Обери фільтр з кнопок.");
                 return;
             }
 
-            tempStorage.put(userId + "_selected_filter_name", text);
+            // 🔥 зберігаємо правильне значення
+            tempStorage.put(userId + "_selected_filter_name", matchedFilter);
 
+            // 🔥 беремо товари
             List<Map<String, Object>> products = adminSelectedProducts.get(userId);
 
             if (products == null || products.isEmpty()) {
@@ -5540,7 +5558,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             for (Map<String, Object> product : products) {
                 try {
-                    boolean success = searcher.addProductToFilter(product, text, null);
+                    boolean success = searcher.addProductToFilter(product, matchedFilter, null);
                     if (success) successCount++;
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -5548,17 +5566,19 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             if (successCount == 0) {
-                sendText(chatId, "❌ Не вдалося додати у фільтр \"" + text + "\"");
+                sendText(chatId, "❌ Не вдалося додати у фільтр \"" + matchedFilter + "\"");
                 return;
             }
 
             sendText(chatId,
-                    "✅ Фільтр \"" + text + "\" встановлено\n" +
-                            "🧩 Тепер обери підфільтр:");
+                    "✅ Фільтр \"" + matchedFilter + "\" встановлено\n" +
+                            "🧩 Обери підфільтр:");
 
+            // 🔥 ПЕРЕХІД У НАСТУПНИЙ СТАН
             userStates.put(userId, "awaiting_subfilter");
 
-            sendMessageSafely(createSubfilterMenu(text, chatId));
+            // 🔥 ВІДКРИВАЄМО ПІДФІЛЬТРИ
+            sendMessageSafely(createSubfilterMenu(matchedFilter, chatId));
 
             return;
         }
