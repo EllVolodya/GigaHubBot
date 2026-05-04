@@ -140,7 +140,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Boolean> developerMenuState = new HashMap<>();
     private final Map<String, String> developerState = new HashMap<>(); // Зберігаємо стан кожного користувача по chatId
 
-    private final PhotoHandler photoHandler = new PhotoHandler(this, userStates, adminEditingProduct);
+    private final PhotoHandler photoHandler =
+            new PhotoHandler(this, userStates, adminEditingProduct, adminSelectedProduct);
     private final Map<String, String> tempProductName = new HashMap<>(); // Тимчасово зберігаємо назву товару для ручного оновлення ціни
 
     private static final String BACK_BUTTON = "⬅️ Назад";
