@@ -5648,7 +5648,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         // 🔥 ФІЛЬТР
-        if (text != null && text.toLowerCase().contains("фільтр")) {
+        if (text != null && text.equals("🔽 Оберіть фільтр")) {
 
             if (singleProduct == null) {
                 sendText(chatId, "⚠️ Спочатку виберіть товар.");
