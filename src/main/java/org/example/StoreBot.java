@@ -3720,7 +3720,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 if (category == null) {
 
-                    sendText(chatId, "❌ Категорія не знайдена.");
+                    sendText(
+                            chatId,
+                            "❌ Категорія не знайдена."
+                    );
 
                     userStates.put(userId, "catalog");
 
@@ -3750,10 +3753,22 @@ public class StoreBot extends TelegramLongPollingBot {
 
                         try {
 
+                            // 🔥 завантажуємо фільтри
+                            List<String> filters =
+                                    catalogSearcher.getFilters(
+                                            category,
+                                            sub
+                                    );
+
+                            System.out.println("FILTERS = " + filters);
+
+                            // 🔥 зберігаємо фільтри
+                            userFilters.put(userId, filters);
+
                             // 🔥 відкриваємо фільтри
                             sendFilters(
                                     userId,
-                                    Integer.parseInt(chatId)
+                                    0
                             );
 
                         } catch (Exception e) {
