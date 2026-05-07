@@ -3274,8 +3274,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "choose_product": {
 
-                    sendText(chatId, "↩️ Назад");
+                    // 🔥 очищаємо вибрані товари
+                    adminSelectedProduct.remove(userId);
+                    adminSelectedProducts.remove(userId);
+                    adminSelectedProductsRange.remove(userId);
 
+                    // 🔥 якщо була підкатегорія
                     if (currentSubcategory.containsKey(userId)) {
 
                         String category = currentCategory.get(userId);
@@ -3292,6 +3296,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         return;
                     }
 
+                    // 🔥 якщо була категорія
                     if (currentCategory.containsKey(userId)) {
 
                         currentCategory.remove(userId);
@@ -3303,6 +3308,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         return;
                     }
 
+                    // 🔥 головне меню
                     userStates.remove(userId);
 
                     sendMessageSafely(
