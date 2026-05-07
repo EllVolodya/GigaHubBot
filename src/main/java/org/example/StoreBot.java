@@ -9670,13 +9670,15 @@ public class StoreBot extends TelegramLongPollingBot {
         return -1;
     }
 
-    /// Показ кошику з товаром (Новий)
+    /// Показ кошику з товаром
     private void showCartNice(Long userId, String chatId) {
 
         List<Map<String, Object>> cart = userCart.get(userId);
 
         if (cart == null || cart.isEmpty()) {
+
             sendText(chatId, "🛒 Кошик порожній.");
+
             return;
         }
 
@@ -9696,18 +9698,67 @@ public class StoreBot extends TelegramLongPollingBot {
                     item.get("price").toString().replace(",", ".")
             );
 
-            int qty = Integer.parseInt(item.get("quantity").toString());
+            int qty = Integer.parseInt(
+                    item.get("quantity").toString()
+            );
 
             double sum = price * qty;
+
             total += sum;
 
-            sb.append("🔸 ").append(i++).append(". ").append(name).append("\n");
-            sb.append("   🔢 Кількість: ").append(qty).append("\n");
-            sb.append("   💵 Ціна за 1: ").append(String.format("%.2f", price)).append(" грн\n");
-            sb.append("   💰 Сума: ").append(String.format("%.2f", sum)).append(" грн\n\n");
+            sb.append("🔸 ")
+                    .append(i++)
+                    .append(". ")
+                    .append(name)
+                    .append("\n");
+
+            // 🔥 АВТО-РОЗРАХУНОК м² ДЛЯ ПЛИТКИ
+
+            try {
+
+                Pattern pattern =
+                        Pattern.compile("(\\d+)[xхXХ](\\d+)");
+
+                Matcher matcher =
+                        pattern.matcher(name);
+
+                if (matcher.find()) {
+
+                    double width =
+                            Double.parseDouble(matcher.group(1)) / 100.0;
+
+                    double height =
+                            Double.parseDouble(matcher.group(2)) / 100.0;
+
+                    double oneTileM2 =
+                            width * height;
+
+                    double totalM2 =
+                            oneTileM2 * qty;
+
+                    sb.append("   📐 м²: ")
+                            .append(String.format("%.2f", totalM2))
+                            .append(" м²\n");
+                }
+
+            } catch (Exception ignored) {
+            }
+
+            sb.append("   🔢 Кількість: ")
+                    .append(qty)
+                    .append(" шт\n");
+
+            sb.append("   💵 Ціна за 1: ")
+                    .append(String.format("%.2f", price))
+                    .append(" грн\n");
+
+            sb.append("   💰 Сума: ")
+                    .append(String.format("%.2f", sum))
+                    .append(" грн\n\n");
         }
 
         sb.append("━━━━━━━━━━━━━━\n");
+
         sb.append("💳 Всього до оплати: ")
                 .append(String.format("%.2f", total))
                 .append(" грн\n");
