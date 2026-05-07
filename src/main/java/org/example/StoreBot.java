@@ -6775,8 +6775,9 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // --- Показ підкатегорій ---
     private void sendSubcategories(Long chatId, String categoryName) {
+
+        currentCategory.put(chatId, categoryName);
 
         String sql = """
         SELECT s.name
@@ -6801,14 +6802,20 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             if (subcategories.isEmpty()) {
-                sendText(chatId, "❌ У цій категорії немає підкатегорій.");
+
+                sendText(
+                        chatId,
+                        "❌ У цій категорії немає підкатегорій."
+                );
+
                 return;
             }
 
-            ReplyKeyboardMarkup markup = ReplyKeyboardMarkup.builder()
-                    .resizeKeyboard(true)
-                    .keyboard(buildKeyboard(subcategories, true))
-                    .build();
+            ReplyKeyboardMarkup markup =
+                    ReplyKeyboardMarkup.builder()
+                            .resizeKeyboard(true)
+                            .keyboard(buildKeyboard(subcategories, true))
+                            .build();
 
             sendMessage(
                     chatId,
@@ -6822,7 +6829,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
             e.printStackTrace();
 
-            sendText(chatId, "⚠️ Помилка при отриманні підкатегорій із бази.");
+            sendText(
+                    chatId,
+                    "⚠️ Помилка при отриманні підкатегорій із бази."
+            );
         }
     }
 
