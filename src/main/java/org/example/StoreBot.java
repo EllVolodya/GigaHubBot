@@ -6682,7 +6682,8 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         /* ПІДКАТЕГОРІЇ */
-        if (currentCategory.containsKey(chatId)) {
+        if ("subcategory".equals(state)
+                && currentCategory.containsKey(chatId)) {
 
             String category = currentCategory.get(chatId);
 
@@ -6692,10 +6693,6 @@ public class StoreBot extends TelegramLongPollingBot {
             // 🔥 DEBUG
             System.out.println("[DEBUG] CATEGORY = " + category);
             System.out.println("[DEBUG] TEXT = [" + text + "]");
-
-            for (String s : subcats) {
-                System.out.println("[DEBUG] SUBCATEGORY = [" + s + "]");
-            }
 
             // 🔥 НОРМАЛІЗАЦІЯ
             String cleanText = text.trim();
@@ -6732,7 +6729,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 filterPage.put(chatId, 0);
 
-                // 🔥 ВАЖЛИВО
+                // 🔥 ПЕРЕХІД У FILTERS
                 userStates.put(chatId, "filters");
 
                 sendFilters(chatId, 0);
@@ -6741,22 +6738,6 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             System.out.println("[DEBUG] SUBCATEGORY NOT FOUND");
-        }
-
-        /* ПІДФІЛЬТРИ */
-        String filter = currentFilter.get(chatId);
-
-        if (filter != null) {
-
-            List<String> subfilters = catalogSearcher.getSubfilters(filter);
-
-            if (subfilters.contains(text)) {
-
-                currentSubfilter.put(chatId, text);
-
-                sendProductList(chatId);
-                return;
-            }
         }
 
         /* ФІЛЬТРИ */
