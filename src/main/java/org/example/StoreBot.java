@@ -6943,19 +6943,26 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
+            // 🔥 нова клавіатура
             ReplyKeyboardMarkup markup =
                     ReplyKeyboardMarkup.builder()
                             .resizeKeyboard(true)
                             .keyboard(buildKeyboard(subcategories, true))
                             .build();
 
-            sendMessage(
-                    chatId,
+            SendMessage message = new SendMessage();
+
+            message.setChatId(chatId.toString());
+
+            message.setText(
                     "🧱 Обери підкатегорію, друже!\n\n" +
                             "Митрофан уже стоїть біля стелажа — каска на місці, ліхтар увімкнений 🔦\n" +
-                            "Залишилось тільки сказати, що саме шукаємо — і я миттю знайду потрібний товар 😉",
-                    markup
+                            "Залишилось тільки сказати, що саме шукаємо — і я миттю знайду потрібний товар 😉"
             );
+
+            message.setReplyMarkup(markup);
+
+            execute(message);
 
         } catch (Exception e) {
 
