@@ -6686,21 +6686,61 @@ public class StoreBot extends TelegramLongPollingBot {
 
             String category = currentCategory.get(chatId);
 
-            List<String> subcats = catalogSearcher.getSubcategories(category);
+            List<String> subcats =
+                    catalogSearcher.getSubcategories(category);
 
-            if (subcats.contains(text)) {
+            // 🔥 DEBUG
+            System.out.println("[DEBUG] CATEGORY = " + category);
+            System.out.println("[DEBUG] TEXT = [" + text + "]");
 
-                currentSubcategory.put(chatId, text);
+            for (String s : subcats) {
+                System.out.println("[DEBUG] SUBCATEGORY = [" + s + "]");
+            }
+
+            // 🔥 НОРМАЛІЗАЦІЯ
+            String cleanText = text.trim();
+
+            String matchedSubcategory = null;
+
+            for (String sub : subcats) {
+
+                if (sub != null &&
+                        sub.trim().equalsIgnoreCase(cleanText)) {
+
+                    matchedSubcategory = sub.trim();
+                    break;
+                }
+            }
+
+            // 🔥 ЯКЩО ЗНАЙШЛИ
+            if (matchedSubcategory != null) {
+
+                System.out.println("[DEBUG] MATCHED SUBCATEGORY = "
+                        + matchedSubcategory);
+
+                currentSubcategory.put(chatId, matchedSubcategory);
+
                 productIndex.put(chatId, 0);
 
-                List<String> filters = catalogSearcher.getFilters(category, text);
+                List<String> filters =
+                        catalogSearcher.getFilters(
+                                category,
+                                matchedSubcategory
+                        );
 
                 userFilters.put(chatId, filters);
+
                 filterPage.put(chatId, 0);
 
+                // 🔥 ВАЖЛИВО
+                userStates.put(chatId, "filters");
+
                 sendFilters(chatId, 0);
+
                 return;
             }
+
+            System.out.println("[DEBUG] SUBCATEGORY NOT FOUND");
         }
 
         /* ПІДФІЛЬТРИ */
