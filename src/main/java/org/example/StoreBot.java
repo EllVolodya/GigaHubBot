@@ -2614,15 +2614,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // 🔙 НАЗАД
-                case "назад":
-                case "⬅️ назад":
-                case "⬅ назад":
-                case "← назад":
-                case "back":
-                    handleBack(userId, chatId);
-                    return;
-
                 default:
                     // 🔥 fallback для кривого тексту
                     if (text != null) {
