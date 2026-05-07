@@ -427,27 +427,37 @@ public class StoreBot extends TelegramLongPollingBot {
                     tempStorage.remove(userId + "_product");
                     userStates.remove(userId);
 
-                    sendText(chatId,
-                            "↩️ Повернулись назад в каталог товарів.");
+                    sendText(
+                            chatId,
+                            "↩️ Повернулись назад в каталог товарів."
+                    );
 
                     if (currentSubcategory.containsKey(userId)) {
+
                         sendProductList(Long.valueOf(chatId));
+
                         return;
                     }
 
                     if (currentCategory.containsKey(userId)) {
+
                         sendSubcategories(
                                 userId,
                                 currentCategory.get(userId)
                         );
+
                         return;
                     }
 
                     sendCategories(userId);
+
                     return;
                 }
 
-                // Кількість
+                // =====================================================
+                // 🔥 КІЛЬКІСТЬ
+                // =====================================================
+
                 int qty;
 
                 try {
@@ -455,48 +465,75 @@ public class StoreBot extends TelegramLongPollingBot {
                     qty = Integer.parseInt(text.trim());
 
                     if (qty <= 0) {
-                        sendText(chatId,
-                                "❌ Кількість має бути більше 0.");
+
+                        sendText(
+                                chatId,
+                                "❌ Кількість має бути більше 0."
+                        );
+
                         return;
                     }
 
                 } catch (Exception e) {
 
-                    sendText(chatId,
-                            "❌ Введіть число (1, 2, 3...)");
+                    sendText(
+                            chatId,
+                            "❌ Введіть число (1, 2, 3...)"
+                    );
+
                     return;
                 }
 
-                // Товар
+                // =====================================================
+                // 🔥 ТОВАР
+                // =====================================================
+
                 Map<String, Object> product =
                         (Map<String, Object>)
                                 tempStorage.get(userId + "_product");
 
                 if (product == null) {
-                    sendText(chatId,
-                            "❌ Товар не знайдено.");
+
+                    sendText(
+                            chatId,
+                            "❌ Товар не знайдено."
+                    );
+
                     return;
                 }
 
-                // 🔥 залишок на складі
+                // =====================================================
+                // 🔥 ЗАЛИШОК НА СКЛАДІ
+                // =====================================================
+
                 int stock = 0;
 
                 try {
 
-                    Object quantityObj =
-                            product.get("quantity");
+                    Object stockObj =
+                            product.get("stock_quantity");
 
-                    if (quantityObj != null) {
+                    // 🔥 якщо ще нема stock_quantity
+                    if (stockObj == null) {
+
+                        stockObj =
+                                product.get("quantity");
+                    }
+
+                    if (stockObj != null) {
 
                         stock = Integer.parseInt(
-                                quantityObj.toString()
+                                stockObj.toString()
                         );
                     }
 
                 } catch (Exception ignored) {
                 }
 
-                // 🔥 перевірка кількості
+                // =====================================================
+                // 🔥 ПЕРЕВІРКА КІЛЬКОСТІ
+                // =====================================================
+
                 if (qty > stock) {
 
                     sendText(
@@ -510,11 +547,24 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // Кошик
+                // =====================================================
+                // 🔥 КОШИК
+                // =====================================================
+
                 Map<String, Object> cartItem =
                         new HashMap<>(product);
 
-                cartItem.put("quantity", qty);
+                // 🔥 зберігаємо залишок складу
+                cartItem.put(
+                        "stock_quantity",
+                        stock
+                );
+
+                // 🔥 кількість користувача
+                cartItem.put(
+                        "quantity",
+                        qty
+                );
 
                 List<Map<String, Object>> cart =
                         userCart.getOrDefault(
@@ -526,46 +576,87 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 for (Map<String, Object> item : cart) {
 
-                    if (item.get("id") != null &&
-                            cartItem.get("id") != null &&
-                            item.get("id").toString()
-                                    .equals(
-                                            cartItem.get("id").toString()
-                                    )) {
+                    if (item.get("id") != null
+                            && cartItem.get("id") != null
+                            && item.get("id").toString()
+                            .equals(
+                                    cartItem.get("id").toString()
+                            )) {
 
                         int oldQty =
                                 Integer.parseInt(
                                         item.get("quantity").toString()
                                 );
 
-                        item.put("quantity", oldQty + qty);
+                        int newQty =
+                                oldQty + qty;
+
+                        // 🔥 перевірка сумарної кількості
+                        if (newQty > stock) {
+
+                            sendText(
+                                    chatId,
+                                    "❌ На складі доступно тільки "
+                                            + stock
+                                            + " шт."
+                            );
+
+                            return;
+                        }
+
+                        item.put(
+                                "quantity",
+                                newQty
+                        );
 
                         found = true;
+
                         break;
                     }
                 }
 
                 if (!found) {
+
                     cart.add(cartItem);
                 }
 
                 userCart.put(userId, cart);
 
-                sendText(chatId,
+                // =====================================================
+                // 🔥 УСПІХ
+                // =====================================================
+
+                sendText(
+                        chatId,
                         "✅ Додано в кошик: "
                                 + product.get("name")
-                                + " (" + qty + " шт)");
+                                + " (" + qty + " шт)"
+                );
 
-                lastShownProduct.put(userId, product);
+                lastShownProduct.put(
+                        userId,
+                        product
+                );
 
-                tempStorage.remove(userId + "_product");
+                tempStorage.remove(
+                        userId + "_product"
+                );
 
-                userStates.put(userId, "in_cart");
+                userStates.put(
+                        userId,
+                        "in_cart"
+                );
 
-                // Показ кошика
-                showCartNice(userId, chatId);
+                // 🔥 показ кошика
+                showCartNice(
+                        userId,
+                        chatId
+                );
 
-                // Кнопки
+                // =====================================================
+                // 🔥 КНОПКИ
+                // =====================================================
+
                 ReplyKeyboardMarkup markup =
                         new ReplyKeyboardMarkup();
 
@@ -573,24 +664,42 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 KeyboardRow row1 =
                         new KeyboardRow();
-                row1.add("🚛 Оформити замовлення");
+
+                row1.add(
+                        "🚛 Оформити замовлення"
+                );
 
                 KeyboardRow row2 =
                         new KeyboardRow();
-                row2.add("❌ Видалити товар");
-                row2.add("✏️ Змінити кількість");
+
+                row2.add(
+                        "❌ Видалити товар"
+                );
+
+                row2.add(
+                        "✏️ Змінити кількість"
+                );
 
                 KeyboardRow row3 =
                         new KeyboardRow();
-                row3.add(BACK_BUTTON);
 
-                markup.setKeyboard(
-                        List.of(row1, row2, row3)
+                row3.add(
+                        BACK_BUTTON
                 );
 
-                sendMessage(chatId,
+                markup.setKeyboard(
+                        List.of(
+                                row1,
+                                row2,
+                                row3
+                        )
+                );
+
+                sendMessage(
+                        chatId,
                         "📦 Ваш кошик:",
-                        markup);
+                        markup
+                );
 
                 return;
 
@@ -598,8 +707,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 e.printStackTrace();
 
-                sendText(chatId,
-                        "❌ Помилка при обробці кошика.");
+                sendText(
+                        chatId,
+                        "❌ Помилка при обробці кошика."
+                );
+
                 return;
             }
         }
