@@ -9714,9 +9714,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             boolean m2Calculated = false;
 
-            // =====================================================
             // 🔥 АВТО-РОЗРАХУНОК м² ДЛЯ ПЛИТКИ
-            // =====================================================
 
             try {
 
@@ -9750,9 +9748,7 @@ public class StoreBot extends TelegramLongPollingBot {
             } catch (Exception ignored) {
             }
 
-            // =====================================================
             // 🔥 АВТО-РОЗРАХУНОК м² ДЛЯ ЛІНОЛЕУМУ
-            // =====================================================
 
             if (!m2Calculated) {
 
