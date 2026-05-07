@@ -3745,20 +3745,25 @@ public class StoreBot extends TelegramLongPollingBot {
 
                         found = true;
 
+                        // 🔥 зберігаємо підкатегорію
                         currentSubcategory.put(userId, sub);
-
-                        userStates.put(userId, "choose_product");
 
                         try {
 
-                            sendProductList(userId);
+                            // 🔥 відкриваємо фільтри
+                            sendFilters(
+                                    userId,
+                                    Integer.parseInt(chatId)
+                            );
 
-                        } catch (TelegramApiException e) {
+                        } catch (Exception e) {
 
                             e.printStackTrace();
 
-                            sendText(chatId,
-                                    "❌ Помилка при відкритті товарів.");
+                            sendText(
+                                    chatId,
+                                    "❌ Помилка при відкритті фільтрів."
+                            );
                         }
 
                         break;
@@ -3767,8 +3772,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 if (!found) {
 
-                    sendText(chatId,
-                            "❌ Підкатегорія не знайдена.");
+                    sendText(
+                            chatId,
+                            "❌ Підкатегорія не знайдена."
+                    );
                 }
             }
             case "editing" -> handleEditing(userId, chatId, text);
