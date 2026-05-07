@@ -3835,7 +3835,32 @@ public class StoreBot extends TelegramLongPollingBot {
 
                         try {
 
-                            // 🔥 завантажуємо товари
+                            // 🔥 отримуємо підфільтри
+                            List<String> subfilters =
+                                    catalogSearcher.getSubfilters(filter);
+
+                            System.out.println("SUBFILTERS = " + subfilters);
+
+                            // 🔥 ЯКЩО Є ПІДФІЛЬТРИ
+
+                            if (subfilters != null && !subfilters.isEmpty()) {
+
+                                userStates.put(
+                                        userId,
+                                        "subfilter"
+                                );
+
+                                sendSubfilters(
+                                        userId,
+                                        filter,
+                                        0
+                                );
+
+                                return;
+                            }
+
+                            // 🔥 ЯКЩО ПІДФІЛЬТРІВ НЕМАЄ
+
                             List<Map<String, Object>> products =
                                     catalogSearcher.findProducts(
                                             currentCategory.get(userId),
@@ -3849,13 +3874,11 @@ public class StoreBot extends TelegramLongPollingBot {
                                     products
                             );
 
-                            // 🔥 state товарів
                             userStates.put(
                                     userId,
                                     "choose_product"
                             );
 
-                            // 🔥 відкриваємо товари
                             sendProductList(userId);
 
                         } catch (Exception e) {
