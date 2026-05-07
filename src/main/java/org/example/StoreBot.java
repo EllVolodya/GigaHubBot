@@ -6592,176 +6592,238 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(chatId);
 
-        /* НАЗАД
-        if (text.equals("⬅️ Назад") || text.equals("Назад")) {
-
-            // 🔥 якщо є підфільтр → назад до фільтрів
-            if (currentSubfilter.containsKey(chatId)) {
-
-                currentSubfilter.remove(chatId);
-
-                sendFilters(chatId, 0);
-                return;
-            }
-
-            // 🔥 якщо є фільтр → назад до підкатегорій
-            if (currentFilter.containsKey(chatId)) {
-
-                currentFilter.remove(chatId);
-
-                String category = currentCategory.get(chatId);
-
-                if (category != null) {
-                    sendSubcategories(chatId, category);
-                    return;
-                }
-            }
-
-            // 🔥 якщо є підкатегорія → назад до категорій
-            if (currentSubcategory.containsKey(chatId)) {
-
-                currentSubcategory.remove(chatId);
-
-                sendCategories(chatId);
-                return;
-            }
-
-            // 🔥 якщо є категорія → головне меню
-            if (currentCategory.containsKey(chatId)) {
-
-                currentCategory.remove(chatId);
-
-                sendMessageSafely(createUserMenu(chatId.toString(), chatId));
-                return;
-            }
-
-            // 🔥 fallback
-            userStates.remove(chatId);
-
-            sendMessageSafely(createUserMenu(chatId.toString(), chatId));
-            return;
-        }*/
-
         /* ПАГІНАЦІЯ ФІЛЬТРІВ */
-        if ("awaiting_filter_for_subfilter".equals(state)) {
+        if ("filters".equals(state)) {
 
             int page = filterPage.getOrDefault(chatId, 0);
 
-            if (text.equals("Продовжити")) {
+            if (text.equalsIgnoreCase("Продовжити")) {
                 sendFilters(chatId, page + 1);
                 return;
             }
 
-            if (text.equals("Попередні")) {
+            if (text.equalsIgnoreCase("Попередні")) {
                 sendFilters(chatId, page - 1);
-                return;
-            }
-
-            List<String> filters = userFilters.get(chatId);
-
-            if (filters != null && filters.contains(text)) {
-
-                selectedFilterForSubfilter.put(chatId, text);
-                userStates.put(chatId, "awaiting_subfilter_name");
-
-                sendText(chatId, "✏️ Введіть назву підфільтра:");
                 return;
             }
         }
 
         /* КАТЕГОРІЇ */
-        List<String> categories = catalogSearcher.getCategories();
+        List<String> categories =
+                catalogSearcher.getCategories();
 
-        if (categories.contains(text)) {
+        String matchedCategory = null;
 
-            currentCategory.put(chatId, text);
+        for (String category : categories) {
+
+            if (category != null &&
+                    category.trim().equalsIgnoreCase(text)) {
+
+                matchedCategory = category.trim();
+                break;
+            }
+        }
+
+        if (matchedCategory != null) {
+
+            System.out.println("[DEBUG] CATEGORY = "
+                    + matchedCategory);
+
+            currentCategory.put(chatId, matchedCategory);
+
             currentSubcategory.remove(chatId);
+            currentFilter.remove(chatId);
+            currentSubfilter.remove(chatId);
 
-            sendSubcategories(chatId, text);
+            userStates.put(chatId, "subcategory");
+
+            sendSubcategories(chatId, matchedCategory);
+
             return;
         }
 
         /* ПІДКАТЕГОРІЇ */
-        if (currentCategory.containsKey(chatId)) {
 
-            String category = currentCategory.get(chatId);
+        if ("subcategory".equals(state)
+                && currentCategory.containsKey(chatId)) {
 
-            List<String> subcats = catalogSearcher.getSubcategories(category);
+            String category =
+                    currentCategory.get(chatId);
 
-            if (subcats.contains(text)) {
+            List<String> subcats =
+                    catalogSearcher.getSubcategories(category);
 
-                currentSubcategory.put(chatId, text);
+            String matchedSubcategory = null;
+
+            for (String sub : subcats) {
+
+                if (sub != null &&
+                        sub.trim().equalsIgnoreCase(text)) {
+
+                    matchedSubcategory = sub.trim();
+                    break;
+                }
+            }
+
+            if (matchedSubcategory != null) {
+
+                System.out.println("[DEBUG] SUBCATEGORY = "
+                        + matchedSubcategory);
+
+                currentSubcategory.put(
+                        chatId,
+                        matchedSubcategory
+                );
+
+                currentFilter.remove(chatId);
+                currentSubfilter.remove(chatId);
+
                 productIndex.put(chatId, 0);
 
-                List<String> filters = catalogSearcher.getFilters(category, text);
+                List<String> filters =
+                        catalogSearcher.getFilters(
+                                category,
+                                matchedSubcategory
+                        );
 
                 userFilters.put(chatId, filters);
+
                 filterPage.put(chatId, 0);
 
+                userStates.put(chatId, "filters");
+
                 sendFilters(chatId, 0);
-                return;
-            }
-        }
 
-        /* ПІДФІЛЬТРИ */
-        String filter = currentFilter.get(chatId);
-
-        if (filter != null) {
-
-            List<String> subfilters = catalogSearcher.getSubfilters(filter);
-
-            if (subfilters.contains(text)) {
-
-                currentSubfilter.put(chatId, text);
-
-                sendProductList(chatId);
                 return;
             }
         }
 
         /* ФІЛЬТРИ */
-        List<String> filters = userFilters.get(chatId);
+        if ("filters".equals(state)) {
 
-        if (filters != null && filters.contains(text)) {
+            List<String> filters =
+                    userFilters.get(chatId);
 
-            currentFilter.put(chatId, text);
-            currentSubfilter.remove(chatId);
+            if (filters != null) {
 
-            if (catalogSearcher.hasProductsInFilter(text)) {
+                String matchedFilter = null;
 
-                sendProductList(chatId);
+                for (String filter : filters) {
 
-            } else if (catalogSearcher.hasSubfilters(text)) {
+                    if (filter != null &&
+                            filter.trim().equalsIgnoreCase(text)) {
 
-                sendSubfilters(chatId, text, 0);
+                        matchedFilter = filter.trim();
+                        break;
+                    }
+                }
 
-            } else {
+                if (matchedFilter != null) {
 
-                sendText(chatId, "❌ У цьому фільтрі немає товарів.");
+                    System.out.println("[DEBUG] FILTER = "
+                            + matchedFilter);
+
+                    currentFilter.put(chatId, matchedFilter);
+
+                    currentSubfilter.remove(chatId);
+
+                    // 🔥 Є ТОВАРИ
+                    if (catalogSearcher.hasProductsInFilter(matchedFilter)) {
+
+                        userStates.put(chatId, "choose_product");
+
+                        sendProductList(chatId);
+
+                        return;
+                    }
+
+                    // 🔥 Є ПІДФІЛЬТРИ
+                    if (catalogSearcher.hasSubfilters(matchedFilter)) {
+
+                        userStates.put(chatId, "subfilters");
+
+                        sendSubfilters(
+                                chatId,
+                                matchedFilter,
+                                0
+                        );
+
+                        return;
+                    }
+
+                    sendText(chatId,
+                            "❌ У цьому фільтрі немає товарів.");
+
+                    return;
+                }
             }
-
-            return;
         }
 
-        /* Підказка при вводі цифр */
+        /* ПІДФІЛЬТРИ */
+        if ("subfilters".equals(state)) {
+
+            String filter =
+                    currentFilter.get(chatId);
+
+            if (filter != null) {
+
+                List<String> subfilters =
+                        catalogSearcher.getSubfilters(filter);
+
+                String matchedSubfilter = null;
+
+                for (String sub : subfilters) {
+
+                    if (sub != null &&
+                            sub.trim().equalsIgnoreCase(text)) {
+
+                        matchedSubfilter = sub.trim();
+                        break;
+                    }
+                }
+
+                if (matchedSubfilter != null) {
+
+                    System.out.println("[DEBUG] SUBFILTER = "
+                            + matchedSubfilter);
+
+                    currentSubfilter.put(
+                            chatId,
+                            matchedSubfilter
+                    );
+
+                    userStates.put(chatId, "choose_product");
+
+                    sendProductList(chatId);
+
+                    return;
+                }
+            }
+        }
+
         if (text.matches("\\d+")) {
 
-            if ("awaiting_filter".equals(state)
-                    || "awaiting_filter_for_subfilter".equals(state)) {
+            if ("filters".equals(state)) {
 
-                sendText(chatId, "👇 Оберіть фільтр кнопкою нижче.");
+                sendText(chatId,
+                        "👇 Оберіть фільтр кнопкою нижче.");
+
                 return;
             }
 
-            if ("awaiting_subfilter".equals(state)) {
+            if ("subfilters".equals(state)) {
 
-                sendText(chatId, "👇 Оберіть підфільтр кнопкою нижче.");
+                sendText(chatId,
+                        "👇 Оберіть підфільтр кнопкою нижче.");
+
                 return;
             }
         }
 
-        /* Невідома команда */
-        sendText(chatId, "Невідома команда 😅 Натисніть /start або виберіть із меню.");
+        sendText(
+                chatId,
+                "❌ Невідома команда.\nСкористайтесь кнопками меню."
+        );
     }
 
     // --- Допоміжні методи для надсилання повідомлень ---
