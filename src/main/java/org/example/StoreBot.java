@@ -6740,6 +6740,22 @@ public class StoreBot extends TelegramLongPollingBot {
             System.out.println("[DEBUG] SUBCATEGORY NOT FOUND");
         }
 
+        /* ПІДФІЛЬТРИ */
+        String filter = currentFilter.get(chatId);
+
+        if (filter != null) {
+
+            List<String> subfilters = catalogSearcher.getSubfilters(filter);
+
+            if (subfilters.contains(text)) {
+
+                currentSubfilter.put(chatId, text);
+
+                sendProductList(chatId);
+                return;
+            }
+        }
+
         /* ФІЛЬТРИ */
         List<String> filters = userFilters.get(chatId);
 
