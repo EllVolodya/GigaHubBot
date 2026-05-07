@@ -3274,39 +3274,45 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "choose_product": {
 
-                    userStates.put(userId, "catalog");
-
                     sendText(chatId, "↩️ Назад");
 
-                    // 🔥 якщо є підкатегорія → йдемо до підкатегорій
                     if (currentSubcategory.containsKey(userId)) {
 
-                        currentSubcategory.remove(userId); // ❗ ВАЖЛИВО
+                        String category = currentCategory.get(userId);
+
+                        currentSubcategory.remove(userId);
+
+                        userStates.put(userId, "subcategory");
 
                         sendSubcategories(
                                 Long.parseLong(chatId),
-                                currentCategory.get(userId)
+                                category
                         );
 
                         return;
                     }
 
-                    // 🔥 якщо є категорія → йдемо до категорій
                     if (currentCategory.containsKey(userId)) {
 
-                        currentCategory.remove(userId); // ❗ ВАЖЛИВО
+                        currentCategory.remove(userId);
+
+                        userStates.put(userId, "catalog");
 
                         sendCategories(Long.parseLong(chatId));
+
                         return;
                     }
 
-                    // 🔥 якщо нічого нема → головне меню
                     userStates.remove(userId);
-                    sendMessageSafely(createUserMenu(chatId, userId));
+
+                    sendMessageSafely(
+                            createUserMenu(chatId, userId)
+                    );
+
                     return;
                 }
 
-                // 🔥 5. ЗАМОВЛЕННЯ (всі awaiting + pickup)
+                // 🔥 5. ЗАМОВЛЕННЯ
                 default: {
 
                     if (state.startsWith("awaiting_") || "order_pickup".equals(state)) {
