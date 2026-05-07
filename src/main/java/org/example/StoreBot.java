@@ -3260,6 +3260,22 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "choose_product": {
 
+                    // 🔥 очистка фільтрів
+                    currentFilter.remove(userId);
+                    currentSubfilter.remove(userId);
+
+                    selectedFilter.remove(userId);
+
+                    selectedSubcategoryForFilter.remove(userId);
+                    selectedFilterForSubfilter.remove(userId);
+
+                    // 🔥 очистка товарів
+                    userFilters.remove(userId);
+                    userProducts.remove(userId);
+
+                    productIndex.remove(userId);
+                    userProductIndex.remove(userId);
+
                     // 🔥 якщо була підкатегорія
                     if (currentSubcategory.containsKey(userId)) {
 
