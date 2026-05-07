@@ -3281,14 +3281,27 @@ public class StoreBot extends TelegramLongPollingBot {
                     adminSelectedProducts.remove(userId);
                     adminSelectedProductsRange.remove(userId);
 
-                    // =========================================================
                     // 🔥 ПОВЕРНЕННЯ ДО ПІДКАТЕГОРІЙ
-                    // =========================================================
                     if (currentSubcategory.containsKey(userId)) {
 
+                        // 🔥 беремо поточну категорію
                         String category = currentCategory.get(userId);
 
-                        // 🔥 виходимо з підкатегорії
+                        System.out.println("[BACK] CATEGORY = " + category);
+
+                        // 🔥 якщо category загубилась
+                        if (category == null || category.isBlank()) {
+
+                            System.out.println("[BACK] CATEGORY NULL -> OPEN CATEGORIES");
+
+                            userStates.put(userId, "catalog");
+
+                            sendCategories(Long.parseLong(chatId));
+
+                            return;
+                        }
+
+                        // 🔥 очищаємо тільки підкатегорію
                         currentSubcategory.remove(userId);
 
                         // 🔥 state підкатегорій
@@ -3303,10 +3316,10 @@ public class StoreBot extends TelegramLongPollingBot {
                         return;
                     }
 
-                    // =========================================================
                     // 🔥 ПОВЕРНЕННЯ ДО КАТЕГОРІЙ
-                    // =========================================================
                     if (currentCategory.containsKey(userId)) {
+
+                        System.out.println("[BACK] OPEN MAIN CATEGORIES");
 
                         // 🔥 повністю виходимо з категорії
                         currentCategory.remove(userId);
@@ -3320,9 +3333,9 @@ public class StoreBot extends TelegramLongPollingBot {
                         return;
                     }
 
-                    // =========================================================
                     // 🔥 FALLBACK → ГОЛОВНЕ МЕНЮ
-                    // =========================================================
+                    System.out.println("[BACK] FALLBACK MENU");
+
                     userStates.remove(userId);
 
                     sendMessageSafely(
