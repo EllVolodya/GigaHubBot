@@ -3831,10 +3831,29 @@ public class StoreBot extends TelegramLongPollingBot {
 
                         found = true;
 
-                        // 🔥 зберігаємо вибраний фільтр
                         currentFilter.put(userId, filter);
 
                         try {
+
+                            // 🔥 завантажуємо товари
+                            List<Map<String, Object>> products =
+                                    catalogSearcher.findProducts(
+                                            currentCategory.get(userId),
+                                            currentSubcategory.get(userId),
+                                            filter,
+                                            null
+                                    );
+
+                            userProductLists.put(
+                                    userId,
+                                    products
+                            );
+
+                            // 🔥 state товарів
+                            userStates.put(
+                                    userId,
+                                    "choose_product"
+                            );
 
                             // 🔥 відкриваємо товари
                             sendProductList(userId);
