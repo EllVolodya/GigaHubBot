@@ -6609,9 +6609,50 @@ public class StoreBot extends TelegramLongPollingBot {
         /* НАЗАД */
         if (text.equals("⬅️ Назад") || text.equals("Назад")) {
 
+            // 🔥 якщо є підфільтр → назад до фільтрів
+            if (currentSubfilter.containsKey(chatId)) {
+
+                currentSubfilter.remove(chatId);
+
+                sendFilters(chatId, 0);
+                return;
+            }
+
+            // 🔥 якщо є фільтр → назад до підкатегорій
+            if (currentFilter.containsKey(chatId)) {
+
+                currentFilter.remove(chatId);
+
+                String category = currentCategory.get(chatId);
+
+                if (category != null) {
+                    sendSubcategories(chatId, category);
+                    return;
+                }
+            }
+
+            // 🔥 якщо є підкатегорія → назад до категорій
+            if (currentSubcategory.containsKey(chatId)) {
+
+                currentSubcategory.remove(chatId);
+
+                sendCategories(chatId);
+                return;
+            }
+
+            // 🔥 якщо є категорія → головне меню
+            if (currentCategory.containsKey(chatId)) {
+
+                currentCategory.remove(chatId);
+
+                sendMessageSafely(createUserMenu(chatId.toString(), chatId));
+                return;
+            }
+
+            // 🔥 fallback
             userStates.remove(chatId);
 
-            sendMessageSafely(createFiltersAdminMenu(chatId.toString()));
+            sendMessageSafely(createUserMenu(chatId.toString(), chatId));
             return;
         }
 
