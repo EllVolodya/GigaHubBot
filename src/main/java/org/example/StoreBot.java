@@ -3714,6 +3714,63 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
             case "choose_product" -> handleChooseProduct(userId, chatId, text);
+            case "subcategory" -> {
+
+                String category = currentCategory.get(userId);
+
+                if (category == null) {
+
+                    sendText(chatId, "❌ Категорія не знайдена.");
+
+                    userStates.put(userId, "catalog");
+
+                    sendCategories(userId);
+
+                    return;
+                }
+
+                List<String> subcategories =
+                        catalogSearcher.getSubcategories(category);
+
+                System.out.println("[SUBCATEGORY]");
+                System.out.println("CATEGORY = " + category);
+                System.out.println("TEXT = " + text);
+                System.out.println("SUBCATEGORIES = " + subcategories);
+
+                boolean found = false;
+
+                for (String sub : subcategories) {
+
+                    if (sub.equalsIgnoreCase(text.trim())) {
+
+                        found = true;
+
+                        currentSubcategory.put(userId, sub);
+
+                        userStates.put(userId, "choose_product");
+
+                        try {
+
+                            sendProductList(userId);
+
+                        } catch (TelegramApiException e) {
+
+                            e.printStackTrace();
+
+                            sendText(chatId,
+                                    "❌ Помилка при відкритті товарів.");
+                        }
+
+                        break;
+                    }
+                }
+
+                if (!found) {
+
+                    sendText(chatId,
+                            "❌ Підкатегорія не знайдена.");
+                }
+            }
             case "editing" -> handleEditing(userId, chatId, text);
             case "awaiting_field_value" -> handleAwaitingField(userId, chatId, text);
             case "awaiting_subcategory" -> handleAddToSubcategory(userId, chatId, text);
