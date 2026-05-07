@@ -6606,7 +6606,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(chatId);
 
-        /* НАЗАД */
+        /* НАЗАД
         if (text.equals("⬅️ Назад") || text.equals("Назад")) {
 
             // 🔥 якщо є підфільтр → назад до фільтрів
@@ -6654,7 +6654,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             sendMessageSafely(createUserMenu(chatId.toString(), chatId));
             return;
-        }
+        }*/
 
         /* ПАГІНАЦІЯ ФІЛЬТРІВ */
         if ("awaiting_filter_for_subfilter".equals(state)) {
