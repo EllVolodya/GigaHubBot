@@ -2632,11 +2632,6 @@ public class StoreBot extends TelegramLongPollingBot {
                             startOrder(userId, chatId.toString(), product);
                             return;
                         }
-
-                        if (lower.contains("назад")) {
-                            handleBack(userId, chatId);
-                            return;
-                        }
                     }
             }
 
@@ -3270,21 +3265,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
                         String category = currentCategory.get(userId);
 
-                        // 🔥 очищаємо navigation
                         currentSubcategory.remove(userId);
-                        currentFilter.remove(userId);
-                        currentSubfilter.remove(userId);
 
-                        userFilters.remove(userId);
-                        productIndex.remove(userId);
-
-                        // 🔥 очищаємо вибрані товари
-                        adminSelectedProduct.remove(userId);
-                        adminSelectedProducts.remove(userId);
-                        adminSelectedProductsRange.remove(userId);
-
-                        // 🔥 правильний state
-                        userStates.put(userId, "catalog");
+                        userStates.put(userId, "subcategory");
 
                         sendSubcategories(
                                 Long.parseLong(chatId),
@@ -3297,20 +3280,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     // 🔥 якщо була категорія
                     if (currentCategory.containsKey(userId)) {
 
-                        // 🔥 очищаємо весь catalog context
                         currentCategory.remove(userId);
-                        currentSubcategory.remove(userId);
-
-                        currentFilter.remove(userId);
-                        currentSubfilter.remove(userId);
-
-                        userFilters.remove(userId);
-                        productIndex.remove(userId);
-
-                        // 🔥 очищаємо вибрані товари
-                        adminSelectedProduct.remove(userId);
-                        adminSelectedProducts.remove(userId);
-                        adminSelectedProductsRange.remove(userId);
 
                         userStates.put(userId, "catalog");
 
@@ -3319,16 +3289,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         return;
                     }
 
-                    // 🔥 повний cleanup
-                    currentCategory.remove(userId);
-                    currentSubcategory.remove(userId);
-
-                    currentFilter.remove(userId);
-                    currentSubfilter.remove(userId);
-
-                    userFilters.remove(userId);
-                    productIndex.remove(userId);
-
+                    // 🔥 очищення
                     adminSelectedProduct.remove(userId);
                     adminSelectedProducts.remove(userId);
                     adminSelectedProductsRange.remove(userId);
