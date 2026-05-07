@@ -3762,8 +3762,22 @@ public class StoreBot extends TelegramLongPollingBot {
 
                             System.out.println("FILTERS = " + filters);
 
+                            // 🔥 якщо фільтрів немає
+                            if (filters == null || filters.isEmpty()) {
+
+                                sendText(
+                                        chatId,
+                                        "❌ Фільтри не знайдено."
+                                );
+
+                                return;
+                            }
+
                             // 🔥 зберігаємо фільтри
                             userFilters.put(userId, filters);
+
+                            // 🔥 ПЕРЕХОДИМО В STATE FILTER
+                            userStates.put(userId, "filter");
 
                             // 🔥 відкриваємо фільтри
                             sendFilters(
@@ -3790,6 +3804,60 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendText(
                             chatId,
                             "❌ Підкатегорія не знайдена."
+                    );
+                }
+            }
+            case "filter" -> {
+
+                List<String> filters = userFilters.get(userId);
+
+                if (filters == null || filters.isEmpty()) {
+
+                    sendText(
+                            chatId,
+                            "❌ Фільтри не знайдено."
+                    );
+
+                    return;
+                }
+
+                String selected = text.trim();
+
+                boolean found = false;
+
+                for (String filter : filters) {
+
+                    if (filter.equalsIgnoreCase(selected)) {
+
+                        found = true;
+
+                        // 🔥 зберігаємо вибраний фільтр
+                        currentFilter.put(userId, filter);
+
+                        try {
+
+                            // 🔥 відкриваємо товари
+                            sendProductList(userId);
+
+                        } catch (Exception e) {
+
+                            e.printStackTrace();
+
+                            sendText(
+                                    chatId,
+                                    "❌ Помилка при відкритті товарів."
+                            );
+                        }
+
+                        break;
+                    }
+                }
+
+                if (!found) {
+
+                    sendText(
+                            chatId,
+                            "❌ Фільтр не знайдено."
                     );
                 }
             }
