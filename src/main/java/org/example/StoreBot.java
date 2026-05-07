@@ -478,6 +478,38 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
+                // 🔥 залишок на складі
+                int stock = 0;
+
+                try {
+
+                    Object quantityObj =
+                            product.get("quantity");
+
+                    if (quantityObj != null) {
+
+                        stock = Integer.parseInt(
+                                quantityObj.toString()
+                        );
+                    }
+
+                } catch (Exception ignored) {
+                }
+
+                // 🔥 перевірка кількості
+                if (qty > stock) {
+
+                    sendText(
+                            chatId,
+                            "❌ На складі доступно тільки "
+                                    + stock
+                                    + " шт.\n\n"
+                                    + "Спробуйте ввести меншу кількість."
+                    );
+
+                    return;
+                }
+
                 // Кошик
                 Map<String, Object> cartItem =
                         new HashMap<>(product);
