@@ -9712,23 +9712,27 @@ public class StoreBot extends TelegramLongPollingBot {
                     .append(name)
                     .append("\n");
 
+            boolean m2Calculated = false;
+
+            // =====================================================
             // 🔥 АВТО-РОЗРАХУНОК м² ДЛЯ ПЛИТКИ
+            // =====================================================
 
             try {
 
-                Pattern pattern =
+                Pattern tilePattern =
                         Pattern.compile("(\\d+)[xхXХ](\\d+)");
 
-                Matcher matcher =
-                        pattern.matcher(name);
+                Matcher tileMatcher =
+                        tilePattern.matcher(name);
 
-                if (matcher.find()) {
+                if (tileMatcher.find()) {
 
                     double width =
-                            Double.parseDouble(matcher.group(1)) / 100.0;
+                            Double.parseDouble(tileMatcher.group(1)) / 100.0;
 
                     double height =
-                            Double.parseDouble(matcher.group(2)) / 100.0;
+                            Double.parseDouble(tileMatcher.group(2)) / 100.0;
 
                     double oneTileM2 =
                             width * height;
@@ -9739,9 +9743,58 @@ public class StoreBot extends TelegramLongPollingBot {
                     sb.append("   📐 м²: ")
                             .append(String.format("%.2f", totalM2))
                             .append(" м²\n");
+
+                    m2Calculated = true;
                 }
 
             } catch (Exception ignored) {
+            }
+
+            // =====================================================
+            // 🔥 АВТО-РОЗРАХУНОК м² ДЛЯ ЛІНОЛЕУМУ
+            // =====================================================
+
+            if (!m2Calculated) {
+
+                try {
+
+                    String lower =
+                            name.toLowerCase();
+
+                    if (lower.contains("лінолеум")
+                            || lower.contains("линолеум")
+                            || lower.contains("ліноліум")
+                            || lower.contains("покриття")) {
+
+                        Pattern linoleumPattern =
+                                Pattern.compile("(\\d+[\\.,]?\\d*)\\s*м");
+
+                        Matcher linoleumMatcher =
+                                linoleumPattern.matcher(lower);
+
+                        if (linoleumMatcher.find()) {
+
+                            double width =
+                                    Double.parseDouble(
+                                            linoleumMatcher.group(1)
+                                                    .replace(",", ".")
+                                    );
+
+                            double totalM2 =
+                                    width * qty;
+
+                            sb.append("   📐 м²: ")
+                                    .append(String.format("%.2f", totalM2))
+                                    .append(" м²\n");
+
+                            sb.append("   📏 Ширина: ")
+                                    .append(String.format("%.1f", width))
+                                    .append(" м\n");
+                        }
+                    }
+
+                } catch (Exception ignored) {
+                }
             }
 
             sb.append("   🔢 Кількість: ")
