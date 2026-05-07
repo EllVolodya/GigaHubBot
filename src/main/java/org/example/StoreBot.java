@@ -3274,11 +3274,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "choose_product": {
 
-                    // 🔥 очищаємо вибрані товари
-                    adminSelectedProduct.remove(userId);
-                    adminSelectedProducts.remove(userId);
-                    adminSelectedProductsRange.remove(userId);
-
                     // 🔥 якщо була підкатегорія
                     if (currentSubcategory.containsKey(userId)) {
 
@@ -3307,6 +3302,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                         return;
                     }
+
+                    // 🔥 ТІЛЬКИ ТУТ чистимо
+                    adminSelectedProduct.remove(userId);
+                    adminSelectedProducts.remove(userId);
+                    adminSelectedProductsRange.remove(userId);
 
                     // 🔥 головне меню
                     userStates.remove(userId);
