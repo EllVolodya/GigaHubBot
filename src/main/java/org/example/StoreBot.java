@@ -3903,6 +3903,58 @@ public class StoreBot extends TelegramLongPollingBot {
                     );
                 }
             }
+            case "subfilter" -> {
+
+                String selectedSubfilter =
+                        text.trim();
+
+                try {
+
+                    currentSubfilter.put(
+                            userId,
+                            selectedSubfilter
+                    );
+
+                    List<Map<String, Object>> products =
+                            catalogSearcher.findProducts(
+                                    currentCategory.get(userId),
+                                    currentSubcategory.get(userId),
+                                    currentFilter.get(userId),
+                                    selectedSubfilter
+                            );
+
+                    if (products == null || products.isEmpty()) {
+
+                        sendText(
+                                chatId,
+                                "❌ Товарів у цьому розділі немає."
+                        );
+
+                        return;
+                    }
+
+                    userProductLists.put(
+                            userId,
+                            products
+                    );
+
+                    userStates.put(
+                            userId,
+                            "choose_product"
+                    );
+
+                    sendProductList(userId);
+
+                } catch (Exception e) {
+
+                    e.printStackTrace();
+
+                    sendText(
+                            chatId,
+                            "❌ Помилка при відкритті товарів."
+                    );
+                }
+            }
             case "editing" -> handleEditing(userId, chatId, text);
             case "awaiting_field_value" -> handleAwaitingField(userId, chatId, text);
             case "awaiting_subcategory" -> handleAddToSubcategory(userId, chatId, text);
