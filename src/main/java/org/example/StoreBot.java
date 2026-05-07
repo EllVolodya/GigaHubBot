@@ -3276,15 +3276,25 @@ public class StoreBot extends TelegramLongPollingBot {
                     productIndex.remove(userId);
                     userProductIndex.remove(userId);
 
-                    // 🔥 якщо була підкатегорія
+                    // 🔥 очистка вибраних товарів
+                    adminSelectedProduct.remove(userId);
+                    adminSelectedProducts.remove(userId);
+                    adminSelectedProductsRange.remove(userId);
+
+                    // =========================================================
+                    // 🔥 ПОВЕРНЕННЯ ДО ПІДКАТЕГОРІЙ
+                    // =========================================================
                     if (currentSubcategory.containsKey(userId)) {
 
                         String category = currentCategory.get(userId);
 
+                        // 🔥 виходимо з підкатегорії
                         currentSubcategory.remove(userId);
 
+                        // 🔥 state підкатегорій
                         userStates.put(userId, "subcategory");
 
+                        // 🔥 показуємо підкатегорії
                         sendSubcategories(
                                 Long.parseLong(chatId),
                                 category
@@ -3293,24 +3303,26 @@ public class StoreBot extends TelegramLongPollingBot {
                         return;
                     }
 
-                    // 🔥 якщо була категорія
+                    // =========================================================
+                    // 🔥 ПОВЕРНЕННЯ ДО КАТЕГОРІЙ
+                    // =========================================================
                     if (currentCategory.containsKey(userId)) {
 
+                        // 🔥 повністю виходимо з категорії
                         currentCategory.remove(userId);
 
+                        // 🔥 state каталогу
                         userStates.put(userId, "catalog");
 
+                        // 🔥 показуємо категорії
                         sendCategories(Long.parseLong(chatId));
 
                         return;
                     }
 
-                    // 🔥 очищення
-                    adminSelectedProduct.remove(userId);
-                    adminSelectedProducts.remove(userId);
-                    adminSelectedProductsRange.remove(userId);
-
-                    // 🔥 головне меню
+                    // =========================================================
+                    // 🔥 FALLBACK → ГОЛОВНЕ МЕНЮ
+                    // =========================================================
                     userStates.remove(userId);
 
                     sendMessageSafely(
