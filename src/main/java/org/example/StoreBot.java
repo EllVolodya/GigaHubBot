@@ -2259,8 +2259,26 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 // Адмін меню
                 case "⚙️ Продавца меню" -> {
-                    if (ADMINS.contains(userId)) sendMessage(createAdminMenu(chatId));
-                    else sendText(chatId, "⛔ У вас немає доступу.");
+
+                    // 🔥 очищаємо старі стани
+                    userStates.remove(userId);
+
+                    // 🔥 очищаємо тимчасовий товар
+                    tempStorage.remove(userId + "_product");
+
+                    if (ADMINS.contains(userId)) {
+
+                        sendMessage(
+                                createAdminMenu(chatId)
+                        );
+
+                    } else {
+
+                        sendText(
+                                chatId,
+                                "⛔ У вас немає доступу."
+                        );
+                    }
                 }
 
                 case "✏️ Редагувати товар" -> {
