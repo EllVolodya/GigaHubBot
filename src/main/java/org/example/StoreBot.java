@@ -1347,7 +1347,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String normalized = text == null ? "" : text.toLowerCase().trim();
 
-        if (normalized.contains("замов")) {
+        if (normalized.equals("🛒 замовити товар")
+                || normalized.equals("замовити товар")) {
 
             System.out.println("🛒 ORDER CLICKED");
 
