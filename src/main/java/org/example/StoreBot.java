@@ -9784,7 +9784,6 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     /// Показ кошику з товаром
-    // Показ кошику з товаром
     private void showCartNice(Long userId, String chatId) {
 
         List<Map<String, Object>> cart = userCart.get(userId);
@@ -9840,9 +9839,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             boolean customCalculated = false;
 
-            // =====================================================
             // 🔥 ПЛИТКА
-            // =====================================================
 
             try {
 
@@ -9908,9 +9905,7 @@ public class StoreBot extends TelegramLongPollingBot {
             } catch (Exception ignored) {
             }
 
-            // =====================================================
             // 🔥 ЛІНОЛЕУМ
-            // =====================================================
 
             if (!customCalculated) {
 
@@ -9981,9 +9976,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // =====================================================
             // 🔥 ЗВИЧАЙНІ UNIT ТОВАРИ
-            // =====================================================
 
             if (!customCalculated) {
 
@@ -9992,6 +9985,22 @@ public class StoreBot extends TelegramLongPollingBot {
                     case "м" -> {
 
                         sb.append("   📏 Метраж: ")
+                                .append(qty)
+                                .append(" м\n");
+
+                        sb.append("   💵 Ціна за 1 м: ")
+                                .append(
+                                        String.format(
+                                                "%.2f",
+                                                price
+                                        )
+                                )
+                                .append(" грн\n");
+                    }
+
+                    case "Метр" -> {
+
+                        sb.append("📏 Метраж: ")
                                 .append(qty)
                                 .append(" м\n");
 
