@@ -357,6 +357,93 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
+        // 🔥 КНОПКА "НАПИСАТИ КОНСУЛЬТАНТУ"
+        if (text != null &&
+                (text.equalsIgnoreCase("📞 Написати консультанту")
+                        || text.equalsIgnoreCase("Написати консультанту"))) {
+
+            System.out.println("📞 CONSULT BUTTON CLICKED");
+
+            // 🔥 зберігаємо state
+            userStates.put(userId, "awaiting_consult_message");
+
+            ReplyKeyboardMarkup markup =
+                    new ReplyKeyboardMarkup();
+
+            markup.setResizeKeyboard(true);
+
+            KeyboardRow row =
+                    new KeyboardRow();
+
+            row.add(BACK_BUTTON);
+
+            markup.setKeyboard(List.of(row));
+
+            sendMessage(
+                    chatId,
+                    "📦 Цей товар доступний під замовлення.\n\n" +
+                            "✍️ Напишіть ваше питання або вкажіть, " +
+                            "яку кількість товару вас цікавить.\n\n" +
+                            "👨‍💼 Консультант отримає ваше повідомлення 👇",
+                    markup
+            );
+
+            return;
+        }
+
+        // 🔥 ПОВІДОМЛЕННЯ КОНСУЛЬТАНТУ
+        if ("awaiting_consult_message".equals(userStates.get(userId))) {
+
+            if (BACK_BUTTON.equals(text)) {
+
+                userStates.remove(userId);
+
+                Map<String, Object> product =
+                        lastShownProduct.get(userId);
+
+                return;
+            }
+
+            try {
+
+                Map<String, Object> product =
+                        lastShownProduct.get(userId);
+
+                String productName =
+                        product != null
+                                ? String.valueOf(product.get("name"))
+                                : "Невідомий товар";
+
+                sendText(
+                        String.valueOf(CONSULTANT_CHAT_ID),
+                        "📩 Нове повідомлення від покупця\n\n" +
+                                "👤 User ID: " + userId + "\n" +
+                                "📦 Товар: " + productName + "\n\n" +
+                                "💬 Повідомлення:\n" +
+                                text
+                );
+
+                sendText(
+                        chatId,
+                        "✅ Повідомлення відправлено консультанту.\n\n" +
+                                "Очікуйте відповідь 👨‍💼"
+                );
+
+                userStates.remove(userId);
+
+            } catch (Exception e) {
+
+                e.printStackTrace();
+
+                sendText(
+                        chatId,
+                        "❌ Помилка при відправці повідомлення."
+                );
+            }
+
+            return;
+        }
+
         // 🔥 Обробка відповіді на питання
         if ("consultant_reply".equals(userStates.get(userId))
                 && text != null && !text.isBlank()) {
