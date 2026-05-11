@@ -7418,28 +7418,41 @@ public class StoreBot extends TelegramLongPollingBot {
 
             for (Long adminId : CONSULTANT_CHAT_ID) {
 
-                sendText(
-                        String.valueOf(adminId),
+                try {
 
-                        "📞 Нове повідомлення консультанту\n\n"
+                    System.out.println(
+                            "SEND TO CONSULTANT: " + adminId
+                    );
 
-                                + "👤 User ID: "
-                                + chatId
-                                + "\n\n"
+                    sendText(
+                            String.valueOf(adminId),
 
-                                + "📦 Товар: "
-                                + productName
-                                + "\n\n"
+                            "📞 Нове повідомлення консультанту\n\n"
 
-                                + "💬 Повідомлення:\n"
-                                + userMessage
-                );
+                                    + "👤 User ID: "
+                                    + chatId
+                                    + "\n\n"
 
-                // 🔥 STATE ДЛЯ ВІДПОВІДІ
-                userStates.put(
-                        adminId,
-                        "consultant_reply"
-                );
+                                    + "📦 Товар: "
+                                    + productName
+                                    + "\n\n"
+
+                                    + "💬 Повідомлення:\n"
+                                    + userMessage
+                    );
+
+                    System.out.println(
+                            "SUCCESS SEND: " + adminId
+                    );
+
+                } catch (Exception e) {
+
+                    System.out.println(
+                            "ERROR SEND TO: " + adminId
+                    );
+
+                    e.printStackTrace();
+                }
             }
 
             sendText(
