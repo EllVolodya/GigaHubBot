@@ -98,7 +98,10 @@ public class StoreBot extends TelegramLongPollingBot {
     //Права
     private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню 620298889L (Мій ІД)
     private final List<Long> DEVELOPERS = List.of(620298889L, 1030917576L, 533570832L); // тут айді розробників меню 620298889L (Мій ІД)
-    private final List<Long> CONSULTANT_CHAT_ID = List.of (533570832L, 620298889L);  // тут айді консультантів меню 620298889L (Мій ІД)
+    private final List<Long> CONSULTANT_CHAT_ID =
+            List.of(
+                    620298889L
+            );  // тут айді консультантів меню 620298889L (Мій ІД)
 
     // 🔹 Адмінські стани
     private final Map<Long, Long> adminReplyTarget = new HashMap<>();
@@ -398,9 +401,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 userStates.remove(userId);
 
-                Map<String, Object> product =
-                        lastShownProduct.get(userId);
-
                 return;
             }
 
@@ -414,19 +414,31 @@ public class StoreBot extends TelegramLongPollingBot {
                                 ? String.valueOf(product.get("name"))
                                 : "Невідомий товар";
 
-                sendText(
-                        String.valueOf(CONSULTANT_CHAT_ID),
-                        "📩 Нове повідомлення від покупця\n\n" +
-                                "👤 User ID: " + userId + "\n" +
-                                "📦 Товар: " + productName + "\n\n" +
-                                "💬 Повідомлення:\n" +
-                                text
-                );
+                // 🔥 ВІДПРАВКА ВСІМ КОНСУЛЬТАНТАМ
+                for (Long consultantId : CONSULTANT_CHAT_ID) {
+
+                    sendText(
+                            String.valueOf(consultantId),
+
+                            "📩 Нове повідомлення від покупця\n\n"
+
+                                    + "👤 User ID: "
+                                    + userId
+                                    + "\n"
+
+                                    + "📦 Товар: "
+                                    + productName
+                                    + "\n\n"
+
+                                    + "💬 Повідомлення:\n"
+                                    + text
+                    );
+                }
 
                 sendText(
                         chatId,
                         "✅ Повідомлення відправлено консультанту.\n\n" +
-                                "Очікуйте відповідь 👨‍💼"
+                                "👨‍💼 Очікуйте відповідь."
                 );
 
                 userStates.remove(userId);
