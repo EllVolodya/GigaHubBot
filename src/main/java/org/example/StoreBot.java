@@ -803,35 +803,73 @@ public class StoreBot extends TelegramLongPollingBot {
         if ("developer_menu".equals(state)) {
 
             if (BACK_BUTTON.equals(text)) {
+
                 userStates.remove(userId);
 
                 try {
+
                     sendCategories(userId);
+
                 } catch (Exception e) {
+
                     e.printStackTrace();
                 }
 
                 return;
             }
+            if (text != null
+                    && text.contains("Редагувати товар")) {
 
-            // ❗ ОБРОБКА КНОПОК МЕНЮ
-            if (text != null && text.contains("Редагувати товар")) {
                 try {
-                    handleAdminSearchSource(userId, chatId, "🔍 Пошук у MySQL");
+
+                    handleAdminSearchSource(
+                            userId,
+                            chatId,
+                            "🔍 Пошук у MySQL"
+                    );
+
                 } catch (TelegramApiException e) {
+
                     e.printStackTrace();
-                    sendText(chatId, "❌ Помилка.");
+
+                    sendText(
+                            chatId,
+                            "❌ Помилка."
+                    );
                 }
+
+                return;
+            }
+            if (text != null
+                    && text.contains("Оновити каталог")) {
+
+                sendText(
+                        chatId,
+                        "♻️ Каталог оновлено."
+                );
+
+                return;
+            }
+            if (text != null
+                    && text.contains("Запрошувальні посилання")) {
+
+                userStates.put(
+                        userId,
+                        "invites_menu"
+                );
+
+                sendMessage(
+                        createInvitesMenu(chatId)
+                );
+
                 return;
             }
 
-            if (text.contains("Оновити каталог")) {
-                sendText(chatId, "♻️ Каталог оновлено.");
-                return;
-            }
+            sendText(
+                    chatId,
+                    "❓ Невідома дія."
+            );
 
-            // fallback
-            sendText(chatId, "❓ Невідома дія.");
             return;
         }
 
