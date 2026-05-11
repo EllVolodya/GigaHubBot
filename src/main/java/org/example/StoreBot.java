@@ -7209,187 +7209,344 @@ public class StoreBot extends TelegramLongPollingBot {
         return s.replaceAll("[\\u00A0\\s]+", " ").trim().toLowerCase();
     }
 
-    //Текст по чат-боту
-    private void handleText(Long chatId, String text) throws TelegramApiException {
+    // Текст по чат-боту
+    private void handleText(Long chatId, String text)
+            throws TelegramApiException {
 
         text = text.trim();
 
-        System.out.println("[handleText] User " + chatId + " sent: " + text);
+        System.out.println(
+                "[handleText] User "
+                        + chatId
+                        + " sent: "
+                        + text
+        );
 
-        String state = userStates.get(chatId);
+        String state =
+                userStates.get(chatId);
 
-        /* НАЗАД
-        if (text.equals("⬅️ Назад") || text.equals("Назад")) {
+        // 🔥 НАПИСАТИ КОНСУЛЬТАНТУ
 
-            // 🔥 якщо є підфільтр → назад до фільтрів
-            if (currentSubfilter.containsKey(chatId)) {
+        if (text.equalsIgnoreCase("📞 Написати консультанту")) {
 
-                currentSubfilter.remove(chatId);
+            userStates.put(
+                    chatId,
+                    "awaiting_consult_message"
+            );
 
-                sendFilters(chatId, 0);
+            ReplyKeyboardMarkup markup =
+                    new ReplyKeyboardMarkup();
+
+            markup.setResizeKeyboard(true);
+
+            KeyboardRow row =
+                    new KeyboardRow();
+
+            row.add(BACK_BUTTON);
+
+            markup.setKeyboard(
+                    List.of(row)
+            );
+
+            sendMessage(
+                    String.valueOf(chatId),
+                    "📦 Цей товар доступний під замовлення.\n\n" +
+                            "✍️ Напишіть ваше питання або вкажіть, " +
+                            "яку кількість товару вас цікавить.\n\n" +
+                            "👨‍💼 Консультант зв'яжеться з вами для уточнення деталей 👇",
+                    markup
+            );
+
+            return;
+        }
+
+        // 🔥 ПОВІДОМЛЕННЯ КОНСУЛЬТАНТУ
+
+        if ("awaiting_consult_message".equals(state)) {
+
+            if (BACK_BUTTON.equals(text)) {
+
+                userStates.remove(chatId);
+
+                sendText(
+                        String.valueOf(chatId),
+                        "↩️ Повернулись назад."
+                );
+
                 return;
             }
 
-            // 🔥 якщо є фільтр → назад до підкатегорій
-            if (currentFilter.containsKey(chatId)) {
+            String userMessage =
+                    text.trim();
 
-                currentFilter.remove(chatId);
+            if (userMessage.isEmpty()) {
 
-                String category = currentCategory.get(chatId);
+                sendText(
+                        String.valueOf(chatId),
+                        "❌ Введіть повідомлення."
+                );
 
-                if (category != null) {
-                    sendSubcategories(chatId, category);
-                    return;
-                }
-            }
-
-            // 🔥 якщо є підкатегорія → назад до категорій
-            if (currentSubcategory.containsKey(chatId)) {
-
-                currentSubcategory.remove(chatId);
-
-                sendCategories(chatId);
                 return;
             }
 
-            // 🔥 якщо є категорія → головне меню
-            if (currentCategory.containsKey(chatId)) {
+            // 🔥 ID консультанта
+            Long adminId =
+                    CONSULTANT_CHAT_ID;
 
-                currentCategory.remove(chatId);
+            StringBuilder sb =
+                    new StringBuilder();
 
-                sendMessageSafely(createUserMenu(chatId.toString(), chatId));
-                return;
-            }
+            sb.append("📞 Нове повідомлення консультанту\n\n");
 
-            // 🔥 fallback
+            sb.append("👤 User ID: ")
+                    .append(chatId)
+                    .append("\n\n");
+
+            sb.append("💬 Повідомлення:\n")
+                    .append(userMessage);
+
+            sendText(
+                    String.valueOf(adminId),
+                    sb.toString()
+            );
+
+            sendText(
+                    String.valueOf(chatId),
+                    "✅ Повідомлення відправлено консультанту."
+            );
+
             userStates.remove(chatId);
 
-            sendMessageSafely(createUserMenu(chatId.toString(), chatId));
             return;
-        }*/
+        }
 
-        /* ПАГІНАЦІЯ ФІЛЬТРІВ */
+        // 🔥 ПАГІНАЦІЯ ФІЛЬТРІВ
+
         if ("awaiting_filter_for_subfilter".equals(state)) {
 
-            int page = filterPage.getOrDefault(chatId, 0);
+            int page =
+                    filterPage.getOrDefault(chatId, 0);
 
             if (text.equals("Продовжити")) {
-                sendFilters(chatId, page + 1);
+
+                sendFilters(
+                        chatId,
+                        page + 1
+                );
+
                 return;
             }
 
             if (text.equals("Попередні")) {
-                sendFilters(chatId, page - 1);
+
+                sendFilters(
+                        chatId,
+                        page - 1
+                );
+
                 return;
             }
 
-            List<String> filters = userFilters.get(chatId);
+            List<String> filters =
+                    userFilters.get(chatId);
 
-            if (filters != null && filters.contains(text)) {
+            if (filters != null
+                    && filters.contains(text)) {
 
-                selectedFilterForSubfilter.put(chatId, text);
-                userStates.put(chatId, "awaiting_subfilter_name");
+                selectedFilterForSubfilter.put(
+                        chatId,
+                        text
+                );
 
-                sendText(chatId, "✏️ Введіть назву підфільтра:");
+                userStates.put(
+                        chatId,
+                        "awaiting_subfilter_name"
+                );
+
+                sendText(
+                        String.valueOf(chatId),
+                        "✏️ Введіть назву підфільтра:"
+                );
+
                 return;
             }
         }
 
-        /* КАТЕГОРІЇ */
-        List<String> categories = catalogSearcher.getCategories();
+        // 🔥 КАТЕГОРІЇ
+
+        List<String> categories =
+                catalogSearcher.getCategories();
 
         if (categories.contains(text)) {
 
-            currentCategory.put(chatId, text);
+            currentCategory.put(
+                    chatId,
+                    text
+            );
+
             currentSubcategory.remove(chatId);
 
-            sendSubcategories(chatId, text);
+            sendSubcategories(
+                    chatId,
+                    text
+            );
+
             return;
         }
 
-        /* ПІДКАТЕГОРІЇ */
+        // 🔥 ПІДКАТЕГОРІЇ
+
         if (currentCategory.containsKey(chatId)) {
 
-            String category = currentCategory.get(chatId);
+            String category =
+                    currentCategory.get(chatId);
 
-            List<String> subcats = catalogSearcher.getSubcategories(category);
+            List<String> subcats =
+                    catalogSearcher.getSubcategories(category);
 
             if (subcats.contains(text)) {
 
-                currentSubcategory.put(chatId, text);
-                productIndex.put(chatId, 0);
+                currentSubcategory.put(
+                        chatId,
+                        text
+                );
 
-                List<String> filters = catalogSearcher.getFilters(category, text);
+                productIndex.put(
+                        chatId,
+                        0
+                );
 
-                userFilters.put(chatId, filters);
-                filterPage.put(chatId, 0);
+                List<String> filters =
+                        catalogSearcher.getFilters(
+                                category,
+                                text
+                        );
 
-                sendFilters(chatId, 0);
+                userFilters.put(
+                        chatId,
+                        filters
+                );
+
+                filterPage.put(
+                        chatId,
+                        0
+                );
+
+                currentFilter.remove(chatId);
+                currentSubfilter.remove(chatId);
+
+                sendFilters(
+                        chatId,
+                        0
+                );
+
                 return;
             }
         }
 
-        /* ПІДФІЛЬТРИ */
-        String filter = currentFilter.get(chatId);
+        // 🔥 ПІДФІЛЬТРИ
+
+        String filter =
+                currentFilter.get(chatId);
 
         if (filter != null) {
 
-            List<String> subfilters = catalogSearcher.getSubfilters(filter);
+            List<String> subfilters =
+                    catalogSearcher.getSubfilters(filter);
 
-            if (subfilters.contains(text)) {
+            if (subfilters != null
+                    && subfilters.contains(text)) {
 
-                currentSubfilter.put(chatId, text);
+                currentSubfilter.put(
+                        chatId,
+                        text
+                );
 
                 sendProductList(chatId);
+
                 return;
             }
         }
 
-        /* ФІЛЬТРИ */
-        List<String> filters = userFilters.get(chatId);
+        // 🔥 ФІЛЬТРИ
 
-        if (filters != null && filters.contains(text)) {
+        List<String> filters =
+                userFilters.get(chatId);
 
-            currentFilter.put(chatId, text);
+        if (filters != null
+                && filters.contains(text)) {
+
+            currentFilter.put(
+                    chatId,
+                    text
+            );
+
             currentSubfilter.remove(chatId);
 
+            // 🔥 Є товари у фільтрі
             if (catalogSearcher.hasProductsInFilter(text)) {
 
                 sendProductList(chatId);
 
-            } else if (catalogSearcher.hasSubfilters(text)) {
+            }
 
-                sendSubfilters(chatId, text, 0);
+            // 🔥 Є підфільтри
+            else if (catalogSearcher.hasSubfilters(text)) {
 
-            } else {
+                sendSubfilters(
+                        chatId,
+                        text,
+                        0
+                );
 
-                sendText(chatId, "❌ У цьому фільтрі немає товарів.");
+            }
+
+            // 🔥 Пустий фільтр
+            else {
+
+                sendText(
+                        String.valueOf(chatId),
+                        "❌ У цьому фільтрі немає товарів."
+                );
             }
 
             return;
         }
 
-        /* Підказка при вводі цифр */
+        // 🔥 ПІДКАЗКИ
+
         if (text.matches("\\d+")) {
 
             if ("awaiting_filter".equals(state)
                     || "awaiting_filter_for_subfilter".equals(state)) {
 
-                sendText(chatId, "👇 Оберіть фільтр кнопкою нижче.");
+                sendText(
+                        String.valueOf(chatId),
+                        "👇 Оберіть фільтр кнопкою нижче."
+                );
+
                 return;
             }
 
             if ("awaiting_subfilter".equals(state)) {
 
-                sendText(chatId, "👇 Оберіть підфільтр кнопкою нижче.");
+                sendText(
+                        String.valueOf(chatId),
+                        "👇 Оберіть підфільтр кнопкою нижче."
+                );
+
                 return;
             }
         }
 
-        /* Невідома команда */
-        sendText(chatId, "Невідома команда 😅 Натисніть /start або виберіть із меню.");
-    }
+        // 🔥 НЕВІДОМА КОМАНДА
 
+        sendText(
+                String.valueOf(chatId),
+                "Невідома команда 😅\n\n" +
+                        "Натисніть /start або виберіть кнопку з меню."
+        );
+    }
     // --- Допоміжні методи для надсилання повідомлень ---
     private void sendText(Long chatId, String text) {
         sendText(chatId.toString(), text);
