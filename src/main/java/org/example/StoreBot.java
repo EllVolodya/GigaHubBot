@@ -508,7 +508,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     case "м" -> unitText = "м";
 
                     case "метр" -> unitText = "метр";
-                    
+
                     case "Метр" -> unitText = "Метр";
 
                     case "м2" -> unitText = "м²";
@@ -833,6 +833,212 @@ public class StoreBot extends TelegramLongPollingBot {
             // fallback
             sendText(chatId, "❓ Невідома дія.");
             return;
+        }
+
+        //Запрошувальне меню
+        if ("invites_menu".equals(state)) {
+
+            // 🔥 Кнопка назад
+            ReplyKeyboardMarkup backKeyboard =
+                    new ReplyKeyboardMarkup();
+
+            backKeyboard.setResizeKeyboard(true);
+            backKeyboard.setOneTimeKeyboard(false);
+
+            KeyboardRow row =
+                    new KeyboardRow();
+
+            row.add(BACK_BUTTON);
+
+            backKeyboard.setKeyboard(
+                    List.of(row)
+            );
+
+            // 🔥 НАЗАД
+
+            if (BACK_BUTTON.equals(text)) {
+
+                userStates.put(userId, "developer_menu");
+
+                adminEditingProduct.remove(userId);
+                adminSelectedProductsRange.remove(userId);
+                adminEditingField.remove(userId);
+
+                sendMessage(
+                        createDeveloperMenu(chatId)
+                );
+
+                return;
+            }
+
+            // 🔥 ДІЇ МЕНЮ
+            switch (text) {
+
+                case "➕ Додати запрошення" -> {
+
+                    userStates.put(
+                            userId,
+                            "add_invite"
+                    );
+
+                    sendText(
+                            chatId,
+                            "Введіть дані нового запрошення у форматі:\n\n" +
+                                    "Name;Kasa;City"
+                    );
+
+                    sendMessage(
+                            chatId,
+                            "Ок, чекаю на дані…",
+                            backKeyboard
+                    );
+
+                    return;
+                }
+
+                case "🗑️ Видалити запрошення" -> {
+
+                    userStates.put(
+                            userId,
+                            "delete_invite"
+                    );
+
+                    sendText(
+                            chatId,
+                            "Введіть ID запрошення для видалення:"
+                    );
+
+                    sendMessage(
+                            chatId,
+                            "Ок, чекаю ID…",
+                            backKeyboard
+                    );
+
+                    return;
+                }
+
+                case "✏️ Редагувати запрошення" -> {
+
+                    userStates.put(
+                            userId,
+                            "edit_invite"
+                    );
+
+                    sendText(
+                            chatId,
+                            "Введіть дані для редагування:\n\n" +
+                                    "ID;Name;Kasa;City"
+                    );
+
+                    sendMessage(
+                            chatId,
+                            "Ок, чекаю нові дані…",
+                            backKeyboard
+                    );
+
+                    return;
+                }
+
+                case "📄 Показати всі запрошення" -> {
+
+                    String sql =
+                            "SELECT * FROM invites ORDER BY id ASC";
+
+                    try (
+                            Connection conn =
+                                    DatabaseManager.getConnection();
+
+                            PreparedStatement stmt =
+                                    conn.prepareStatement(sql);
+
+                            ResultSet rs =
+                                    stmt.executeQuery()
+                    ) {
+
+                        StringBuilder sb =
+                                new StringBuilder(
+                                        "📄 Статистика запрошень:\n\n"
+                                );
+
+                        boolean hasInvites = false;
+
+                        while (rs.next()) {
+
+                            hasInvites = true;
+
+                            sb.append("🆔 ID: ")
+                                    .append(rs.getInt("id"))
+                                    .append("\n");
+
+                            sb.append("👤 Ім'я: ")
+                                    .append(rs.getString("name"))
+                                    .append("\n");
+
+                            sb.append("💰 Каса: ")
+                                    .append(rs.getString("kasa"))
+                                    .append("\n");
+
+                            sb.append("🏙️ Місто: ")
+                                    .append(rs.getString("city"))
+                                    .append("\n");
+
+                            sb.append("📈 Приєдналось: ")
+                                    .append(rs.getInt("number"))
+                                    .append("\n");
+
+                            sb.append("━━━━━━━━━━━━━━\n");
+                        }
+
+                        if (!hasInvites) {
+
+                            sendText(
+                                    chatId,
+                                    "❌ Поки що немає запрошень."
+                            );
+
+                        } else {
+
+                            sendText(
+                                    chatId,
+                                    sb.toString()
+                            );
+                        }
+
+                    } catch (Exception e) {
+
+                        e.printStackTrace();
+
+                        sendText(
+                                chatId,
+                                "❌ Помилка бази даних."
+                        );
+                    }
+
+                    sendMessage(
+                            chatId,
+                            "Оберіть дію:",
+                            backKeyboard
+                    );
+
+                    return;
+                }
+
+                default -> {
+
+                    sendText(
+                            chatId,
+                            "❓ Невідома команда."
+                    );
+
+                    sendMessage(
+                            chatId,
+                            "Оберіть дію:",
+                            backKeyboard
+                    );
+
+                    return;
+                }
+            }
         }
 
         // 🔥 ОБРОБКА КОШИКА
