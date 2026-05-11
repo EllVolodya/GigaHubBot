@@ -100,7 +100,7 @@ public class StoreBot extends TelegramLongPollingBot {
     private final List<Long> DEVELOPERS = List.of(620298889L, 1030917576L, 533570832L); // тут айді розробників меню 620298889L (Мій ІД)
     private final List<Long> CONSULTANT_CHAT_ID =
             List.of(
-                    620298889L
+                    620298889L, 533570832L
             );  // тут айді консультантів меню 620298889L (Мій ІД)
 
     // 🔹 Адмінські стани
