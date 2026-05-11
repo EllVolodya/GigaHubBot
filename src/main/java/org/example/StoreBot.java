@@ -9955,7 +9955,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         // 🔥 ціна за м²
                         sum = totalM2 * price;
 
-                        sb.append("   📐 Площа: ")
+                        sb.append("📐 Площа: ")
                                 .append(
                                         String.format(
                                                 "%.2f",
@@ -9964,11 +9964,11 @@ public class StoreBot extends TelegramLongPollingBot {
                                 )
                                 .append(" м²\n");
 
-                        sb.append("   🔢 Кількість плитки: ")
+                        sb.append("🔢 Кількість плитки: ")
                                 .append(qty)
                                 .append(" шт\n");
 
-                        sb.append("   💵 Ціна за 1 м²: ")
+                        sb.append("💵 Ціна за 1 м²: ")
                                 .append(
                                         String.format(
                                                 "%.2f",
@@ -10016,7 +10016,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             // 🔥 ціна за м²
                             sum = totalM2 * price;
 
-                            sb.append("   📐 Площа: ")
+                            sb.append("📐 Площа: ")
                                     .append(
                                             String.format(
                                                     "%.2f",
@@ -10025,7 +10025,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                     )
                                     .append(" м²\n");
 
-                            sb.append("   📏 Ширина: ")
+                            sb.append("📏 Ширина: ")
                                     .append(
                                             String.format(
                                                     "%.1f",
@@ -10034,11 +10034,11 @@ public class StoreBot extends TelegramLongPollingBot {
                                     )
                                     .append(" м\n");
 
-                            sb.append("   📏 Довжина: ")
+                            sb.append("📏 Довжина: ")
                                     .append(qty)
                                     .append(" м\n");
 
-                            sb.append("   💵 Ціна за 1 м²: ")
+                            sb.append("💵 Ціна за 1 м²: ")
                                     .append(
                                             String.format(
                                                     "%.2f",
@@ -10063,7 +10063,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     case "м" -> {
 
-                        sb.append("   📏 Метраж: ")
+                        sb.append("📏 Метраж: ")
                                 .append(qty)
                                 .append(" м\n");
 
@@ -10083,7 +10083,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 .append(qty)
                                 .append(" м\n");
 
-                        sb.append("   💵 Ціна за 1 м: ")
+                        sb.append("💵 Ціна за 1 м: ")
                                 .append(
                                         String.format(
                                                 "%.2f",
@@ -10095,11 +10095,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     case "м2" -> {
 
-                        sb.append("   📐 Площа: ")
+                        sb.append("📐 Площа: ")
                                 .append(qty)
                                 .append(" м²\n");
 
-                        sb.append("   💵 Ціна за 1 м²: ")
+                        sb.append("💵 Ціна за 1 м²: ")
                                 .append(
                                         String.format(
                                                 "%.2f",
@@ -10111,11 +10111,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     default -> {
 
-                        sb.append("   🔢 Кількість: ")
+                        sb.append("🔢 Кількість: ")
                                 .append(qty)
                                 .append(" шт\n");
 
-                        sb.append("   💵 Ціна за 1 шт: ")
+                        sb.append("💵 Ціна за 1 шт: ")
                                 .append(
                                         String.format(
                                                 "%.2f",
@@ -10129,7 +10129,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             total += sum;
 
-            sb.append("   💰 Сума: ")
+            sb.append("💰 Сума: ")
                     .append(
                             String.format(
                                     "%.2f",
