@@ -507,6 +507,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     case "м" -> unitText = "м";
 
+                    case "метр" -> unitText = "метр";
+                    
                     case "Метр" -> unitText = "Метр";
 
                     case "м2" -> unitText = "м²";
@@ -10078,6 +10080,22 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     case "Метр" -> {
+
+                        sb.append("📏 Метраж: ")
+                                .append(qty)
+                                .append(" м\n");
+
+                        sb.append("💵 Ціна за 1 м: ")
+                                .append(
+                                        String.format(
+                                                "%.2f",
+                                                price
+                                        )
+                                )
+                                .append(" грн\n");
+                    }
+
+                    case "метр" -> {
 
                         sb.append("📏 Метраж: ")
                                 .append(qty)
