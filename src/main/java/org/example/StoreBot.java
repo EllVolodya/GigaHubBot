@@ -9784,6 +9784,7 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     /// Показ кошику з товаром
+    // Показ кошику з товаром
     private void showCartNice(Long userId, String chatId) {
 
         List<Map<String, Object>> cart = userCart.get(userId);
@@ -9811,6 +9812,11 @@ public class StoreBot extends TelegramLongPollingBot {
             String lowerName =
                     name.toLowerCase();
 
+            String unit =
+                    item.get("unit") != null
+                            ? item.get("unit").toString().toLowerCase()
+                            : "шт";
+
             double price =
                     Double.parseDouble(
                             item.get("price")
@@ -9832,17 +9838,19 @@ public class StoreBot extends TelegramLongPollingBot {
                     .append(name)
                     .append("\n");
 
-            boolean m2Calculated = false;
+            boolean customCalculated = false;
 
+            // =====================================================
             // 🔥 ПЛИТКА
+            // =====================================================
 
             try {
 
-                // 🔥 тільки плитка
-                if (lowerName.contains("плит")
+                if (unit.equals("м2")
+                        && (lowerName.contains("плит")
                         || lowerName.contains("кахель")
                         || lowerName.contains("керамограніт")
-                        || lowerName.contains("метротайл")) {
+                        || lowerName.contains("метротайл"))) {
 
                     Pattern tilePattern =
                             Pattern.compile("(\\d+)[xхXХ](\\d+)");
@@ -9871,7 +9879,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         // 🔥 ціна за м²
                         sum = totalM2 * price;
 
-                        sb.append("   📐 м²: ")
+                        sb.append("   📐 Площа: ")
                                 .append(
                                         String.format(
                                                 "%.2f",
@@ -9893,23 +9901,26 @@ public class StoreBot extends TelegramLongPollingBot {
                                 )
                                 .append(" грн\n");
 
-                        m2Calculated = true;
+                        customCalculated = true;
                     }
                 }
 
             } catch (Exception ignored) {
             }
 
+            // =====================================================
             // 🔥 ЛІНОЛЕУМ
+            // =====================================================
 
-            if (!m2Calculated) {
+            if (!customCalculated) {
 
                 try {
 
-                    if (lowerName.contains("лінолеум")
+                    if (unit.equals("м2")
+                            && (lowerName.contains("лінолеум")
                             || lowerName.contains("линолеум")
                             || lowerName.contains("ліноліум")
-                            || lowerName.contains("покриття")) {
+                            || lowerName.contains("покриття"))) {
 
                         Pattern linoleumPattern =
                                 Pattern.compile("(\\d+[\\.,]?\\d*)\\s*м");
@@ -9931,7 +9942,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             // 🔥 ціна за м²
                             sum = totalM2 * price;
 
-                            sb.append("   📐 м²: ")
+                            sb.append("   📐 Площа: ")
                                     .append(
                                             String.format(
                                                     "%.2f",
@@ -9962,7 +9973,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                     )
                                     .append(" грн\n");
 
-                            m2Calculated = true;
+                            customCalculated = true;
                         }
                     }
 
@@ -9970,41 +9981,61 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
             }
 
-            // 🔥 ПРОСТІ ТОВАРИ
+            // =====================================================
+            // 🔥 ЗВИЧАЙНІ UNIT ТОВАРИ
+            // =====================================================
 
-            if (!m2Calculated) {
+            if (!customCalculated) {
 
-                // 🔥 якщо продається за метр
-                if (lowerName.contains("метр")
-                        || lowerName.contains("м ")) {
+                switch (unit) {
 
-                    sb.append("   📏 Метраж: ")
-                            .append(qty)
-                            .append(" м\n");
+                    case "м" -> {
 
-                    sb.append("   💵 Ціна за 1 метр: ")
-                            .append(
-                                    String.format(
-                                            "%.2f",
-                                            price
-                                    )
-                            )
-                            .append(" грн\n");
+                        sb.append("   📏 Метраж: ")
+                                .append(qty)
+                                .append(" м\n");
 
-                } else {
+                        sb.append("   💵 Ціна за 1 м: ")
+                                .append(
+                                        String.format(
+                                                "%.2f",
+                                                price
+                                        )
+                                )
+                                .append(" грн\n");
+                    }
 
-                    sb.append("   🔢 Кількість: ")
-                            .append(qty)
-                            .append(" шт\n");
+                    case "м2" -> {
 
-                    sb.append("   💵 Ціна за 1 шт: ")
-                            .append(
-                                    String.format(
-                                            "%.2f",
-                                            price
-                                    )
-                            )
-                            .append(" грн\n");
+                        sb.append("   📐 Площа: ")
+                                .append(qty)
+                                .append(" м²\n");
+
+                        sb.append("   💵 Ціна за 1 м²: ")
+                                .append(
+                                        String.format(
+                                                "%.2f",
+                                                price
+                                        )
+                                )
+                                .append(" грн\n");
+                    }
+
+                    default -> {
+
+                        sb.append("   🔢 Кількість: ")
+                                .append(qty)
+                                .append(" шт\n");
+
+                        sb.append("   💵 Ціна за 1 шт: ")
+                                .append(
+                                        String.format(
+                                                "%.2f",
+                                                price
+                                        )
+                                )
+                                .append(" грн\n");
+                    }
                 }
             }
 
