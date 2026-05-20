@@ -5391,9 +5391,15 @@ public class StoreBot extends TelegramLongPollingBot {
                 if (BACK_BUTTON.equals(text)) {
                     try {
                         handleBack(userId, chatId);
-                    } catch (Exception e) { // 🔥 ВАЖЛИВО
-                        LOGGER.severe("[Back Button Error] Failed to handle BACK_BUTTON for chatId=" + chatId + ": " + e.getMessage());
-                        sendText(chatId, "❌ Сталася помилка при обробці кнопки Назад.");
+                    } catch (Exception e) {
+
+                        LOGGER.severe(
+                                "[Back Button Error] Failed to handle BACK_BUTTON for chatId="
+                                        + chatId + ": " + e.getMessage()
+                        );
+
+                        sendText(chatId,
+                                "❌ Сталася помилка при обробці кнопки Назад.");
                     }
                     return;
                 }
@@ -5411,12 +5417,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 // Перевірка тексту
                 if (text == null || text.trim().isEmpty()) {
+
                     sendText(chatId,
                             "❌ Введіть номер телефону.");
                     return;
                 }
 
-                // Чистимо номер
+                // Очистка номера
                 String phone = text
                         .replaceAll("[^0-9+]", "")
                         .trim();
@@ -5429,27 +5436,29 @@ public class StoreBot extends TelegramLongPollingBot {
                                     "Приклад:\n" +
                                     "0971234567\n" +
                                     "+380971234567");
+
                     return;
                 }
 
                 // Зберігаємо телефон
                 userPhones.put(userId, phone);
 
-                // Кошик
+                // Отримання кошика
                 List<Map<String, Object>> cart =
                         userCart.get(userId);
 
                 if (cart == null || cart.isEmpty()) {
+
                     sendText(chatId,
                             "❌ Кошик порожній.");
                     return;
                 }
 
-                // Код замовлення
+                // Генерація номера замовлення
                 String orderCode =
-                        "ORD-" +
-                                (System.currentTimeMillis() % 10000);
+                        "ORD-" + (System.currentTimeMillis() % 10000);
 
+                // Дані доставки
                 String deliveryType =
                         tempDeliveryType.getOrDefault(
                                 userId,
@@ -5481,7 +5490,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             postOffice = addressValue;
                 }
 
-                // Формування товарів
+                // Формування списку товарів
                 StringBuilder itemsBuilder =
                         new StringBuilder();
 
@@ -5490,26 +5499,23 @@ public class StoreBot extends TelegramLongPollingBot {
                 for (Map<String, Object> item : cart) {
 
                     String name =
-                            String.valueOf(
-                                    item.get("name")
-                            );
+                            String.valueOf(item.get("name"));
 
                     int qty =
                             Integer.parseInt(
-                                    item.get("quantity")
-                                            .toString()
+                                    item.get("quantity").toString()
                             );
 
                     double price =
                             Double.parseDouble(
-                                    item.get("price")
-                                            .toString()
+                                    item.get("price").toString()
                             );
 
-                    itemsBuilder.append(name)
+                    itemsBuilder.append("• ")
+                            .append(name)
                             .append(" x")
                             .append(qty)
-                            .append("; ");
+                            .append("\n");
 
                     total += price * qty;
                 }
@@ -5520,7 +5526,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 String items =
                         itemsBuilder.toString();
 
-                // Запис в БД
+                // Запис в базу даних
                 try (Connection conn =
                              DatabaseManager.getConnection()) {
 
@@ -5554,8 +5560,11 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     sendText(chatId,
                             "❌ Помилка при створенні замовлення.");
+
                     return;
                 }
+
+                // Очищення даних користувача
                 userCart.remove(userId);
                 userPhones.remove(userId);
                 userStates.remove(userId);
@@ -5565,13 +5574,40 @@ public class StoreBot extends TelegramLongPollingBot {
                 tempFullname.remove(userId);
                 tempCard.remove(userId);
 
-                // Фінальне повідомлення
+                // Повідомлення користувачу
                 sendText(chatId,
                         "✅ Замовлення оформлено!\n\n" +
                                 "🔢 Код: " + orderCode + "\n\n" +
                                 "📞 Наш менеджер зателефонує вам найближчим часом\n" +
                                 "для підтвердження замовлення.\n\n" +
                                 "Дякуємо за покупку 🙌");
+
+                // Повідомлення адміністраторам
+                String adminMessage =
+                        "📦 НОВЕ ЗАМОВЛЕННЯ!\n\n" +
+                                "👤 Користувач: " + fullname + "\n" +
+                                "🆔 UserID: " + userId + "\n" +
+                                "🔢 Номер замовлення: " + orderCode + "\n" +
+                                "📞 Телефон: " + phone + "\n" +
+                                "🚚 Доставка: " + deliveryType + "\n\n" +
+                                "🛒 Товари:\n" +
+                                items + "\n" +
+                                "💰 Сума: " + total + " грн";
+
+                // Відправка всім адміністраторам
+                for (Long adminId : ADMINS) {
+
+                    try {
+                        sendText(adminId, adminMessage);
+                    } catch (Exception e) {
+
+                        LOGGER.warning(
+                                "Не вдалося відправити повідомлення адміну "
+                                        + adminId + ": "
+                                        + e.getMessage()
+                        );
+                    }
+                }
 
                 return;
             }
