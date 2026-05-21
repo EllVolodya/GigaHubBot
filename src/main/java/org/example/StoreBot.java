@@ -8130,127 +8130,288 @@ public class StoreBot extends TelegramLongPollingBot {
 
     // 🔸 Показ замовлення користовувача Адміну
     private void createOrderAdminMenu(String chatId, Map<String, Object> order, Long userId) {
-        String orderCode = String.valueOf(order.get("orderCode"));
-
-        // Оновлюємо дані з бази — щоб статус оплати був актуальний!
-        Map<String, Object> freshOrder = getOrderByCode(orderCode);
-        if (freshOrder == null || freshOrder.isEmpty()) {
-            sendText(chatId, "Помилка: замовлення не знайдено в базі.");
-            return;
-        }
-
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("User ID: ").append(userId).append("\n")
-                .append("Код замовлення: ").append(freshOrder.getOrDefault("orderCode", "-")).append("\n")
-                .append("Тип замовлення: ").append(freshOrder.getOrDefault("deliveryType", "Невідомо")).append("\n\n");
-
-        // Спосіб оплати та статус — красиво і зрозуміло
-        String paymentMethodRaw = String.valueOf(freshOrder.getOrDefault("paymentmethod", ""));
-        String paymentStatusRaw = String.valueOf(freshOrder.getOrDefault("paymentstatus", ""));
-
-        String paymentMethod = switch (paymentMethodRaw) {
-            case "Готівка" -> "Готівкою при отриманні";
-            case "Очікується", "Оплачено", "Відхилено", "Підозріла сума" -> "Онлайн-оплата (карткою)";
-            default -> "Не вказано";
-        };
-
-        String paymentStatus = switch (paymentStatusRaw) {
-            case "Оплачено"       -> "Оплачено";
-            case "Очікується"     -> "Очікується оплата";
-            case "Відхилено"      -> "Оплата відхилена";
-            case "Підозріла сума" -> "Підозріла сума!";
-            case "Готівка"        -> "Готівкою при отриманні";
-            default               -> "Не вказано";
-        };
-
-        sb.append("Спосіб оплати: ").append(paymentMethod).append("\n")
-                .append("Статус оплати: ").append(paymentStatus).append("\n\n");
-
-        // Доставка
-        String deliveryType = (String) freshOrder.get("deliveryType");
-        if ("Самовивіз".equals(deliveryType)) {
-            sb.append("Місто: ").append(freshOrder.getOrDefault("city", "-")).append("\n");
-        } else if ("Доставка по місту".equals(deliveryType)) {
-            sb.append("Адреса: ").append(freshOrder.getOrDefault("address", "-")).append("\n");
-        }
-        /*} else if ("Нова пошта".equals(deliveryType)) {
-            sb.append("Відділення НП: ").append(freshOrder.getOrDefault("postOffice", "-")).append("\n");
-        }*/
-
-        sb.append("П.І.: ").append(freshOrder.getOrDefault("fullName", "-")).append("\n")
-                .append("Телефон: ").append(freshOrder.getOrDefault("phone", "-")).append("\n")
-                .append("Картка (магазину): ").append(freshOrder.getOrDefault("card", "-")).append("\n\n");
-
-        // Товари
-        String itemsStr = (String) freshOrder.get("item");
-        if (itemsStr != null && !itemsStr.isEmpty()) {
-            String[] itemArr = itemsStr.split(";");
-            int i = 1;
-            for (String s : itemArr) {
-                if (s.isBlank()) continue;
-                String[] parts = s.split(":");
-                String name = parts[0];
-                double price = 0;
-                int quantity = 1;
-                try {
-                    if (parts.length > 1) price = Double.parseDouble(parts[1]);
-                    if (parts.length > 2) quantity = Integer.parseInt(parts[2]);
-                } catch (Exception ignored) {}
-                double lineTotal = price * quantity;
-
-                sb.append(i++).append(". ").append(name).append("\n")
-                        .append("   Кількість: ").append(quantity).append("\n")
-                        .append("   Ціна: ").append(price).append(" грн\n")
-                        .append("   Разом: ").append(lineTotal).append(" грн\n\n");
-            }
-        }
-
-        // Загальна сума
-        double total = 0.0;
-        Object totalObj = freshOrder.get("total");
-        if (totalObj instanceof Number) {
-            total = ((Number) totalObj).doubleValue();
-        } else if (totalObj != null) {
-            try { total = Double.parseDouble(totalObj.toString()); } catch (Exception ignored) {}
-        }
-
-        sb.append("**Всього до оплати:** ").append(String.format("%.2f", total)).append(" грн\n");
-
-        // Кнопки
-        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
-        keyboardMarkup.setResizeKeyboard(true);
-
-        List<KeyboardRow> keyboard = new ArrayList<>();
-        KeyboardRow row1 = new KeyboardRow();
-        row1.add("✅ Підтвердити");
-        row1.add("❌ Відхилити");
-        row1.add("🗑️ Видалити замовлення");
-        keyboard.add(row1);
-
-        KeyboardRow row2 = new KeyboardRow();
-        row2.add("⏮️ Назад");
-        row2.add("🔍 Пошук коду");
-        row2.add("⏭️ Дальше");
-        keyboard.add(row2);
-
-        KeyboardRow row3 = new KeyboardRow();
-        row3.add(BACK_BUTTON);
-        keyboard.add(row3);
-
-        keyboardMarkup.setKeyboard(keyboard);
-
-        SendMessage message = new SendMessage();
-        message.setChatId(chatId);
-        message.setText(sb.toString());
-        message.setParseMode("Markdown");
-        message.setReplyMarkup(keyboardMarkup);
 
         try {
-            execute(message);
-        } catch (TelegramApiException e) {
+            Object codeObj = order.get("orderCode");
+
+            if (codeObj == null) {
+                sendText(chatId, "❌ Помилка: код замовлення відсутній.");
+                return;
+            }
+
+            String orderCode = codeObj.toString().trim();
+
+            if (orderCode.isEmpty() || orderCode.equalsIgnoreCase("null")) {
+                sendText(chatId, "❌ Помилка: пустий код замовлення.");
+                return;
+            }
+
+            // DEBUG
+            System.out.println("ORDER CODE = " + orderCode);
+            System.out.println("ORDER MAP = " + order);
+
+            // Отримання актуального замовлення
+            Map<String, Object> freshOrder = getOrderByCode(orderCode);
+
+            if (freshOrder == null || freshOrder.isEmpty()) {
+                sendText(chatId, "❌ Помилка: замовлення не знайдено в базі.");
+                return;
+            }
+
+            StringBuilder sb = new StringBuilder();
+
+            sb.append("🛒 Замовлення користувача\n\n");
+
+            sb.append("👤 User ID: ").append(userId).append("\n");
+            sb.append("🆔 Код замовлення: ")
+                    .append(freshOrder.getOrDefault("orderCode", "-"))
+                    .append("\n");
+
+            sb.append("🚚 Тип доставки: ")
+                    .append(freshOrder.getOrDefault("deliveryType", "Невідомо"))
+                    .append("\n\n");
+
+            // Оплата
+            String paymentMethodRaw =
+                    String.valueOf(freshOrder.getOrDefault("paymentmethod", ""));
+
+            String paymentStatusRaw =
+                    String.valueOf(freshOrder.getOrDefault("paymentstatus", ""));
+
+            String paymentMethod;
+
+            switch (paymentMethodRaw) {
+
+                case "Готівка":
+                    paymentMethod = "💵 Готівкою при отриманні";
+                    break;
+
+                case "Очікується":
+                case "Оплачено":
+                case "Відхилено":
+                case "Підозріла сума":
+                    paymentMethod = "💳 Онлайн-оплата";
+                    break;
+
+                default:
+                    paymentMethod = "❓ Не вказано";
+                    break;
+            }
+
+            String paymentStatus;
+
+            switch (paymentStatusRaw) {
+
+                case "Оплачено":
+                    paymentStatus = "✅ Оплачено";
+                    break;
+
+                case "Очікується":
+                    paymentStatus = "⌛ Очікується оплата";
+                    break;
+
+                case "Відхилено":
+                    paymentStatus = "❌ Оплата відхилена";
+                    break;
+
+                case "Підозріла сума":
+                    paymentStatus = "⚠️ Підозріла сума";
+                    break;
+
+                case "Готівка":
+                    paymentStatus = "💵 Готівкою при отриманні";
+                    break;
+
+                default:
+                    paymentStatus = "❓ Не вказано";
+                    break;
+            }
+
+            sb.append("💳 Спосіб оплати: ")
+                    .append(paymentMethod)
+                    .append("\n");
+
+            sb.append("📌 Статус оплати: ")
+                    .append(paymentStatus)
+                    .append("\n\n");
+
+            // Доставка
+            String deliveryType =
+                    String.valueOf(freshOrder.getOrDefault("deliveryType", ""));
+
+            switch (deliveryType) {
+
+                case "Самовивіз":
+                    sb.append("🏙️ Місто: ")
+                            .append(freshOrder.getOrDefault("city", "-"))
+                            .append("\n");
+                    break;
+
+                case "Доставка по місту":
+                    sb.append("📍 Адреса: ")
+                            .append(freshOrder.getOrDefault("address", "-"))
+                            .append("\n");
+                    break;
+
+                case "Нова пошта":
+                    sb.append("📦 Відділення НП: ")
+                            .append(freshOrder.getOrDefault("postOffice", "-"))
+                            .append("\n");
+                    break;
+            }
+
+            sb.append("\n");
+
+            // Дані користувача
+            sb.append("👤 П.І.Б: ")
+                    .append(freshOrder.getOrDefault("fullName", "-"))
+                    .append("\n");
+
+            sb.append("📞 Телефон: ")
+                    .append(freshOrder.getOrDefault("phone", "-"))
+                    .append("\n");
+
+            sb.append("💳 Картка магазину: ")
+                    .append(freshOrder.getOrDefault("card", "-"))
+                    .append("\n\n");
+
+            // Товари
+            sb.append("🛍️ Товари:\n\n");
+
+            String itemsStr =
+                    String.valueOf(freshOrder.getOrDefault("item", ""));
+
+            if (!itemsStr.isEmpty()) {
+
+                String[] itemArr = itemsStr.split(";");
+
+                int i = 1;
+
+                for (String s : itemArr) {
+
+                    if (s == null || s.isBlank()) {
+                        continue;
+                    }
+
+                    String[] parts = s.split(":");
+
+                    String name = parts.length > 0 ? parts[0] : "Товар";
+
+                    double price = 0;
+                    int quantity = 1;
+
+                    try {
+
+                        if (parts.length > 1) {
+                            price = Double.parseDouble(parts[1]);
+                        }
+
+                        if (parts.length > 2) {
+                            quantity = Integer.parseInt(parts[2]);
+                        }
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    double lineTotal = price * quantity;
+
+                    sb.append(i++)
+                            .append(". ")
+                            .append(name)
+                            .append("\n");
+
+                    sb.append("   📦 Кількість: ")
+                            .append(quantity)
+                            .append("\n");
+
+                    sb.append("   💰 Ціна: ")
+                            .append(price)
+                            .append(" грн\n");
+
+                    sb.append("   🧾 Разом: ")
+                            .append(lineTotal)
+                            .append(" грн\n\n");
+                }
+
+            } else {
+
+                sb.append("❌ Товари відсутні\n\n");
+            }
+
+            // Загальна сума
+            double total = 0.0;
+
+            Object totalObj = freshOrder.get("total");
+
+            if (totalObj instanceof Number) {
+
+                total = ((Number) totalObj).doubleValue();
+
+            } else if (totalObj != null) {
+
+                try {
+                    total = Double.parseDouble(totalObj.toString());
+                } catch (Exception ignored) {
+                }
+            }
+
+            sb.append("💵 Всього до оплати: ")
+                    .append(String.format("%.2f", total))
+                    .append(" грн");
+
+            // Клавіатура
+            ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+
+            keyboardMarkup.setResizeKeyboard(true);
+
+            List<KeyboardRow> keyboard = new ArrayList<>();
+
+            KeyboardRow row1 = new KeyboardRow();
+            row1.add("✅ Підтвердити");
+            row1.add("❌ Відхилити");
+            row1.add("🗑️ Видалити замовлення");
+            keyboard.add(row1);
+
+            KeyboardRow row2 = new KeyboardRow();
+            row2.add("⏮️ Назад");
+            row2.add("🔍 Пошук коду");
+            row2.add("⏭️ Дальше");
+            keyboard.add(row2);
+
+            KeyboardRow row3 = new KeyboardRow();
+            row3.add(BACK_BUTTON);
+            keyboard.add(row3);
+
+            keyboardMarkup.setKeyboard(keyboard);
+
+            // =========================
+            // Відправка
+            // =========================
+            SendMessage message = new SendMessage();
+
+            message.setChatId(chatId);
+            message.setText(sb.toString());
+            message.setReplyMarkup(keyboardMarkup);
+
+            try {
+
+                execute(message);
+
+            } catch (TelegramApiException e) {
+
+                e.printStackTrace();
+
+                sendText(chatId,
+                        "❌ Помилка при відправці повідомлення адміну.");
+            }
+
+        } catch (Exception e) {
+
             e.printStackTrace();
-            sendText(chatId, "Помилка при відправці повідомлення адміну.");
+
+            sendText(chatId,
+                    "❌ Критична помилка при відкритті замовлення.");
         }
     }
 
