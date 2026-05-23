@@ -1133,6 +1133,92 @@ public class StoreBot extends TelegramLongPollingBot {
 
             return;
         }
+
+        if ("filters_menu".equals(state)) {
+
+            // 🔙 Назад
+            if (BACK_BUTTON.equals(text)) {
+
+                userStates.put(userId, "developer_menu");
+
+                try {
+
+                    execute(createDeveloperMenu(chatId));
+
+                } catch (TelegramApiException e) {
+
+                    e.printStackTrace();
+                }
+
+                return;
+            }
+
+            // ➕ Додати фільтр
+            if (text != null
+                    && text.contains("Додати фільтр")) {
+
+                sendText(
+                        chatId,
+                        "➕ Введіть назву нового фільтра:"
+                );
+
+                userStates.put(
+                        userId,
+                        "awaiting_filter_name"
+                );
+
+                return;
+            }
+
+            // ➕ Додати підфільтр
+            if (text != null
+                    && text.contains("Додати підфільтр")) {
+
+                sendText(
+                        chatId,
+                        "➕ Введіть назву нового підфільтра:"
+                );
+
+                userStates.put(
+                        userId,
+                        "awaiting_subfilter_name"
+                );
+
+                return;
+            }
+
+            // ✏️ Редагувати фільтр
+            if (text != null
+                    && text.contains("Редагувати фільтр")) {
+
+                sendText(
+                        chatId,
+                        "✏️ Введіть назву фільтра для редагування:"
+                );
+
+                return;
+            }
+
+            // 🗑 Видалити фільтр
+            if (text != null
+                    && text.contains("Видалити фільтр")) {
+
+                sendText(
+                        chatId,
+                        "🗑 Введіть назву фільтра для видалення:"
+                );
+
+                return;
+            }
+
+            sendText(
+                    chatId,
+                    "❓ Невідома дія у меню фільтрів."
+            );
+
+            return;
+        }
+
         //Запрошувальне меню
         if ("invites_menu".equals(state)) {
 
