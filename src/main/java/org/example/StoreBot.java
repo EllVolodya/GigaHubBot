@@ -1097,6 +1097,34 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
+            // 🗂 Редагування категорій
+            if (text != null
+                    && text.contains("Редагувати категорії")) {
+
+                userStates.put(
+                        userId,
+                        "category_admin_menu"
+                );
+
+                try {
+
+                    execute(
+                            createCategoryAdminMenu(chatId)
+                    );
+
+                } catch (TelegramApiException e) {
+
+                    e.printStackTrace();
+
+                    sendText(
+                            chatId,
+                            "❌ Не вдалося відкрити меню категорій."
+                    );
+                }
+
+                return;
+            }
+
             // ❌ Невідома дія
             sendText(
                     chatId,
