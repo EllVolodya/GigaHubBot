@@ -1199,44 +1199,62 @@ public class StoreBot extends TelegramLongPollingBot {
         if (update.hasCallbackQuery()) {
 
             String data = update.getCallbackQuery().getData();
-            String callbackChatId = update.getCallbackQuery().getMessage().getChatId().toString();
+            String callbackChatId = update.getCallbackQuery()
+                    .getMessage()
+                    .getChatId()
+                    .toString();
 
             switch (data) {
 
+                // 🎥 Відео
+
                 case "video_order" -> sendHelpVideo(
-                        chatId,
+                        callbackChatId,
                         ORDER_VIDEO_FILE_ID,
                         "🛒 Відео: Як зробити замовлення"
                 );
 
                 case "video_buy" -> sendHelpVideo(
-                        chatId,
+                        callbackChatId,
                         BUY_VIDEO_FILE_ID,
                         "📦 Відео: Як замовити товар"
                 );
 
                 case "video_start" -> sendHelpVideo(
-                        chatId,
+                        callbackChatId,
                         START_VIDEO_FILE_ID,
                         "⚠️ Відео: Що робити коли пише /start"
                 );
 
                 case "video_support" -> sendHelpVideo(
-                        chatId,
+                        callbackChatId,
                         SUPPORT_VIDEO_FILE_ID,
                         "💬 Відео: Як написати в підтримку"
                 );
 
-                case "video_pay" -> sendHelpVideo(
-                        chatId,
-                        PAY_VIDEO_FILE_ID,
-                        "💳 Відео: Як оплатити товар"
+
+
+                // 📝 Текстові відповіді
+
+                case "text_pay" -> sendText(
+                        callbackChatId,
+                        """
+                        💳 Оплата товару
+                        
+                        1. Після оформлення замовлення з вами зв'яжеться наш менеджер для підтвердження замовлення.
+                        2. Після підтвердження менеджером ваше замовлення буде передане на доставку.
+                        """
                 );
 
-                case "video_delivery" -> sendHelpVideo(
-                        chatId,
-                        DELIVERY_VIDEO_FILE_ID,
-                        "🚚 Відео: Скільки йде доставка"
+                case "text_delivery" -> sendText(
+                        callbackChatId,
+                        """
+                        🚚 Інформація про доставку
+                        
+                        • Усі товари доставляються після 14:00 за адресою, яку ви вказали менеджеру.
+                        • Час видачі товару зазвичай займає 1–5 хвилин.
+                        • Якщо товар не прибув або виникла проблема — зверніться в підтримку.
+                        """
                 );
             }
         }
@@ -3006,10 +3024,8 @@ public class StoreBot extends TelegramLongPollingBot {
                             InlineKeyboardButton.builder()
                                     .text("🛒 Як зробити замовлення?")
                                     .callbackData("video_order")
-                                    .build()
-                    ));
+                                    .build(),
 
-                    rows.add(List.of(
                             InlineKeyboardButton.builder()
                                     .text("📦 Як замовити товар?")
                                     .callbackData("video_buy")
@@ -3018,12 +3034,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     rows.add(List.of(
                             InlineKeyboardButton.builder()
-                                    .text("⚠️ Що робити коли пише /start?")
+                                    .text("⚠️ Проблема з /start")
                                     .callbackData("video_start")
-                                    .build()
-                    ));
+                                    .build(),
 
-                    rows.add(List.of(
                             InlineKeyboardButton.builder()
                                     .text("💬 Як написати в підтримку?")
                                     .callbackData("video_support")
@@ -3033,14 +3047,12 @@ public class StoreBot extends TelegramLongPollingBot {
                     rows.add(List.of(
                             InlineKeyboardButton.builder()
                                     .text("💳 Як оплатити товар?")
-                                    .callbackData("video_pay")
-                                    .build()
-                    ));
+                                    .callbackData("text_pay")
+                                    .build(),
 
-                    rows.add(List.of(
                             InlineKeyboardButton.builder()
                                     .text("🚚 Скільки йде доставка?")
-                                    .callbackData("video_delivery")
+                                    .callbackData("text_delivery")
                                     .build()
                     ));
 
