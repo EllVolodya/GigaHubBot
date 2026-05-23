@@ -1015,6 +1015,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 return;
             }
+
+            // ✏️ Редагування товару
             if (text != null
                     && text.contains("Редагувати товар")) {
 
@@ -1038,6 +1040,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 return;
             }
+
+            // ♻️ Оновити каталог
             if (text != null
                     && text.contains("Оновити каталог")) {
 
@@ -1048,6 +1052,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 return;
             }
+
+            // 🔗 Інвайти
             if (text != null
                     && text.contains("Запрошувальні посилання")) {
 
@@ -1063,6 +1069,32 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
+            // ⚙️ Керування фільтрами
+            if (text != null
+                    && text.contains("Керування фільтрами")) {
+
+                userStates.put(
+                        userId,
+                        "filters_menu"
+                );
+
+                sendText(
+                        chatId,
+                        """
+                        ⚙️ Меню керування фільтрами
+                        
+                        Тут ви можете:
+                        • Додати фільтр
+                        • Видалити фільтр
+                        • Редагувати фільтр
+                        • Переглянути список фільтрів
+                        """
+                );
+
+                return;
+            }
+
+            // ❌ Невідома дія
             sendText(
                     chatId,
                     "❓ Невідома дія."
@@ -1070,7 +1102,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             return;
         }
-
         //Запрошувальне меню
         if ("invites_menu".equals(state)) {
 
