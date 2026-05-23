@@ -7418,24 +7418,47 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private SendMessage createCategoryAdminMenu(String chatId) {
 
-        SendMessage msg = new SendMessage(chatId, "🔧 Редагування категорій:");
+        SendMessage msg = new SendMessage(
+                chatId,
+                "🔧 Редагування категорій:"
+        );
 
-        ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
+        ReplyKeyboardMarkup kb =
+                new ReplyKeyboardMarkup();
+
         kb.setResizeKeyboard(true);
 
+        List<KeyboardRow> keyboard =
+                new ArrayList<>();
+
+        // 1 ряд
         KeyboardRow r1 = new KeyboardRow();
         r1.add(new KeyboardButton("➕ Додати категорію"));
         r1.add(new KeyboardButton("➕ Додати підкатегорію"));
 
+        // 2 ряд
         KeyboardRow r2 = new KeyboardRow();
         r2.add(new KeyboardButton("➕ Додати фільтр у підкатегорію"));
-        r2.add(new KeyboardButton("✏️ Змінити назву категорії"));
 
+        // 3 ряд
         KeyboardRow r3 = new KeyboardRow();
-        r3.add(new KeyboardButton("🗑️ Видалити категорію"));
-        r3.add(new KeyboardButton(BACK_BUTTON));
+        r3.add(new KeyboardButton("✏️ Змінити назву категорії"));
 
-        kb.setKeyboard(List.of(r1, r2, r3));
+        // 4 ряд
+        KeyboardRow r4 = new KeyboardRow();
+        r4.add(new KeyboardButton("🗑️ Видалити категорію"));
+
+        // 5 ряд
+        KeyboardRow r5 = new KeyboardRow();
+        r5.add(new KeyboardButton(BACK_BUTTON));
+
+        keyboard.add(r1);
+        keyboard.add(r2);
+        keyboard.add(r3);
+        keyboard.add(r4);
+        keyboard.add(r5);
+
+        kb.setKeyboard(keyboard);
 
         msg.setReplyMarkup(kb);
 
