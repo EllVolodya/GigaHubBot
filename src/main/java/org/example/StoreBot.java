@@ -344,6 +344,69 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if (update.hasCallbackQuery()) {
+
+            String data = update.getCallbackQuery().getData();
+            String callbackChatId = update.getCallbackQuery()
+                    .getMessage()
+                    .getChatId()
+                    .toString();
+
+            switch (data) {
+
+                // 🎥 Відео
+
+                case "video_order" -> sendHelpVideo(
+                        callbackChatId,
+                        ORDER_VIDEO_FILE_ID,
+                        "🛒 Відео: Як зробити замовлення"
+                );
+
+                case "video_buy" -> sendHelpVideo(
+                        callbackChatId,
+                        BUY_VIDEO_FILE_ID,
+                        "📦 Відео: Як замовити товар"
+                );
+
+                case "video_start" -> sendHelpVideo(
+                        callbackChatId,
+                        START_VIDEO_FILE_ID,
+                        "⚠️ Відео: Що робити коли пише /start"
+                );
+
+                case "video_support" -> sendHelpVideo(
+                        callbackChatId,
+                        SUPPORT_VIDEO_FILE_ID,
+                        "💬 Відео: Як написати в підтримку"
+                );
+
+
+
+                // 📝 Текстові відповіді
+
+                case "text_pay" -> sendText(
+                        callbackChatId,
+                        """
+                        💳 Оплата товару
+                        
+                        1. Після оформлення замовлення з вами зв'яжеться наш менеджер для підтвердження замовлення.
+                        2. Після підтвердження менеджером ваше замовлення буде передане на доставку.
+                        """
+                );
+
+                case "text_delivery" -> sendText(
+                        callbackChatId,
+                        """
+                        🚚 Інформація про доставку
+                        
+                        • Усі товари доставляються після 14:00 за адресою, яку ви вказали менеджеру.
+                        • Час видачі товару зазвичай займає 1–5 хвилин.
+                        • Якщо товар не прибув або виникла проблема — зверніться в підтримку.
+                        """
+                );
+            }
+        }
+
         // 1. STATE — ПЕРШИЙ!
         if ("VIEW_PRODUCTS".equals(state)) {
 
@@ -1193,69 +1256,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     return;
                 }
-            }
-        }
-
-        if (update.hasCallbackQuery()) {
-
-            String data = update.getCallbackQuery().getData();
-            String callbackChatId = update.getCallbackQuery()
-                    .getMessage()
-                    .getChatId()
-                    .toString();
-
-            switch (data) {
-
-                // 🎥 Відео
-
-                case "video_order" -> sendHelpVideo(
-                        callbackChatId,
-                        ORDER_VIDEO_FILE_ID,
-                        "🛒 Відео: Як зробити замовлення"
-                );
-
-                case "video_buy" -> sendHelpVideo(
-                        callbackChatId,
-                        BUY_VIDEO_FILE_ID,
-                        "📦 Відео: Як замовити товар"
-                );
-
-                case "video_start" -> sendHelpVideo(
-                        callbackChatId,
-                        START_VIDEO_FILE_ID,
-                        "⚠️ Відео: Що робити коли пише /start"
-                );
-
-                case "video_support" -> sendHelpVideo(
-                        callbackChatId,
-                        SUPPORT_VIDEO_FILE_ID,
-                        "💬 Відео: Як написати в підтримку"
-                );
-
-
-
-                // 📝 Текстові відповіді
-
-                case "text_pay" -> sendText(
-                        callbackChatId,
-                        """
-                        💳 Оплата товару
-                        
-                        1. Після оформлення замовлення з вами зв'яжеться наш менеджер для підтвердження замовлення.
-                        2. Після підтвердження менеджером ваше замовлення буде передане на доставку.
-                        """
-                );
-
-                case "text_delivery" -> sendText(
-                        callbackChatId,
-                        """
-                        🚚 Інформація про доставку
-                        
-                        • Усі товари доставляються після 14:00 за адресою, яку ви вказали менеджеру.
-                        • Час видачі товару зазвичай займає 1–5 хвилин.
-                        • Якщо товар не прибув або виникла проблема — зверніться в підтримку.
-                        """
-                );
             }
         }
 
