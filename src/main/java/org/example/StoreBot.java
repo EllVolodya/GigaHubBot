@@ -1078,18 +1078,21 @@ public class StoreBot extends TelegramLongPollingBot {
                         "filters_menu"
                 );
 
-                sendText(
-                        chatId,
-                        """
-                        ⚙️ Меню керування фільтрами
-                        
-                        Тут ви можете:
-                        • Додати фільтр
-                        • Видалити фільтр
-                        • Редагувати фільтр
-                        • Переглянути список фільтрів
-                        """
-                );
+                try {
+
+                    execute(
+                            createFiltersAdminMenu(chatId)
+                    );
+
+                } catch (TelegramApiException e) {
+
+                    e.printStackTrace();
+
+                    sendText(
+                            chatId,
+                            "❌ Не вдалося відкрити меню фільтрів."
+                    );
+                }
 
                 return;
             }
@@ -9952,9 +9955,6 @@ public class StoreBot extends TelegramLongPollingBot {
         markup.setResizeKeyboard(true);
 
         List<KeyboardRow> keyboard = new ArrayList<>();
-
-        /*KeyboardRow row1 = new KeyboardRow();
-        row1.add("🔄 Увімк/Вимк фільтри");*/
 
         KeyboardRow row2 = new KeyboardRow();
         row2.add("➕ Додати фільтр");
