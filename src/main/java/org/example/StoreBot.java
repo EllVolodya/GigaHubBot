@@ -1164,7 +1164,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 userStates.put(
                         userId,
-                        "awaiting_filter_name"
+                        "awaiting_new_filter"
                 );
 
                 return;
