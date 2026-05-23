@@ -207,146 +207,19 @@ public class StoreBot extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
-        if (update == null || update.getMessage() == null) return;
 
-        // Повідомлення
-        if (update.hasMessage() && update.getMessage().hasVideo()) {
+        // 🔥 NULL CHECK
+        if (update == null) return;
 
-            Message message = update.getMessage();
-            String chatId = message.getChatId().toString();
-
-            String fileId = message.getVideo().getFileId();
-            Integer duration = message.getVideo().getDuration();
-            Integer width = message.getVideo().getWidth();
-            Integer height = message.getVideo().getHeight();
-
-            System.out.println("========== VIDEO RECEIVED ==========");
-            System.out.println("FILE_ID: " + fileId);
-            System.out.println("DURATION: " + duration);
-            System.out.println("RESOLUTION: " + width + "x" + height);
-            System.out.println("====================================");
-
-            SendMessage reply = new SendMessage();
-            reply.setChatId(chatId);
-            reply.setText("🎥 VIDEO FILE_ID:\n\n" + fileId);
-
-            try {
-                execute(reply);
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
-
-            return;
-        }
-
-        if (update.hasMessage() && update.getMessage().hasPhoto()) {
-
-            Message message = update.getMessage();
-            Long userId = message.getFrom().getId();
-            String chatId = message.getChatId().toString();
-
-            String state = userStates.get(userId);
-
-            // 🔥 ЯКЩО ЧЕКАЄМО ФОТО
-            if ("awaiting_photo".equals(state)) {
-                System.out.println("[DEBUG] PHOTO RECEIVED → forwarding to PhotoHandler");
-
-                photoHandler.handleAwaitingPhoto(userId, chatId, update);
-                return;
-            }
-        }
-
-        Long userId = update.getMessage().getFrom().getId();
-
-        String chatId = update.getMessage().getChatId().toString();
-
-        Long realChatId = update.getMessage().getChatId();
-
-        String text = update.getMessage().getText() != null
-                ? update.getMessage().getText().trim()
-                : null;
-
-        String state = userStates.get(userId);
-
-        if (text != null && text.toLowerCase().contains("назад")) {
-
-            System.out.println("🔥 BACK CLICKED");
-
-            try {
-                handleBack(userId, chatId.toString());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            return;
-        }
-
-        if (text.startsWith("/start")) {
-
-            Long chatIdLong = update.getMessage().getChatId();
-            String chatIdStr = chatIdLong.toString();
-
-            try {
-                // 🔥 очищаємо ВСЕ по userId
-                clearUserState(userId);
-
-                userStates.remove(userId);
-
-                currentCategory.remove(userId);
-                currentSubcategory.remove(userId);
-
-                currentFilter.remove(userId);
-                currentSubfilter.remove(userId);
-
-                userFilters.remove(userId);
-                filterPage.remove(userId);
-
-                userProductLists.remove(userId);
-                productIndex.remove(userId);
-
-                selectedFilterForSubfilter.remove(userId);
-                editItemIndex.remove(userId);
-
-                userCart.remove(userId);
-
-                String inviteCode = text.replace("/start", "").trim();
-
-                UserManager userManager = new UserManager();
-
-                SendMessage msg = userManager.registerUser(
-                        userId,
-                        update.getMessage().getFrom().getFirstName(),
-                        chatIdStr
-                );
-
-                if (msg != null && !inviteCode.isEmpty()) {
-
-                    System.out.println("🔥 inviteCode = " + inviteCode);
-
-                    InviteManager inviteManager = new InviteManager();
-                    boolean ok = inviteManager.incrementInviteNumber(inviteCode);
-
-                    if (ok) System.out.println("✅ Лічильник збільшено");
-                    else    System.out.println("❌ Invite не знайдено");
-                }
-
-                execute(createUserMenu(chatIdStr, userId));
-
-            } catch (SQLException e) {
-                e.printStackTrace();
-                sendText(chatIdStr, "❌ Помилка бази даних.");
-
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-                sendText(chatIdStr, "❌ Помилка Telegram.");
-            }
-
+        // 🔥 Якщо немає ні message ні callback
+        if (!update.hasMessage() && !update.hasCallbackQuery()) {
             return;
         }
 
         if (update.hasCallbackQuery()) {
 
             String data = update.getCallbackQuery().getData();
+
             String callbackChatId = update.getCallbackQuery()
                     .getMessage()
                     .getChatId()
@@ -354,7 +227,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
             switch (data) {
 
-                // 🎥 Відео
+                // 🎥 ВІДЕО
 
                 case "video_order" -> sendHelpVideo(
                         callbackChatId,
@@ -381,8 +254,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 );
 
 
-
-                // 📝 Текстові відповіді
+                // 📝 ТЕКСТ
 
                 case "text_pay" -> sendText(
                         callbackChatId,
@@ -390,6 +262,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         💳 Оплата товару
                         
                         1. Після оформлення замовлення з вами зв'яжеться наш менеджер для підтвердження замовлення.
+                        
                         2. Після підтвердження менеджером ваше замовлення буде передане на доставку.
                         """
                 );
@@ -400,11 +273,158 @@ public class StoreBot extends TelegramLongPollingBot {
                         🚚 Інформація про доставку
                         
                         • Усі товари доставляються після 14:00 за адресою, яку ви вказали менеджеру.
+                        
                         • Час видачі товару зазвичай займає 1–5 хвилин.
+                        
                         • Якщо товар не прибув або виникла проблема — зверніться в підтримку.
                         """
                 );
             }
+
+            return;
+        }
+
+        Message message = update.getMessage();
+
+        Long userId = message.getFrom().getId();
+
+        String chatId = message.getChatId().toString();
+
+        Long realChatId = message.getChatId();
+
+        String text = message.getText() != null
+                ? message.getText().trim()
+                : "";
+
+        String state = userStates.get(userId);
+
+        if (message.hasVideo()) {
+
+            String fileId = message.getVideo().getFileId();
+
+            Integer duration = message.getVideo().getDuration();
+
+            Integer width = message.getVideo().getWidth();
+
+            Integer height = message.getVideo().getHeight();
+
+            System.out.println("========== VIDEO RECEIVED ==========");
+            System.out.println("FILE_ID: " + fileId);
+            System.out.println("DURATION: " + duration);
+            System.out.println("RESOLUTION: " + width + "x" + height);
+            System.out.println("====================================");
+
+            SendMessage reply = new SendMessage();
+
+            reply.setChatId(chatId);
+
+            reply.setText("🎥 VIDEO FILE_ID:\n\n" + fileId);
+
+            try {
+                execute(reply);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
+            }
+
+            return;
+        }
+
+        if (message.hasPhoto()) {
+
+            if ("awaiting_photo".equals(state)) {
+
+                System.out.println("[DEBUG] PHOTO RECEIVED");
+
+                photoHandler.handleAwaitingPhoto(
+                        userId,
+                        chatId,
+                        update
+                );
+
+                return;
+            }
+        }
+
+        if (text != null &&
+                text.toLowerCase().contains("назад")) {
+
+            System.out.println("🔥 BACK CLICKED");
+
+            try {
+
+                handleBack(userId, chatId);
+
+            } catch (Exception e) {
+
+                e.printStackTrace();
+            }
+
+            return;
+        }
+
+        // 🚀 START
+        if (text.startsWith("/start")) {
+
+            try {
+
+                clearUserState(userId);
+
+                userStates.remove(userId);
+
+                currentCategory.remove(userId);
+                currentSubcategory.remove(userId);
+
+                currentFilter.remove(userId);
+                currentSubfilter.remove(userId);
+
+                userFilters.remove(userId);
+                filterPage.remove(userId);
+
+                userProductLists.remove(userId);
+                productIndex.remove(userId);
+
+                selectedFilterForSubfilter.remove(userId);
+                editItemIndex.remove(userId);
+
+                userCart.remove(userId);
+
+                String inviteCode =
+                        text.replace("/start", "").trim();
+
+                UserManager userManager =
+                        new UserManager();
+
+                SendMessage msg =
+                        userManager.registerUser(
+                                userId,
+                                message.getFrom().getFirstName(),
+                                chatId
+                        );
+
+                if (msg != null && !inviteCode.isEmpty()) {
+
+                    InviteManager inviteManager =
+                            new InviteManager();
+
+                    boolean ok =
+                            inviteManager.incrementInviteNumber(inviteCode);
+
+                    if (ok)
+                        System.out.println("✅ Лічильник збільшено");
+                    else
+                        System.out.println("❌ Invite не знайдено");
+                }
+
+                execute(createUserMenu(chatId, userId));
+
+            } catch (Exception e) {
+
+                e.printStackTrace();
+
+                sendText(chatId, "❌ Помилка.");
+            }
+
+            return;
         }
 
         // 1. STATE — ПЕРШИЙ!
@@ -2381,26 +2401,26 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "🛒 Додати в кошик" -> addToCart(userId);
                 case "📍 Адреси та Контакти" -> {
-                    SendMessage message = new SendMessage();
-                    message.setChatId(chatId);
-                    message.setParseMode("HTML");
-                    message.setDisableWebPagePreview(true); // ⬅ вимикає прев’ю
-                    message.setText("""
+                    SendMessage msg = new SendMessage();
+                    msg.setChatId(chatId);
+                    msg.setParseMode("HTML");
+                    msg.setDisableWebPagePreview(true); // ⬅ вимикає прев’ю
+                    msg.setText("""
                                         🏘️ Казанка: <a href="https://maps.app.goo.gl/d7GQnKaXedkHDuq97">на мапі</a>
                                         📞 Телефон: <code>(050) 457 84 58</code>
 
                                         🏘️ Новий Буг: <a href="https://maps.app.goo.gl/YJ5qzxAqXVpZJXYPA">на мапі</a>
                                         📞 Телефон: <code>(050) 493 15 15</code>
                                     """);
-                    execute(message);
+                    execute(msg);
                 }
 
                 case "🌐 Соц-мережі" -> {
-                    SendMessage message = new SendMessage();
-                    message.setChatId(chatId);
-                    message.setParseMode("HTML");
-                    message.setDisableWebPagePreview(true); // ⬅ вимикає прев’ю
-                    message.setText("""
+                    SendMessage msg = new SendMessage();
+                    msg.setChatId(chatId);
+                    msg.setParseMode("HTML");
+                    msg.setDisableWebPagePreview(true); // ⬅ вимикає прев’ю
+                    msg.setText("""
                                         🌐 Ми у соціальних мережах:
 
                                         📘 Facebook: <a href="https://www.facebook.com/p/%D0%93%D0%B8%D0%B3%D0%B0%D1%85%D0%B0%D0%B1-61578183892871/">відкрити</a>
@@ -2409,7 +2429,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                                         ☕ Також Instagram доступний у CoffeeMax: <a href="https://www.instagram.com/coffee_max_1?igsh=bmhsNDRyN2M5eG5l&utm_source=qr">відкрити</a>
                                     """);
-                    execute(message);
+                    execute(msg);
                 }
                 case "💬 Допомога" -> sendMessage(createHelpMenu(chatId));
                 case "Написати консультанту" -> {
