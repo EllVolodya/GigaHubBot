@@ -153,6 +153,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private static final String VIDEO_HELP_FILE_ID =
             "BAACAgIAAyEFAATOLPSsAAMCaWdUVJPb_3IkmZP6ydnb7_KbVd4AAqefAAKeUkFLURTvQ-M9SPE4BA";
+    private static final String ORDER_VIDEO_FILE_ID = "file_id";
+    private static final String BUY_VIDEO_FILE_ID = "file_id";
+    private static final String START_VIDEO_FILE_ID = "file_id";
+    private static final String SUPPORT_VIDEO_FILE_ID = "file_id";
+    private static final String PAY_VIDEO_FILE_ID = "file_id";
+    private static final String DELIVERY_VIDEO_FILE_ID = "file_id";
 
     private static StoreBot instance;
 
@@ -1187,6 +1193,51 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     return;
                 }
+            }
+        }
+
+        if (update.hasCallbackQuery()) {
+
+            String data = update.getCallbackQuery().getData();
+            String callbackChatId = update.getCallbackQuery().getMessage().getChatId().toString();
+
+            switch (data) {
+
+                case "video_order" -> sendHelpVideo(
+                        chatId,
+                        ORDER_VIDEO_FILE_ID,
+                        "🛒 Відео: Як зробити замовлення"
+                );
+
+                case "video_buy" -> sendHelpVideo(
+                        chatId,
+                        BUY_VIDEO_FILE_ID,
+                        "📦 Відео: Як замовити товар"
+                );
+
+                case "video_start" -> sendHelpVideo(
+                        chatId,
+                        START_VIDEO_FILE_ID,
+                        "⚠️ Відео: Що робити коли пише /start"
+                );
+
+                case "video_support" -> sendHelpVideo(
+                        chatId,
+                        SUPPORT_VIDEO_FILE_ID,
+                        "💬 Відео: Як написати в підтримку"
+                );
+
+                case "video_pay" -> sendHelpVideo(
+                        chatId,
+                        PAY_VIDEO_FILE_ID,
+                        "💳 Відео: Як оплатити товар"
+                );
+
+                case "video_delivery" -> sendHelpVideo(
+                        chatId,
+                        DELIVERY_VIDEO_FILE_ID,
+                        "🚚 Відео: Скільки йде доставка"
+                );
             }
         }
 
@@ -2935,11 +2986,66 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "🎥 Відеоінструкція" -> {
+
                     SendVideo video = new SendVideo();
                     video.setChatId(chatId);
                     video.setVideo(new InputFile(VIDEO_HELP_FILE_ID));
-                    video.setCaption("🎥 Відеоінструкція користування ботом\n\n" +
-                            "Тут показано, як оформити замовлення, оплатити та звернутися в підтримку.");
+
+                    video.setCaption("""
+                        🎥 Відеоінструкція користування ботом
+                        
+                        📌 Оберіть питання нижче та подивіться потрібне відео.
+                        """);
+
+                    // Inline кнопки
+                    InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
+
+                    List<List<InlineKeyboardButton>> rows = new ArrayList<>();
+
+                    rows.add(List.of(
+                            InlineKeyboardButton.builder()
+                                    .text("🛒 Як зробити замовлення?")
+                                    .callbackData("video_order")
+                                    .build()
+                    ));
+
+                    rows.add(List.of(
+                            InlineKeyboardButton.builder()
+                                    .text("📦 Як замовити товар?")
+                                    .callbackData("video_buy")
+                                    .build()
+                    ));
+
+                    rows.add(List.of(
+                            InlineKeyboardButton.builder()
+                                    .text("⚠️ Що робити коли пише /start?")
+                                    .callbackData("video_start")
+                                    .build()
+                    ));
+
+                    rows.add(List.of(
+                            InlineKeyboardButton.builder()
+                                    .text("💬 Як написати в підтримку?")
+                                    .callbackData("video_support")
+                                    .build()
+                    ));
+
+                    rows.add(List.of(
+                            InlineKeyboardButton.builder()
+                                    .text("💳 Як оплатити товар?")
+                                    .callbackData("video_pay")
+                                    .build()
+                    ));
+
+                    rows.add(List.of(
+                            InlineKeyboardButton.builder()
+                                    .text("🚚 Скільки йде доставка?")
+                                    .callbackData("video_delivery")
+                                    .build()
+                    ));
+
+                    markup.setKeyboard(rows);
+                    video.setReplyMarkup(markup);
 
                     try {
                         execute(video);
@@ -11258,6 +11364,21 @@ public class StoreBot extends TelegramLongPollingBot {
             ps.executeUpdate();
 
         } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void sendHelpVideo(String chatId, String fileId, String caption) {
+
+        SendVideo video = new SendVideo();
+
+        video.setChatId(chatId);
+        video.setVideo(new InputFile(fileId));
+        video.setCaption(caption);
+
+        try {
+            execute(video);
+        } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
