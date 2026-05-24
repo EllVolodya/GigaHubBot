@@ -5983,7 +5983,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 tempFullname.remove(userId);
                 tempCard.remove(userId);
 
-                // ✅ Повідомлення користувачу
                 sendText(
                         chatId,
                         "✅ Замовлення оформлено!\n\n" +
