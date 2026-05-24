@@ -5752,15 +5752,21 @@ public class StoreBot extends TelegramLongPollingBot {
                         .replaceAll("[^0-9+]", "")
                         .trim();
 
+                // 🇺🇦 Якщо номер починається з 0 → додаємо +38
+                if (phone.matches("^0\\d{9}$")) {
+
+                    phone = "+38" + phone;
+                }
+
                 // ❌ Перевірка номера
-                if (!phone.matches("^\\+?[0-9]{8,15}$")) {
+                if (!phone.matches("^\\+380\\d{9}$")) {
 
                     sendText(
                             chatId,
                             "❌ Введіть коректний номер телефону.\n\n" +
                                     "Приклад:\n" +
-                                    "0971234567\n" +
-                                    "+380971234567"
+                                    "0664014292\n" +
+                                    "+380664014292"
                     );
 
                     return;
@@ -5769,19 +5775,21 @@ public class StoreBot extends TelegramLongPollingBot {
                 // 💾 Зберігаємо телефон в пам'ять
                 userPhones.put(userId, phone);
 
-                // 🔥 ЗБЕРІГАЄМО НОМЕР В БАЗУ USERS
+                // 🔥 ЗБЕРІГАЄМО НОМЕР В USERS
                 try (Connection conn =
                              DatabaseManager.getConnection()) {
 
                     PreparedStatement updatePhone =
                             conn.prepareStatement(
-                                    "UPDATE users SET number = ? WHERE userId = ?"
+                                    "UPDATE users SET number = ? WHERE telegramid = ?"
                             );
 
                     updatePhone.setString(1, phone);
                     updatePhone.setLong(2, userId);
 
                     updatePhone.executeUpdate();
+
+                    System.out.println("✅ Номер телефону збережено");
 
                 } catch (Exception e) {
 
