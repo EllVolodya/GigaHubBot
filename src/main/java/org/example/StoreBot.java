@@ -96,12 +96,12 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Double> tempWidth = new HashMap<>();
 
     //Права
-    private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню 620298889L (Мій ІД)
-    private final List<Long> DEVELOPERS = List.of(620298889L, 1030917576L, 533570832L); // тут айді розробників меню 620298889L (Мій ІД)
+    private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню
+    private final List<Long> DEVELOPERS = List.of(620298889L, 1030917576L, 533570832L); // тут айді розробників меню
     private final List<Long> CONSULTANT_CHAT_ID =
             List.of(
                     620298889L, 533570832L
-            );  // тут айді консультантів меню 620298889L (Мій ІД)
+            );  // тут айді консультантів меню
 
     // 🔹 Адмінські стани
     private final Map<Long, Long> adminReplyTarget = new HashMap<>();
@@ -398,8 +398,32 @@ public class StoreBot extends TelegramLongPollingBot {
                                 message.getFrom().getFirstName(),
                                 chatId
                         );
+                if (msg != null) {
 
+                    String adminMessage = """
+                    🆕 Новий користувач зареєструвався
+                    
+                    👤 Ім'я: %s
+                    🆔 Telegram ID: %s
+                    """
+                            .formatted(
+                                    message.getFrom().getFirstName(),
+                                    userId
+                            );
+
+                    for (Long adminId : ADMINS) {
+
+                        sendText(
+                                String.valueOf(adminId),
+                                adminMessage
+                        );
+                    }
+                }
+
+                // 🔗 Інвайт система
                 if (msg != null && !inviteCode.isEmpty()) {
+
+                    System.out.println("🔥 inviteCode = " + inviteCode);
 
                     InviteManager inviteManager =
                             new InviteManager();
@@ -413,13 +437,18 @@ public class StoreBot extends TelegramLongPollingBot {
                         System.out.println("❌ Invite не знайдено");
                 }
 
-                execute(createUserMenu(chatId, userId));
+                execute(
+                        createUserMenu(chatId, userId)
+                );
 
             } catch (Exception e) {
 
                 e.printStackTrace();
 
-                sendText(chatId, "❌ Помилка.");
+                sendText(
+                        chatId,
+                        "❌ Помилка."
+                );
             }
 
             return;
