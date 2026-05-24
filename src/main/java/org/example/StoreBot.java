@@ -5758,7 +5758,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     phone = "+38" + phone;
                 }
 
-                // 🇺🇦 Якщо без 0 та без +380
+                // 🇺🇦 Якщо номер без +380
                 if (phone.matches("^\\d{9}$")) {
 
                     phone = "+380" + phone;
@@ -5778,37 +5778,71 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // 💾 Зберігаємо телефон
+                // 💾 Зберігаємо телефон в пам'ять
                 userPhones.put(userId, phone);
 
-                // 🔥 ЗБЕРІГАЄМО В USERS
+                // 🔥 ЗБЕРЕЖЕННЯ НОМЕРА В USERS
                 try (Connection conn =
                              DatabaseManager.getConnection()) {
 
-                    PreparedStatement updatePhone =
+                    // 🔎 Перевірка користувача
+                    PreparedStatement checkStmt =
                             conn.prepareStatement(
-                                    "UPDATE users " +
-                                            "SET number = CAST(? AS CHAR) " +
-                                            "WHERE telegramid = ?"
+                                    "SELECT id FROM users WHERE telegramid = ?"
                             );
 
-                    updatePhone.setString(1, phone);
-                    updatePhone.setLong(2, userId);
+                    checkStmt.setLong(1, userId);
 
-                    int updated =
-                            updatePhone.executeUpdate();
+                    ResultSet rs =
+                            checkStmt.executeQuery();
 
-                    System.out.println(
-                            "✅ Номер телефону збережено. Rows: "
-                                    + updated
-                    );
+                    // ✅ UPDATE
+                    if (rs.next()) {
+
+                        PreparedStatement updateStmt =
+                                conn.prepareStatement(
+                                        "UPDATE users " +
+                                                "SET number = CAST(? AS CHAR) " +
+                                                "WHERE telegramid = ?"
+                                );
+
+                        updateStmt.setString(1, phone);
+                        updateStmt.setLong(2, userId);
+
+                        int updated =
+                                updateStmt.executeUpdate();
+
+                        System.out.println(
+                                "✅ Номер оновлено в users. Rows: "
+                                        + updated
+                        );
+
+                    } else {
+
+                        // ➕ INSERT
+                        PreparedStatement insertStmt =
+                                conn.prepareStatement(
+                                        "INSERT INTO users " +
+                                                "(telegramid, number) " +
+                                                "VALUES (?, CAST(? AS CHAR))"
+                                );
+
+                        insertStmt.setLong(1, userId);
+                        insertStmt.setString(2, phone);
+
+                        insertStmt.executeUpdate();
+
+                        System.out.println(
+                                "✅ Новий користувач створений в users"
+                        );
+                    }
 
                 } catch (Exception e) {
 
                     e.printStackTrace();
 
                     LOGGER.warning(
-                            "Не вдалося зберегти номер телефону: "
+                            "❌ Помилка збереження номера: "
                                     + e.getMessage()
                     );
                 }
@@ -5949,7 +5983,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 tempFullname.remove(userId);
                 tempCard.remove(userId);
 
-                // ✅ Користувачу
+                // ✅ Повідомлення користувачу
                 sendText(
                         chatId,
                         "✅ Замовлення оформлено!\n\n" +
