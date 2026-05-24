@@ -5993,7 +5993,6 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "Дякуємо за покупку 🙌"
                 );
 
-                // 👨‍💼 Повідомлення адмінам
                 String adminMessage =
                         "📦 НОВЕ ЗАМОВЛЕННЯ!\n\n" +
                                 "👤 Користувач: " + fullname + "\n" +
