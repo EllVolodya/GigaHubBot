@@ -5752,10 +5752,16 @@ public class StoreBot extends TelegramLongPollingBot {
                         .replaceAll("[^0-9+]", "")
                         .trim();
 
-                // 🇺🇦 Якщо номер починається з 0 → додаємо +38
+                // 🇺🇦 Якщо номер починається з 0
                 if (phone.matches("^0\\d{9}$")) {
 
                     phone = "+38" + phone;
+                }
+
+                // 🇺🇦 Якщо без 0 та без +380
+                if (phone.matches("^\\d{9}$")) {
+
+                    phone = "+380" + phone;
                 }
 
                 // ❌ Перевірка номера
@@ -5772,24 +5778,30 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // 💾 Зберігаємо телефон в пам'ять
+                // 💾 Зберігаємо телефон
                 userPhones.put(userId, phone);
 
-                // 🔥 ЗБЕРІГАЄМО НОМЕР В USERS
+                // 🔥 ЗБЕРІГАЄМО В USERS
                 try (Connection conn =
                              DatabaseManager.getConnection()) {
 
                     PreparedStatement updatePhone =
                             conn.prepareStatement(
-                                    "UPDATE users SET number = ? WHERE telegramid = ?"
+                                    "UPDATE users " +
+                                            "SET number = CAST(? AS CHAR) " +
+                                            "WHERE telegramid = ?"
                             );
 
                     updatePhone.setString(1, phone);
                     updatePhone.setLong(2, userId);
 
-                    updatePhone.executeUpdate();
+                    int updated =
+                            updatePhone.executeUpdate();
 
-                    System.out.println("✅ Номер телефону збережено");
+                    System.out.println(
+                            "✅ Номер телефону збережено. Rows: "
+                                    + updated
+                    );
 
                 } catch (Exception e) {
 
@@ -5815,7 +5827,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // 🔢 Генерація номера замовлення
+                // 🔢 Код замовлення
                 String orderCode =
                         "ORD-" + (System.currentTimeMillis() % 10000);
 
@@ -5851,7 +5863,7 @@ public class StoreBot extends TelegramLongPollingBot {
                             postOffice = addressValue;
                 }
 
-                // 📦 Формування списку товарів
+                // 📦 Формування товарів
                 StringBuilder itemsBuilder =
                         new StringBuilder();
 
@@ -5947,7 +5959,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "Дякуємо за покупку 🙌"
                 );
 
-                // 👨‍💼 Адмінам
+                // 👨‍💼 Повідомлення адмінам
                 String adminMessage =
                         "📦 НОВЕ ЗАМОВЛЕННЯ!\n\n" +
                                 "👤 Користувач: " + fullname + "\n" +
