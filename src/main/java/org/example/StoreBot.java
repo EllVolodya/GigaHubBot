@@ -3012,13 +3012,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                case "Редагувати категорії" -> {
-                    if (ADMINS.contains(userId)) {
-                        userStates.put(userId, "category_management");
-                        sendMessage(createCategoryAdminMenu(chatId));
-                    } else sendText(chatId, "⛔ У вас немає доступу до цієї функції.");
-                }
-
                 case "🛒 Замовлення користувачів" -> {
                     try (Connection conn = DatabaseManager.getConnection()) {
 
