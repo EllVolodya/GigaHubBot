@@ -1205,12 +1205,12 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 sendText(
                         chatId,
-                        "➕ Введіть назву нового підфільтра:"
+                        "📂 Введіть назву фільтра, до якого хочете додати підфільтр:"
                 );
 
                 userStates.put(
                         userId,
-                        "awaiting_subfilter_name"
+                        "awaiting_filter_for_subfilter"
                 );
 
                 return;
