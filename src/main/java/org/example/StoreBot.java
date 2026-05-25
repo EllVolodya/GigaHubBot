@@ -5725,7 +5725,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 // =====================================================
-                // ❌ EMPTY
+                // ❌ EMPTY TEXT
                 // =====================================================
 
                 if (text == null || text.trim().isEmpty()) {
@@ -5766,7 +5766,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     sendText(
                             chatId,
-                            "❌ Некоректний номер.\n\n" +
+                            "❌ Некоректний номер телефону.\n\n" +
                                     "Приклад:\n" +
                                     "0664014292\n" +
                                     "+380664014292"
@@ -5776,7 +5776,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 // =====================================================
-                // 💾 CACHE
+                // 💾 SAVE CACHE
                 // =====================================================
 
                 userPhones.put(userId, phone);
