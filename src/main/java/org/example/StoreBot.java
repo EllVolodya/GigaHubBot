@@ -2676,10 +2676,15 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "➕ Додати підфільтр" -> {
 
-                    userStates.put(userId, "awaiting_filter_for_subfilter");
-                    filterPage.put(userId, 0);
+                    userStates.put(
+                            userId,
+                            "awaiting_filter_for_subfilter"
+                    );
 
-                    sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0));
+                    sendText(
+                            chatId,
+                            "📂 Введіть назву фільтра, до якого хочете додати підфільтр:"
+                    );
 
                     return;
                 }
