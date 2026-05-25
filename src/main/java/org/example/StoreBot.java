@@ -4742,6 +4742,16 @@ public class StoreBot extends TelegramLongPollingBot {
                     );
                 }
             }
+            case "category_admin_menu" -> {
+
+                handleCategoryManagementState(
+                        userId,
+                        chatId,
+                        text
+                );
+
+                return;
+            }
             case "editing" -> handleEditing(userId, chatId, text);
             case "awaiting_field_value" -> handleAwaitingField(userId, chatId, text);
             case "awaiting_subcategory" -> handleAddToSubcategory(userId, chatId, text);
