@@ -5700,7 +5700,7 @@ public class StoreBot extends TelegramLongPollingBot {
             case "awaiting_phone" -> {
 
                 // =====================================================
-                // 🔙 НАЗАД
+                // 🔙 BACK
                 // =====================================================
 
                 if (BACK_BUTTON.equals(text)) {
@@ -5776,7 +5776,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 // =====================================================
-                // 💾 SAVE CACHE
+                // 💾 CACHE
                 // =====================================================
 
                 userPhones.put(userId, phone);
@@ -5794,7 +5794,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     PreparedStatement checkStmt =
                             conn.prepareStatement(
-                                    "SELECT id FROM users WHERE telegramid = ?"
+                                    "SELECT id FROM users WHERE id = ?"
                             );
 
                     checkStmt.setLong(1, userId);
@@ -5812,7 +5812,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 conn.prepareStatement(
                                         "UPDATE users " +
                                                 "SET number = ? " +
-                                                "WHERE telegramid = ?"
+                                                "WHERE id = ?"
                                 );
 
                         updateStmt.setString(1, phone);
@@ -5823,10 +5823,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                         LOGGER.info(
                                 "✅ USER UPDATED: " + updated
-                        );
-
-                        System.out.println(
-                                "UPDATED ROWS: " + updated
                         );
                     }
 
@@ -5839,7 +5835,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         PreparedStatement insertStmt =
                                 conn.prepareStatement(
                                         "INSERT INTO users " +
-                                                "(telegramid, number) " +
+                                                "(id, number) " +
                                                 "VALUES (?, ?)"
                                 );
 
@@ -5851,10 +5847,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                         LOGGER.info(
                                 "✅ USER INSERTED: " + inserted
-                        );
-
-                        System.out.println(
-                                "INSERTED ROWS: " + inserted
                         );
                     }
 
@@ -6019,6 +6011,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     stmt.executeUpdate();
 
+                    LOGGER.info(
+                            "✅ ORDER CREATED: " + orderCode
+                    );
+
                 } catch (Exception e) {
 
                     e.printStackTrace();
@@ -6034,6 +6030,39 @@ public class StoreBot extends TelegramLongPollingBot {
                     );
 
                     return;
+                }
+
+                // =====================================================
+                // 👨‍💼 ADMIN MESSAGE
+                // =====================================================
+
+                String adminMessage =
+                        "📦 НОВЕ ЗАМОВЛЕННЯ\n\n" +
+                                "👤 Клієнт: " + fullName + "\n" +
+                                "🆔 ID: " + userId + "\n" +
+                                "📞 Телефон: " + phone + "\n" +
+                                "🚚 Доставка: " + deliveryType + "\n" +
+                                "🔢 Код: " + orderCode + "\n\n" +
+                                "🛒 Товари:\n" +
+                                items + "\n" +
+                                "💰 Сума: " + total + " грн";
+
+                for (Long adminId : ADMINS) {
+
+                    try {
+
+                        sendText(
+                                adminId,
+                                adminMessage
+                        );
+
+                    } catch (Exception e) {
+
+                        LOGGER.warning(
+                                "ADMIN SEND ERROR: "
+                                        + e.getMessage()
+                        );
+                    }
                 }
 
                 // =====================================================
@@ -6060,39 +6089,6 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "📞 Менеджер скоро зв'яжеться з вами.\n\n" +
                                 "Дякуємо за покупку 🙌"
                 );
-
-                // =====================================================
-                // 👨‍💼 ADMINS
-                // =====================================================
-
-                String adminMessage =
-                        "📦 НОВЕ ЗАМОВЛЕННЯ\n\n" +
-                                "👤 Клієнт: " + fullName + "\n" +
-                                "🆔 UserID: " + userId + "\n" +
-                                "🔢 Код: " + orderCode + "\n" +
-                                "📞 Телефон: " + phone + "\n" +
-                                "🚚 Доставка: " + deliveryType + "\n\n" +
-                                "🛒 Товари:\n" +
-                                items + "\n" +
-                                "💰 Сума: " + total + " грн";
-
-                for (Long adminId : ADMINS) {
-
-                    try {
-
-                        sendText(
-                                adminId,
-                                adminMessage
-                        );
-
-                    } catch (Exception e) {
-
-                        LOGGER.warning(
-                                "ADMIN SEND ERROR: "
-                                        + e.getMessage()
-                        );
-                    }
-                }
 
                 return;
             }
