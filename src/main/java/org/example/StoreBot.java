@@ -6791,6 +6791,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
         String state = userStates.get(userId);
 
+        System.out.println(
+                "CURRENT STATE = " + state
+        );
+
         System.out.println("[EDIT] TEXT=" + text + " STATE=" + state);
 
         // ❌ якщо нічого не вибрано
