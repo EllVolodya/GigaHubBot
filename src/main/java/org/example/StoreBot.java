@@ -5699,9 +5699,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "awaiting_phone" -> {
 
-                // =========================================================
-                // 🔙 КНОПКА НАЗАД
-                // =========================================================
+                // =====================================================
+                // 🔙 НАЗАД
+                // =====================================================
 
                 if (BACK_BUTTON.equals(text)) {
 
@@ -5711,33 +5711,22 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     } catch (Exception e) {
 
-                        LOGGER.severe(
-                                "[Back Button Error] chatId="
-                                        + chatId + " | "
-                                        + e.getMessage()
+                        LOGGER.warning(
+                                "BACK ERROR: " + e.getMessage()
                         );
 
                         sendText(
                                 chatId,
-                                "❌ Помилка при поверненні назад."
+                                "❌ Помилка."
                         );
                     }
 
                     return;
                 }
 
-                if ("🚛 Оформити замовлення".equals(text)
-                        || "❌ Видалити товар".equals(text)
-                        || "✏️ Змінити кількість".equals(text)
-                        || "🛒 Замовити товар".equals(text)) {
-
-                    sendText(
-                            chatId,
-                            "📞 Будь ласка, введіть номер телефону."
-                    );
-
-                    return;
-                }
+                // =====================================================
+                // ❌ EMPTY
+                // =====================================================
 
                 if (text == null || text.trim().isEmpty()) {
 
@@ -5748,24 +5737,36 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     return;
                 }
+
+                // =====================================================
+                // 📞 FORMAT PHONE
+                // =====================================================
+
                 String phone = text
                         .replaceAll("[^0-9+]", "")
                         .trim();
 
+                // 0661234567
                 if (phone.matches("^0\\d{9}$")) {
 
                     phone = "+38" + phone;
                 }
 
+                // 661234567
                 if (phone.matches("^\\d{9}$")) {
 
                     phone = "+380" + phone;
                 }
+
+                // =====================================================
+                // ❌ VALIDATE
+                // =====================================================
+
                 if (!phone.matches("^\\+380\\d{9}$")) {
 
                     sendText(
                             chatId,
-                            "❌ Некоректний номер телефону.\n\n" +
+                            "❌ Некоректний номер.\n\n" +
                                     "Приклад:\n" +
                                     "0664014292\n" +
                                     "+380664014292"
@@ -5773,56 +5774,87 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     return;
                 }
+
+                // =====================================================
+                // 💾 SAVE CACHE
+                // =====================================================
+
                 userPhones.put(userId, phone);
 
-                try (Connection conn = DatabaseManager.getConnection()) {
+                // =====================================================
+                // 💾 SAVE USER
+                // =====================================================
+
+                try (Connection conn =
+                             DatabaseManager.getConnection()) {
+
+                    // =============================================
+                    // 🔍 CHECK USER
+                    // =============================================
+
                     PreparedStatement checkStmt =
                             conn.prepareStatement(
-                                    "SELECT id FROM users WHERE telegram_id = ?"
+                                    "SELECT id FROM users WHERE telegramid = ?"
                             );
 
                     checkStmt.setLong(1, userId);
 
-                    ResultSet rs = checkStmt.executeQuery();
+                    ResultSet rs =
+                            checkStmt.executeQuery();
 
+                    // =============================================
                     // ✏️ UPDATE
+                    // =============================================
+
                     if (rs.next()) {
 
                         PreparedStatement updateStmt =
                                 conn.prepareStatement(
                                         "UPDATE users " +
                                                 "SET number = ? " +
-                                                "WHERE telegram_id = ?"
+                                                "WHERE telegramid = ?"
                                 );
 
                         updateStmt.setString(1, phone);
                         updateStmt.setLong(2, userId);
 
-                        int updated = updateStmt.executeUpdate();
+                        int updated =
+                                updateStmt.executeUpdate();
 
                         LOGGER.info(
-                                "✅ Номер оновлено. Rows: " + updated
+                                "✅ USER UPDATED: " + updated
                         );
 
+                        System.out.println(
+                                "UPDATED ROWS: " + updated
+                        );
                     }
 
+                    // =============================================
                     // ➕ INSERT
+                    // =============================================
+
                     else {
 
                         PreparedStatement insertStmt =
                                 conn.prepareStatement(
                                         "INSERT INTO users " +
-                                                "(telegram_id, number) " +
+                                                "(telegramid, number) " +
                                                 "VALUES (?, ?)"
                                 );
 
                         insertStmt.setLong(1, userId);
                         insertStmt.setString(2, phone);
 
-                        insertStmt.executeUpdate();
+                        int inserted =
+                                insertStmt.executeUpdate();
 
                         LOGGER.info(
-                                "✅ Новий користувач створений"
+                                "✅ USER INSERTED: " + inserted
+                        );
+
+                        System.out.println(
+                                "INSERTED ROWS: " + inserted
                         );
                     }
 
@@ -5831,7 +5863,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     e.printStackTrace();
 
                     LOGGER.warning(
-                            "❌ Помилка users save: "
+                            "❌ SAVE USER ERROR: "
                                     + e.getMessage()
                     );
 
@@ -5843,7 +5875,10 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                // 🛒 КОШИК
+                // =====================================================
+                // 🛒 CART
+                // =====================================================
+
                 List<Map<String, Object>> cart =
                         userCart.get(userId);
 
@@ -5857,10 +5892,17 @@ public class StoreBot extends TelegramLongPollingBot {
                     return;
                 }
 
-                String orderCode =
-                        "ORD-" + (System.currentTimeMillis() % 100000);
+                // =====================================================
+                // 🔢 ORDER CODE
+                // =====================================================
 
+                String orderCode =
+                        "ORD-" + System.currentTimeMillis();
+
+                // =====================================================
                 // 🚚 DELIVERY
+                // =====================================================
+
                 String deliveryType =
                         tempDeliveryType.getOrDefault(
                                 userId,
@@ -5885,18 +5927,24 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 switch (deliveryType) {
 
-                    case "Самовивіз" -> city = addressValue;
+                    case "Самовивіз" ->
+                            city = addressValue;
 
-                    case "Доставка по місту" -> address = addressValue;
+                    case "Доставка по місту" ->
+                            address = addressValue;
 
-                    case "Нова пошта" -> postOffice = addressValue;
+                    case "Нова пошта" ->
+                            postOffice = addressValue;
                 }
 
-                // 📦 ТОВАРИ
+                // =====================================================
+                // 📦 ITEMS
+                // =====================================================
+
                 StringBuilder itemsBuilder =
                         new StringBuilder();
 
-                double total = 0.0;
+                double total = 0;
 
                 for (Map<String, Object> item : cart) {
 
@@ -5922,30 +5970,35 @@ public class StoreBot extends TelegramLongPollingBot {
                     total += price * quantity;
                 }
 
-                total = Math.round(total * 100.0) / 100.0;
+                total =
+                        Math.round(total * 100.0) / 100.0;
 
                 String items =
                         itemsBuilder.toString();
 
+                // =====================================================
                 // 💾 INSERT ORDER
-                try (Connection conn = DatabaseManager.getConnection()) {
+                // =====================================================
+
+                try (Connection conn =
+                             DatabaseManager.getConnection()) {
 
                     PreparedStatement stmt =
                             conn.prepareStatement(
                                     "INSERT INTO orders (" +
-                                            "userId, " +
-                                            "orderCode, " +
-                                            "deliveryType, " +
-                                            "city, " +
-                                            "address, " +
-                                            "postOffice, " +
-                                            "fullName, " +
-                                            "phone, " +
-                                            "item, " +
-                                            "total, " +
-                                            "paymentmethod, " +
-                                            "paymentstatus, " +
-                                            "status, " +
+                                            "userId," +
+                                            "orderCode," +
+                                            "deliveryType," +
+                                            "city," +
+                                            "address," +
+                                            "postOffice," +
+                                            "fullName," +
+                                            "phone," +
+                                            "item," +
+                                            "total," +
+                                            "paymentmethod," +
+                                            "paymentstatus," +
+                                            "status," +
                                             "date" +
                                             ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())"
                             );
@@ -5971,19 +6024,22 @@ public class StoreBot extends TelegramLongPollingBot {
                     e.printStackTrace();
 
                     LOGGER.warning(
-                            "❌ Помилка створення замовлення: "
+                            "❌ ORDER ERROR: "
                                     + e.getMessage()
                     );
 
                     sendText(
                             chatId,
-                            "❌ Помилка при створенні замовлення."
+                            "❌ Помилка створення замовлення."
                     );
 
                     return;
                 }
 
-                // 🧹 ОЧИСТКА
+                // =====================================================
+                // 🧹 CLEAR
+                // =====================================================
+
                 userCart.remove(userId);
                 userPhones.remove(userId);
                 userStates.remove(userId);
@@ -5993,7 +6049,10 @@ public class StoreBot extends TelegramLongPollingBot {
                 tempFullname.remove(userId);
                 tempCard.remove(userId);
 
+                // =====================================================
                 // ✅ SUCCESS
+                // =====================================================
+
                 sendText(
                         chatId,
                         "✅ Замовлення оформлено!\n\n" +
@@ -6002,7 +6061,10 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "Дякуємо за покупку 🙌"
                 );
 
-                // 👨‍💼 ADMIN MESSAGE
+                // =====================================================
+                // 👨‍💼 ADMINS
+                // =====================================================
+
                 String adminMessage =
                         "📦 НОВЕ ЗАМОВЛЕННЯ\n\n" +
                                 "👤 Клієнт: " + fullName + "\n" +
@@ -6018,13 +6080,15 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     try {
 
-                        sendText(adminId, adminMessage);
+                        sendText(
+                                adminId,
+                                adminMessage
+                        );
 
                     } catch (Exception e) {
 
                         LOGGER.warning(
-                                "❌ Не вдалося відправити адміну "
-                                        + adminId + ": "
+                                "ADMIN SEND ERROR: "
                                         + e.getMessage()
                         );
                     }
