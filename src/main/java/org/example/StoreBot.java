@@ -10488,7 +10488,6 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔥 Прибираємо вимкнені фільтри
         List<String> activeFilters = new ArrayList<>();
 
         try (Connection conn = DatabaseManager.getConnection()) {
@@ -10505,11 +10504,31 @@ public class StoreBot extends TelegramLongPollingBot {
             Set<String> dbFilters = new HashSet<>();
 
             while (rs.next()) {
-                dbFilters.add(rs.getString("name").trim().toLowerCase());
+
+                String dbName = rs.getString("name");
+
+                if (dbName != null) {
+                    dbFilters.add(
+                            dbName
+                                    .trim()
+                                    .toLowerCase(Locale.ROOT)
+                    );
+                }
             }
 
             for (String filter : filters) {
-                if (filter != null && dbFilters.contains(filter.trim())) {
+
+                if (filter == null) {
+                    continue;
+                }
+
+                String normalizedFilter = filter
+                        .trim()
+                        .toLowerCase(Locale.ROOT);
+
+                System.out.println("CHECK FILTER: [" + normalizedFilter + "]");
+
+                if (dbFilters.contains(normalizedFilter)) {
                     activeFilters.add(filter.trim());
                 }
             }
@@ -10528,10 +10547,17 @@ public class StoreBot extends TelegramLongPollingBot {
         int pageSize = 20;
         int totalPages = (int) Math.ceil((double) activeFilters.size() / pageSize);
 
-        if (totalPages <= 0) totalPages = 1;
+        if (totalPages <= 0) {
+            totalPages = 1;
+        }
 
-        if (page < 0) page = 0;
-        if (page >= totalPages) page = totalPages - 1;
+        if (page < 0) {
+            page = 0;
+        }
+
+        if (page >= totalPages) {
+            page = totalPages - 1;
+        }
 
         filterPage.put(chatId, page);
 
@@ -10563,8 +10589,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow nav = new KeyboardRow();
 
-        if (page > 0) nav.add("Попередні");
-        if (page < totalPages - 1) nav.add("Продовжити");
+        if (page > 0) {
+            nav.add("Попередні");
+        }
+
+        if (page < totalPages - 1) {
+            nav.add("Продовжити");
+        }
 
         if (!nav.isEmpty()) {
             rows.add(nav);
@@ -10597,18 +10628,21 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            // 🔥 Шукаємо активний filter_id
+            String normalizedFilter = filterName
+                    .trim()
+                    .toLowerCase(Locale.ROOT);
+
+            System.out.println("FILTER: [" + normalizedFilter + "]");
+
             PreparedStatement findFilter = conn.prepareStatement("""
-                SELECT id
-                FROM filters
-                WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
-                AND active = 1
-                LIMIT 1
-            """);
+            SELECT id
+            FROM filters
+            WHERE LOWER(TRIM(name)) = ?
+            AND active = 1
+            LIMIT 1
+        """);
 
-            System.out.println("FILTER: [" + filterName + "]");
-
-            findFilter.setString(1, filterName.trim());
+            findFilter.setString(1, normalizedFilter);
 
             ResultSet filterRs = findFilter.executeQuery();
 
@@ -10619,7 +10653,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             int filterId = filterRs.getInt("id");
 
-            // 🔥 Беремо тільки активні підфільтри
             PreparedStatement ps = conn.prepareStatement("""
             SELECT name
             FROM subfilters
@@ -10647,16 +10680,13 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔴 Якщо немає активних підфільтрів
         if (subfilters.isEmpty()) {
             sendText(chatId.toString(), "ℹ️ У цьому розділі немає доступних підфільтрів.");
             return;
         }
 
-        // 🔥 Унікальні значення
         subfilters = subfilters.stream().distinct().toList();
 
-        // 🔹 Пагінація
         int pageSize = 20;
         int totalPages = (int) Math.ceil((double) subfilters.size() / pageSize);
 
@@ -10684,20 +10714,20 @@ public class StoreBot extends TelegramLongPollingBot {
             rows.add(row);
         }
 
-        // 🔹 Навігація
         if (page < totalPages - 1) {
+
             KeyboardRow nextRow = new KeyboardRow();
             nextRow.add("Далі сторінка");
             rows.add(nextRow);
         }
 
         if (page > 0) {
+
             KeyboardRow prevRow = new KeyboardRow();
             prevRow.add("Попередня сторінка");
             rows.add(prevRow);
         }
 
-        // 🔙 Назад
         KeyboardRow backRow = new KeyboardRow();
         backRow.add(BACK_BUTTON);
         rows.add(backRow);
