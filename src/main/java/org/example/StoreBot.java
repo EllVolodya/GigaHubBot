@@ -10505,7 +10505,7 @@ public class StoreBot extends TelegramLongPollingBot {
             Set<String> dbFilters = new HashSet<>();
 
             while (rs.next()) {
-                dbFilters.add(rs.getString("name").trim());
+                dbFilters.add(rs.getString("name").trim().toLowerCase());
             }
 
             for (String filter : filters) {
@@ -10599,12 +10599,14 @@ public class StoreBot extends TelegramLongPollingBot {
 
             // 🔥 Шукаємо активний filter_id
             PreparedStatement findFilter = conn.prepareStatement("""
-            SELECT id
-            FROM filters
-            WHERE LOWER(TRIM(name)) LIKE CONCAT('%', LOWER(TRIM(?)), '%')
-            AND active = 1
-            LIMIT 1
-        """);
+                SELECT id
+                FROM filters
+                WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+                AND active = 1
+                LIMIT 1
+            """);
+
+            System.out.println("FILTER: [" + filterName + "]");
 
             findFilter.setString(1, filterName.trim());
 
