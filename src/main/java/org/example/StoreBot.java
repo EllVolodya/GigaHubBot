@@ -7997,30 +7997,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 return;
             }
-
-            List<String> filters =
-                    userFilters.get(chatId);
-
-            if (filters != null
-                    && filters.contains(text)) {
-
-                selectedFilterForSubfilter.put(
-                        chatId,
-                        text
-                );
-
-                userStates.put(
-                        chatId,
-                        "awaiting_subfilter_name"
-                );
-
-                sendText(
-                        String.valueOf(chatId),
-                        "✏️ Введіть назву підфільтра:"
-                );
-
-                return;
-            }
         }
 
         // 🔥 КАТЕГОРІЇ
@@ -8028,7 +8004,10 @@ public class StoreBot extends TelegramLongPollingBot {
         List<String> categories =
                 catalogSearcher.getCategories();
 
-        if (categories.contains(text)) {
+        if (categories.stream()
+                .map(c -> c.trim().toLowerCase(Locale.ROOT))
+                .toList()
+                .contains(text.toLowerCase(Locale.ROOT))) {
 
             currentCategory.put(
                     chatId,
@@ -8036,6 +8015,8 @@ public class StoreBot extends TelegramLongPollingBot {
             );
 
             currentSubcategory.remove(chatId);
+            currentFilter.remove(chatId);
+            currentSubfilter.remove(chatId);
 
             sendSubcategories(
                     chatId,
@@ -8055,7 +8036,13 @@ public class StoreBot extends TelegramLongPollingBot {
             List<String> subcats =
                     catalogSearcher.getSubcategories(category);
 
-            if (subcats.contains(text)) {
+            boolean isSubcategory =
+                    subcats.stream()
+                            .map(s -> s.trim().toLowerCase(Locale.ROOT))
+                            .toList()
+                            .contains(text.toLowerCase(Locale.ROOT));
+
+            if (isSubcategory) {
 
                 currentSubcategory.put(
                         chatId,
@@ -8095,6 +8082,81 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
+        // 🔥 ФІЛЬТРИ
+
+        List<String> filters =
+                userFilters.get(chatId);
+
+        if (filters != null) {
+
+            boolean isFilter = filters.stream()
+                    .map(f -> f.trim().toLowerCase(Locale.ROOT))
+                    .toList()
+                    .contains(
+                            text.trim().toLowerCase(Locale.ROOT)
+                    );
+
+            if (isFilter) {
+
+                currentFilter.put(
+                        chatId,
+                        text
+                );
+
+                currentSubfilter.remove(chatId);
+
+                productIndex.put(
+                        chatId,
+                        0
+                );
+
+                System.out.println(
+                        "[FILTER CLICK] " + text
+                );
+
+                // 🔥 СПОЧАТКУ ПІДФІЛЬТРИ
+                boolean hasSubfilters =
+                        catalogSearcher.hasSubfilters(text);
+
+                System.out.println(
+                        "[HAS SUBFILTERS] " + hasSubfilters
+                );
+
+                if (hasSubfilters) {
+
+                    sendSubfilters(
+                            chatId,
+                            text,
+                            0
+                    );
+
+                    return;
+                }
+
+                // 🔥 ПОТІМ ТОВАРИ
+                boolean hasProducts =
+                        catalogSearcher.hasProductsInFilter(text);
+
+                System.out.println(
+                        "[HAS PRODUCTS] " + hasProducts
+                );
+
+                if (hasProducts) {
+
+                    sendProductList(chatId);
+
+                    return;
+                }
+
+                sendText(
+                        String.valueOf(chatId),
+                        "❌ У цьому фільтрі немає товарів."
+                );
+
+                return;
+            }
+        }
+
         // 🔥 ПІДФІЛЬТРИ
 
         String filter =
@@ -8105,63 +8167,32 @@ public class StoreBot extends TelegramLongPollingBot {
             List<String> subfilters =
                     catalogSearcher.getSubfilters(filter);
 
-            if (subfilters != null
-                    && subfilters.contains(text)) {
+            if (subfilters != null) {
 
-                currentSubfilter.put(
-                        chatId,
-                        text
-                );
+                boolean isSubfilter = subfilters.stream()
+                        .map(s -> s.trim().toLowerCase(Locale.ROOT))
+                        .toList()
+                        .contains(
+                                text.trim().toLowerCase(Locale.ROOT)
+                        );
 
-                sendProductList(chatId);
+                if (isSubfilter) {
 
-                return;
+                    currentSubfilter.put(
+                            chatId,
+                            text
+                    );
+
+                    productIndex.put(
+                            chatId,
+                            0
+                    );
+
+                    sendProductList(chatId);
+
+                    return;
+                }
             }
-        }
-
-        // 🔥 ФІЛЬТРИ
-
-        List<String> filters =
-                userFilters.get(chatId);
-
-        if (filters != null
-                && filters.contains(text)) {
-
-            currentFilter.put(
-                    chatId,
-                    text
-            );
-
-            currentSubfilter.remove(chatId);
-
-            // 🔥 Є товари у фільтрі
-            if (catalogSearcher.hasProductsInFilter(text)) {
-
-                sendProductList(chatId);
-
-            }
-
-            // 🔥 Є підфільтри
-            else if (catalogSearcher.hasSubfilters(text)) {
-
-                sendSubfilters(
-                        chatId,
-                        text,
-                        0
-                );
-
-            }
-
-            // 🔥 Пустий фільтр
-            else {
-
-                sendText(
-                        String.valueOf(chatId),
-                        "❌ У цьому фільтрі немає товарів."
-                );
-            }
-
-            return;
         }
 
         // 🔥 ПІДКАЗКИ
@@ -8198,6 +8229,7 @@ public class StoreBot extends TelegramLongPollingBot {
                         "Натисніть /start або виберіть кнопку з меню."
         );
     }
+
     // --- Допоміжні методи для надсилання повідомлень ---
     private void sendText(Long chatId, String text) {
         sendText(chatId.toString(), text);
