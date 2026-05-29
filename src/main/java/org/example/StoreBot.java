@@ -4603,6 +4603,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 List<String> filters = userFilters.get(userId);
 
+                System.out.println("STATE FILTER");
+                System.out.println("FILTERS = " + filters);
+
                 if (filters == null || filters.isEmpty()) {
 
                     sendText(
@@ -4615,85 +4618,130 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 String selected = text.trim();
 
-                boolean found = false;
+                String selectedFilter = null;
 
                 for (String filter : filters) {
 
                     if (filter.equalsIgnoreCase(selected)) {
 
-                        found = true;
-
-                        currentFilter.put(userId, filter);
-
-                        try {
-
-                            // 🔥 отримуємо підфільтри
-                            List<String> subfilters =
-                                    catalogSearcher.getSubfilters(filter);
-
-                            System.out.println("SUBFILTERS = " + subfilters);
-
-                            // 🔥 ЯКЩО Є ПІДФІЛЬТРИ
-
-                            if (subfilters != null && !subfilters.isEmpty()) {
-
-                                userStates.put(
-                                        userId,
-                                        "subfilter"
-                                );
-
-                                sendSubfilters(
-                                        userId,
-                                        filter,
-                                        0
-                                );
-
-                                return;
-                            }
-
-                            // 🔥 ЯКЩО ПІДФІЛЬТРІВ НЕМАЄ
-
-                            List<Map<String, Object>> products =
-                                    catalogSearcher.findProducts(
-                                            currentCategory.get(userId),
-                                            currentSubcategory.get(userId),
-                                            filter,
-                                            null
-                                    );
-
-                            userProductLists.put(
-                                    userId,
-                                    products
-                            );
-
-                            userStates.put(
-                                    userId,
-                                    "choose_product"
-                            );
-
-                            sendProductList(userId);
-
-                        } catch (Exception e) {
-
-                            e.printStackTrace();
-
-                            sendText(
-                                    chatId,
-                                    "❌ Помилка при відкритті товарів."
-                            );
-                        }
-
+                        selectedFilter = filter;
                         break;
                     }
                 }
 
-                if (!found) {
+                if (selectedFilter == null) {
 
                     sendText(
                             chatId,
                             "❌ Фільтр не знайдено."
                     );
+
+                    return;
                 }
+
+                currentFilter.put(
+                        userId,
+                        selectedFilter
+                );
+
+                try {
+
+                    List<String> subfilters =
+                            catalogSearcher.getSubfilters(
+                                    selectedFilter
+                            );
+
+                    System.out.println(
+                            "SUBFILTERS = " + subfilters
+                    );
+
+                    // Є підфільтри
+                    if (subfilters != null &&
+                            !subfilters.isEmpty()) {
+
+                        userStates.put(
+                                userId,
+                                "subfilter"
+                        );
+
+                        System.out.println(
+                                "STATE SET TO SUBFILTER"
+                        );
+
+                        sendSubfilters(
+                                userId,
+                                selectedFilter,
+                                0
+                        );
+
+                        return;
+                    }
+
+                    // Немає підфільтрів
+                    String category =
+                            currentCategory.get(userId);
+
+                    String subcategory =
+                            currentSubcategory.get(userId);
+
+                    System.out.println(
+                            "CATEGORY = " + category
+                    );
+
+                    System.out.println(
+                            "SUBCATEGORY = " + subcategory
+                    );
+
+                    List<Map<String, Object>> products =
+                            catalogSearcher.findProducts(
+                                    category,
+                                    subcategory,
+                                    selectedFilter,
+                                    null
+                            );
+
+                    System.out.println(
+                            "PRODUCTS = " +
+                                    (products == null
+                                            ? "NULL"
+                                            : products.size())
+                    );
+
+                    if (products == null ||
+                            products.isEmpty()) {
+
+                        sendText(
+                                chatId,
+                                "❌ Товарів не знайдено."
+                        );
+
+                        return;
+                    }
+
+                    userProductLists.put(
+                            userId,
+                            products
+                    );
+
+                    userStates.put(
+                            userId,
+                            "choose_product"
+                    );
+
+                    sendProductList(userId);
+
+                } catch (Exception e) {
+
+                    e.printStackTrace();
+
+                    sendText(
+                            chatId,
+                            "❌ Помилка при відкритті товарів.\n"
+                                    + e.getMessage()
+                    );
+                }
+
+                return;
             }
             case "subfilter" -> {
 
