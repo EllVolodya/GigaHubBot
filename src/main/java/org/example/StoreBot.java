@@ -4697,29 +4697,49 @@ public class StoreBot extends TelegramLongPollingBot {
             }
             case "subfilter" -> {
 
-                String selectedSubfilter =
-                        text.trim();
+                String selectedSubfilter = text.trim();
 
                 try {
 
-                    currentSubfilter.put(
-                            userId,
-                            selectedSubfilter
-                    );
+                    currentSubfilter.put(userId, selectedSubfilter);
+
+                    String category = currentCategory.get(userId);
+                    String subcategory = currentSubcategory.get(userId);
+                    String filter = currentFilter.get(userId);
+
+                    System.out.println("CATEGORY = " + category);
+                    System.out.println("SUBCATEGORY = " + subcategory);
+                    System.out.println("FILTER = " + filter);
+                    System.out.println("SUBFILTER = " + selectedSubfilter);
+
+                    if (category == null || subcategory == null || filter == null) {
+
+                        sendText(
+                                chatId,
+                                "❌ Не вдалося визначити категорію або фільтр."
+                        );
+
+                        return;
+                    }
 
                     List<Map<String, Object>> products =
                             catalogSearcher.findProducts(
-                                    currentCategory.get(userId),
-                                    currentSubcategory.get(userId),
-                                    currentFilter.get(userId),
+                                    category,
+                                    subcategory,
+                                    filter,
                                     selectedSubfilter
                             );
+
+                    System.out.println(
+                            "PRODUCTS FOUND = " +
+                                    (products == null ? "NULL" : products.size())
+                    );
 
                     if (products == null || products.isEmpty()) {
 
                         sendText(
                                 chatId,
-                                "❌ Товарів у цьому розділі немає."
+                                "❌ Товарів для цього підфільтра не знайдено."
                         );
 
                         return;
@@ -4737,14 +4757,19 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     sendProductList(userId);
 
+                    return;
+
                 } catch (Exception e) {
 
                     e.printStackTrace();
 
                     sendText(
                             chatId,
-                            "❌ Помилка при відкритті товарів."
+                            "❌ Помилка при відкритті товарів:\n"
+                                    + e.getMessage()
                     );
+
+                    return;
                 }
             }
             case "category_admin_menu" -> {
