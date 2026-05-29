@@ -1248,7 +1248,8 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        if ("category_management".equals(state)) {
+        if ("category_admin_menu".equals(state)
+                || "category_management".equals(state)) {
 
             handleCategoryManagementState(
                     userId,
