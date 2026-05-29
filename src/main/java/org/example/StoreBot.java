@@ -96,11 +96,11 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Double> tempWidth = new HashMap<>();
 
     //Права
-    private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню (Мій ІД 620298889L )
-    private final List<Long> DEVELOPERS = List.of(620298889L, 1030917576L, 533570832L); // тут айді розробників меню
+    private final List<Long> ADMINS = List.of(1030917576L, 533570832L);// тут айді продавців меню (Мій ІД 620298889L )
+    private final List<Long> DEVELOPERS = List.of(1030917576L, 533570832L); // тут айді розробників меню
     private final List<Long> CONSULTANT_CHAT_ID =
             List.of(
-                    620298889L, 533570832L
+                    533570832L
             );  // тут айді консультантів меню
 
     // 🔹 Адмінські стани
