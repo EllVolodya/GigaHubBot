@@ -10722,10 +10722,16 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     // 🔹 Показ підфільтрів
-    private void sendSubfilters(Long chatId, String filterName, int page) throws TelegramApiException {
+    private void sendSubfilters(Long chatId, String filterName, int page)
+            throws TelegramApiException {
 
         if (filterName == null || filterName.isBlank()) {
-            sendText(chatId.toString(), "❌ Помилка: фільтр не визначений.");
+
+            sendText(
+                    chatId.toString(),
+                    "❌ Помилка: фільтр не визначений."
+            );
+
             return;
         }
 
@@ -10733,117 +10739,208 @@ public class StoreBot extends TelegramLongPollingBot {
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            String normalizedFilter = filterName
-                    .trim()
-                    .toLowerCase(Locale.ROOT);
+            String normalizedFilter =
+                    filterName.trim().toLowerCase(Locale.ROOT);
 
-            System.out.println("FILTER: [" + normalizedFilter + "]");
+            System.out.println(
+                    "CHECK FILTER: [" + normalizedFilter + "]"
+            );
 
-            PreparedStatement findFilter = conn.prepareStatement("""
-            SELECT id
-            FROM filters
-            WHERE LOWER(TRIM(name)) = ?
-            AND active = 1
-            LIMIT 1
-        """);
+            PreparedStatement findFilter =
+                    conn.prepareStatement("""
+                    SELECT id
+                    FROM filters
+                    WHERE LOWER(TRIM(name)) = ?
+                    AND active = 1
+                    LIMIT 1
+                """);
 
-            findFilter.setString(1, normalizedFilter);
+            findFilter.setString(
+                    1,
+                    normalizedFilter
+            );
 
-            ResultSet filterRs = findFilter.executeQuery();
+            ResultSet filterRs =
+                    findFilter.executeQuery();
 
             if (!filterRs.next()) {
-                sendText(chatId.toString(), "❌ Фільтр не знайдено або вимкнений.");
+
+                sendText(
+                        chatId.toString(),
+                        "❌ Фільтр не знайдено або вимкнений."
+                );
+
                 return;
             }
 
-            int filterId = filterRs.getInt("id");
+            int filterId =
+                    filterRs.getInt("id");
 
-            PreparedStatement ps = conn.prepareStatement("""
-            SELECT name
-            FROM subfilters
-            WHERE filter_id = ?
-            AND active = 1
-            ORDER BY sort_order ASC, name ASC
-        """);
+            System.out.println(
+                    "FILTER ID = " + filterId
+            );
 
-            ps.setInt(1, filterId);
+            PreparedStatement ps =
+                    conn.prepareStatement("""
+                    SELECT name
+                    FROM subfilters
+                    WHERE filter_id = ?
+                    AND active = 1
+                    ORDER BY sort_order ASC, name ASC
+                """);
 
-            ResultSet rs = ps.executeQuery();
+            ps.setInt(
+                    1,
+                    filterId
+            );
+
+            ResultSet rs =
+                    ps.executeQuery();
 
             while (rs.next()) {
 
-                String name = rs.getString("name");
+                String name =
+                        rs.getString("name");
 
-                if (name != null && !name.isBlank()) {
-                    subfilters.add(name.trim());
+                if (name != null &&
+                        !name.isBlank()) {
+
+                    subfilters.add(
+                            name.trim()
+                    );
                 }
             }
 
         } catch (Exception e) {
+
             e.printStackTrace();
-            sendText(chatId.toString(), "❌ Помилка при завантаженні підфільтрів.");
+
+            sendText(
+                    chatId.toString(),
+                    "❌ Помилка при завантаженні підфільтрів."
+            );
+
             return;
         }
 
         if (subfilters.isEmpty()) {
-            sendText(chatId.toString(), "ℹ️ У цьому розділі немає доступних підфільтрів.");
+
+            sendText(
+                    chatId.toString(),
+                    "ℹ️ У цьому розділі немає доступних підфільтрів."
+            );
+
             return;
         }
 
-        subfilters = subfilters.stream().distinct().toList();
+        subfilters =
+                subfilters.stream()
+                        .distinct()
+                        .toList();
 
         int pageSize = 20;
-        int totalPages = (int) Math.ceil((double) subfilters.size() / pageSize);
 
-        if (totalPages <= 0) {
+        int totalPages =
+                (int) Math.ceil(
+                        (double) subfilters.size()
+                                / pageSize
+                );
+
+        if (totalPages < 1) {
+
             totalPages = 1;
         }
 
-        page = Math.max(0, Math.min(page, totalPages - 1));
+        page = Math.max(
+                0,
+                Math.min(
+                        page,
+                        totalPages - 1
+                )
+        );
 
-        int start = page * pageSize;
-        int end = Math.min(start + pageSize, subfilters.size());
+        int start =
+                page * pageSize;
 
-        List<KeyboardRow> rows = new ArrayList<>();
+        int end =
+                Math.min(
+                        start + pageSize,
+                        subfilters.size()
+                );
+
+        List<KeyboardRow> rows =
+                new ArrayList<>();
 
         for (int i = start; i < end; i += 2) {
 
-            KeyboardRow row = new KeyboardRow();
+            KeyboardRow row =
+                    new KeyboardRow();
 
-            row.add(subfilters.get(i));
+            row.add(
+                    subfilters.get(i)
+            );
 
             if (i + 1 < end) {
-                row.add(subfilters.get(i + 1));
+
+                row.add(
+                        subfilters.get(i + 1)
+                );
             }
 
             rows.add(row);
         }
 
-        if (page < totalPages - 1) {
-
-            KeyboardRow nextRow = new KeyboardRow();
-            nextRow.add("Далі сторінка");
-            rows.add(nextRow);
-        }
+        KeyboardRow navigationRow =
+                new KeyboardRow();
 
         if (page > 0) {
 
-            KeyboardRow prevRow = new KeyboardRow();
-            prevRow.add("Попередня сторінка");
-            rows.add(prevRow);
+            navigationRow.add(
+                    "⬅️ Попередня сторінка"
+            );
         }
 
-        KeyboardRow backRow = new KeyboardRow();
-        backRow.add(BACK_BUTTON);
+        if (page < totalPages - 1) {
+
+            navigationRow.add(
+                    "➡️ Наступна сторінка"
+            );
+        }
+
+        if (!navigationRow.isEmpty()) {
+
+            rows.add(navigationRow);
+        }
+
+        KeyboardRow backRow =
+                new KeyboardRow();
+
+        backRow.add(
+                BACK_BUTTON
+        );
+
         rows.add(backRow);
 
-        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        ReplyKeyboardMarkup markup =
+                new ReplyKeyboardMarkup();
+
         markup.setKeyboard(rows);
         markup.setResizeKeyboard(true);
+        markup.setOneTimeKeyboard(false);
+
+        System.out.println(
+                "[DEBUG] Rows: " + rows.size()
+                        + " Buttons: "
+                        + subfilters.size()
+        );
 
         sendMessage(
                 chatId.toString(),
-                "🔎 Обери підфільтр:\nСторінка " + (page + 1) + " з " + totalPages,
+                "🔎 Оберіть підфільтр:\n\n" +
+                        "Сторінка "
+                        + (page + 1)
+                        + " з "
+                        + totalPages,
                 markup
         );
     }
