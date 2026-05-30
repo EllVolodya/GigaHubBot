@@ -1138,28 +1138,21 @@ public class StoreBot extends TelegramLongPollingBot {
 
             // ✏️ Редагування товару
             if (text != null
-                    && text.contains("Редагувати товар")) {
+                    && text.equals("Редагувати товар")) {
+
+                KeyboardRow row1 = new KeyboardRow();
+                row1.add("🔍 Пошук у MySQL");
+
+                KeyboardRow row2 = new KeyboardRow();
+                row2.add("🔍 Пошук з EXCEL");
+
+                KeyboardRow row3 = new KeyboardRow();
+                row3.add(BACK_BUTTON);
 
                 ReplyKeyboardMarkup markup =
                         new ReplyKeyboardMarkup();
 
                 markup.setResizeKeyboard(true);
-
-                KeyboardRow row1 =
-                        new KeyboardRow();
-
-                row1.add("🔍 Пошук у MySQL");
-
-                KeyboardRow row2 =
-                        new KeyboardRow();
-
-                row2.add("🔍 Пошук з EXCEL");
-
-                KeyboardRow row3 =
-                        new KeyboardRow();
-
-                row3.add(BACK_BUTTON);
-
                 markup.setKeyboard(
                         List.of(
                                 row1,
@@ -1173,11 +1166,23 @@ public class StoreBot extends TelegramLongPollingBot {
                         "choose_search_source"
                 );
 
-                sendMessage(
-                        chatId,
-                        "🔎 Оберіть джерело пошуку:",
-                        markup
-                );
+                try {
+
+                    sendTextWithMarkup(
+                            Long.valueOf(chatId),
+                            "🔎 Оберіть джерело пошуку:",
+                            markup
+                    );
+
+                } catch (TelegramApiException e) {
+
+                    e.printStackTrace();
+
+                    sendText(
+                            chatId,
+                            "❌ Помилка відкриття меню."
+                    );
+                }
 
                 return;
             }
@@ -4968,63 +4973,45 @@ public class StoreBot extends TelegramLongPollingBot {
             case "paint_length" -> handleRoomLength(userId, chatId, text, "paint_width");
             case "choose_search_source" -> {
 
-                switch (text) {
+                if ("🔍 Пошук у MySQL".equals(text)) {
 
-                    case "🔍 Пошук у MySQL" -> {
+                    adminSearchSource.put(
+                            userId,
+                            "mysql"
+                    );
 
-                        adminSearchSource.put(
-                                userId,
-                                "mysql"
-                        );
+                    userStates.put(
+                            userId,
+                            "awaiting_search"
+                    );
 
-                        userStates.put(
-                                userId,
-                                "awaiting_search"
-                        );
+                    sendText(
+                            chatId,
+                            "🔍 Введіть назву товару:"
+                    );
 
-                        sendText(
-                                chatId,
-                                "🔍 Введіть назву товару для пошуку в MySQL:"
-                        );
-                    }
-
-                    case "🔍 Пошук з EXCEL" -> {
-
-                        adminSearchSource.put(
-                                userId,
-                                "excel"
-                        );
-
-                        userStates.put(
-                                userId,
-                                "awaiting_search"
-                        );
-
-                        sendText(
-                                chatId,
-                                "🔍 Введіть назву товару для пошуку в Excel:"
-                        );
-                    }
-
-                    case BACK_BUTTON -> {
-
-                        userStates.remove(userId);
-
-                        sendMessageSafely(
-                                createDeveloperMenu(chatId)
-                        );
-                    }
-
-                    default -> {
-
-                        sendText(
-                                chatId,
-                                "❌ Оберіть варіант кнопкою."
-                        );
-                    }
+                    return;
                 }
 
-                return;
+                if ("🔍 Пошук з EXCEL".equals(text)) {
+
+                    adminSearchSource.put(
+                            userId,
+                            "excel"
+                    );
+
+                    userStates.put(
+                            userId,
+                            "awaiting_search"
+                    );
+
+                    sendText(
+                            chatId,
+                            "🔍 Введіть назву товару з Excel:"
+                    );
+
+                    return;
+                }
             }
 
             case "awaiting_search" -> {
