@@ -7264,6 +7264,22 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // 🗂️ ДОДАТИ В ПІДКАТЕГОРІЮ
+        if ("🗂️ Додати в підкатегорію".equals(text)) {
+
+            userStates.put(
+                    userId,
+                    "awaiting_subcategory_select"
+            );
+
+            sendText(
+                    chatId,
+                    "📂 Введіть назву підкатегорії:"
+            );
+
+            return;
+        }
+
         // 🖼️ ДОДАТИ ФОТО
         if ("🖼️ Додати фотографію".equals(text)) {
 
@@ -7830,7 +7846,6 @@ public class StoreBot extends TelegramLongPollingBot {
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
-        //row2.add("⭐ Додати товар у Хіт продажу");
         row2.add("⚙️ Керування фільтрами");
         keyboard.add(row2);
 
