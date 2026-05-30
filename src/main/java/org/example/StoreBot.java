@@ -1160,23 +1160,44 @@ public class StoreBot extends TelegramLongPollingBot {
             if (text != null
                     && text.contains("Редагувати товар")) {
 
-                try {
+                ReplyKeyboardMarkup markup =
+                        new ReplyKeyboardMarkup();
 
-                    handleAdminSearchSource(
-                            userId,
-                            chatId,
-                            "🔍 Пошук у MySQL"
-                    );
+                markup.setResizeKeyboard(true);
 
-                } catch (TelegramApiException e) {
+                KeyboardRow row1 =
+                        new KeyboardRow();
 
-                    e.printStackTrace();
+                row1.add("🔍 Пошук у MySQL");
 
-                    sendText(
-                            chatId,
-                            "❌ Помилка."
-                    );
-                }
+                KeyboardRow row2 =
+                        new KeyboardRow();
+
+                row2.add("🔍 Пошук з EXCEL");
+
+                KeyboardRow row3 =
+                        new KeyboardRow();
+
+                row3.add(BACK_BUTTON);
+
+                markup.setKeyboard(
+                        List.of(
+                                row1,
+                                row2,
+                                row3
+                        )
+                );
+
+                userStates.put(
+                        userId,
+                        "choose_search_source"
+                );
+
+                sendMessage(
+                        chatId,
+                        "🔎 Оберіть джерело пошуку:",
+                        markup
+                );
 
                 return;
             }
@@ -4966,12 +4987,64 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "paint_length" -> handleRoomLength(userId, chatId, text, "paint_width");
             case "choose_search_source" -> {
-                try {
-                    handleAdminSearchSource(userId, chatId, text);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                    sendText(chatId, "❌ Помилка при виборі джерела пошуку.");
+
+                switch (text) {
+
+                    case "🔍 Пошук у MySQL" -> {
+
+                        adminSearchSource.put(
+                                userId,
+                                "mysql"
+                        );
+
+                        userStates.put(
+                                userId,
+                                "awaiting_search"
+                        );
+
+                        sendText(
+                                chatId,
+                                "🔍 Введіть назву товару для пошуку в MySQL:"
+                        );
+                    }
+
+                    case "🔍 Пошук з EXCEL" -> {
+
+                        adminSearchSource.put(
+                                userId,
+                                "excel"
+                        );
+
+                        userStates.put(
+                                userId,
+                                "awaiting_search"
+                        );
+
+                        sendText(
+                                chatId,
+                                "🔍 Введіть назву товару для пошуку в Excel:"
+                        );
+                    }
+
+                    case BACK_BUTTON -> {
+
+                        userStates.remove(userId);
+
+                        sendMessageSafely(
+                                createDeveloperMenu(chatId)
+                        );
+                    }
+
+                    default -> {
+
+                        sendText(
+                                chatId,
+                                "❌ Оберіть варіант кнопкою."
+                        );
+                    }
                 }
+
+                return;
             }
 
             case "awaiting_search" -> {
