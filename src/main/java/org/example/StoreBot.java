@@ -4651,6 +4651,28 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendText(userId, "❌ Помилка при редагуванні товару.");
                 }
             }
+            case "awaiting_subcategory_select" -> {
+
+                System.out.println(
+                        "SELECTED SUBCATEGORY = " + text
+                );
+
+                sendText(
+                        chatId,
+                        "✅ Підкатегорія вибрана: " + text
+                );
+
+                userStates.put(
+                        userId,
+                        "editing_product"
+                );
+
+                sendMessageSafely(
+                        createEditMenu(chatId, userId)
+                );
+
+                return;
+            }
             case "choose_product" -> handleChooseProduct(userId, chatId, text);
             case "subcategory" -> {
 
