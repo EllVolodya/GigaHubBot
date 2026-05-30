@@ -3141,25 +3141,43 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "✏️ Редагувати товар" -> {
 
+                    System.out.println("🔥 EDIT PRODUCT CLICKED");
+                    System.out.println("STATE BEFORE = " + userStates.get(userId));
+
                     if (DEVELOPERS.contains(userId)) {
 
-                        userStates.put(
-                                userId,
-                                "choose_search_source"
-                        ); // ставимо стан редагування
+                        userStates.put(userId, "choose_search_source");
 
-                        // Відразу показуємо меню вибору джерела
+                        System.out.println("STATE AFTER = " + userStates.get(userId));
+
                         try {
-                            SendMessage menu = showAdminSearchSourceMenu(userId, Long.parseLong(chatId));
+
+                            SendMessage menu =
+                                    showAdminSearchSourceMenu(
+                                            userId,
+                                            Long.parseLong(chatId)
+                                    );
+
                             execute(menu);
-                        } catch (TelegramApiException e) {
-                            LOGGER.severe("[Admin Error] Failed to show search source menu for user " + userId + ": " + e.getMessage());
-                            sendText(chatId, "❌ Сталася помилка при показі меню вибору джерела пошуку.");
+
+                        } catch (Exception e) {
+
+                            e.printStackTrace();
+
+                            sendText(
+                                    chatId,
+                                    "❌ Помилка відкриття меню."
+                            );
                         }
 
                     } else {
-                        sendText(chatId, "⛔ У вас немає прав для цієї дії.");
+
+                        sendText(
+                                chatId,
+                                "⛔ Немає доступу."
+                        );
                     }
+
                     return;
                 }
 
