@@ -227,30 +227,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 // 🎥 ВІДЕО
 
-                case "video_order" -> sendHelpVideo(
-                        callbackChatId,
-                        ORDER_VIDEO_FILE_ID,
-                        "🛒 Відео: Як зробити замовлення"
-                );
-
-                case "video_buy" -> sendHelpVideo(
-                        callbackChatId,
-                        BUY_VIDEO_FILE_ID,
-                        "📦 Відео: Як замовити товар"
-                );
-
-                case "video_start" -> sendHelpVideo(
-                        callbackChatId,
-                        START_VIDEO_FILE_ID,
-                        "⚠️ Відео: Що робити коли пише /start"
-                );
-
-                case "video_support" -> sendHelpVideo(
-                        callbackChatId,
-                        SUPPORT_VIDEO_FILE_ID,
-                        "💬 Відео: Як написати в підтримку"
-                );
-
+                case "video_order" -> sendHelpVideo(callbackChatId, ORDER_VIDEO_FILE_ID);
+                case "video_buy" -> sendHelpVideo(callbackChatId, BUY_VIDEO_FILE_ID);
+                case "video_start" -> sendHelpVideo(callbackChatId, START_VIDEO_FILE_ID);
+                case "video_support" -> sendHelpVideo(callbackChatId, SUPPORT_VIDEO_FILE_ID);
 
                 // 📝 ТЕКСТ
 
@@ -12181,13 +12161,12 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    private void sendHelpVideo(String chatId, String fileId, String caption) {
+    private void sendHelpVideo(String chatId, String fileId) {
 
         SendVideo video = new SendVideo();
 
         video.setChatId(chatId);
         video.setVideo(new InputFile(fileId));
-        video.setCaption(caption);
 
         try {
             execute(video);
