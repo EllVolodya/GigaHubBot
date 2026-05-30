@@ -1139,18 +1139,29 @@ public class StoreBot extends TelegramLongPollingBot {
             // ✏️ Редагування товару
             if (text != null && text.equals("Редагувати товар")) {
 
+                userStates.put(
+                        userId,
+                        "choose_search_source"
+                );
+
                 ReplyKeyboardMarkup markup =
                         new ReplyKeyboardMarkup();
 
                 markup.setResizeKeyboard(true);
 
-                KeyboardRow row1 = new KeyboardRow();
+                KeyboardRow row1 =
+                        new KeyboardRow();
+
                 row1.add("🔍 Пошук у MySQL");
 
-                KeyboardRow row2 = new KeyboardRow();
+                KeyboardRow row2 =
+                        new KeyboardRow();
+
                 row2.add("🔍 Пошук з EXCEL");
 
-                KeyboardRow row3 = new KeyboardRow();
+                KeyboardRow row3 =
+                        new KeyboardRow();
+
                 row3.add(BACK_BUTTON);
 
                 markup.setKeyboard(
@@ -1165,7 +1176,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     sendTextWithMarkup(
                             Long.valueOf(chatId),
-                            "🔎 Оберіть джерело пошуку:",
+                            "🔎 Оберіть джерело пошуку товару:",
                             markup
                     );
 
@@ -1175,7 +1186,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     sendText(
                             chatId,
-                            "❌ Помилка відкриття меню."
+                            "❌ Не вдалося відкрити меню пошуку."
                     );
                 }
 
@@ -5010,44 +5021,71 @@ public class StoreBot extends TelegramLongPollingBot {
             case "paint_length" -> handleRoomLength(userId, chatId, text, "paint_width");
             case "choose_search_source" -> {
 
-                if ("🔍 Пошук у MySQL".equals(text)) {
+                switch (text) {
 
-                    adminSearchSource.put(
-                            userId,
-                            "mysql"
-                    );
+                    case "🔍 Пошук у MySQL" -> {
 
-                    userStates.put(
-                            userId,
-                            "awaiting_search"
-                    );
+                        adminSearchSource.put(
+                                userId,
+                                "mysql"
+                        );
 
-                    sendText(
-                            chatId,
-                            "🔍 Введіть назву товару:"
-                    );
+                        userStates.put(
+                                userId,
+                                "awaiting_search"
+                        );
 
-                    return;
-                }
+                        sendText(
+                                chatId,
+                                "🔍 Введіть назву товару для пошуку в MySQL:"
+                        );
 
-                if ("🔍 Пошук з EXCEL".equals(text)) {
+                        return;
+                    }
 
-                    adminSearchSource.put(
-                            userId,
-                            "excel"
-                    );
+                    case "🔍 Пошук з EXCEL" -> {
 
-                    userStates.put(
-                            userId,
-                            "awaiting_search"
-                    );
+                        adminSearchSource.put(
+                                userId,
+                                "excel"
+                        );
 
-                    sendText(
-                            chatId,
-                            "🔍 Введіть назву товару з Excel:"
-                    );
+                        userStates.put(
+                                userId,
+                                "awaiting_search"
+                        );
 
-                    return;
+                        sendText(
+                                chatId,
+                                "🔍 Введіть назву товару для пошуку в Excel:"
+                        );
+
+                        return;
+                    }
+
+                    case BACK_BUTTON -> {
+
+                        userStates.put(
+                                userId,
+                                "developer_menu"
+                        );
+
+                        sendMessage(
+                                createDeveloperMenu(chatId)
+                        );
+
+                        return;
+                    }
+
+                    default -> {
+
+                        sendText(
+                                chatId,
+                                "❌ Оберіть варіант кнопкою."
+                        );
+
+                        return;
+                    }
                 }
             }
 
