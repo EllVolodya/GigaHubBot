@@ -6981,83 +6981,192 @@ public class StoreBot extends TelegramLongPollingBot {
         userStates.put(userId, "choose_search_source");
     }
 
-    private void handleChooseProduct(Long userId, String chatId, String text) {
+    // Вибір товару
+    private void handleChooseProduct(
+            Long userId,
+            String chatId,
+            String text
+    ) {
 
-        System.out.println("DEBUG handleChooseProduct userId=" + userId + " TEXT=" + text);
+        System.out.println(
+                "DEBUG handleChooseProduct userId="
+                        + userId
+                        + " TEXT="
+                        + text
+        );
 
-        List<Map<String, Object>> products = userProductLists.get(userId);
+        List<Map<String, Object>> products =
+                userProductLists.get(userId);
 
-        if (products == null || products.isEmpty()) {
-            sendText(chatId, "❌ Список товарів порожній.");
+        if (products == null ||
+                products.isEmpty()) {
+
+            sendText(
+                    chatId,
+                    "❌ Список товарів порожній."
+            );
+
             return;
         }
 
-        // ❗ BACK ОБРОБЛЯЄТЬСЯ ГЛОБАЛЬНО (НЕ ТУТ)
-        if (text != null && text.contains("Назад")) {
-            handleBack(userId, chatId);
+        // 🔙 Назад
+        if (text != null &&
+                text.contains("Назад")) {
+
+            handleBack(
+                    userId,
+                    chatId
+            );
+
             return;
         }
 
-        if (text == null || !text.matches("\\d+")) {
+        if (text == null ||
+                !text.matches("\\d+")) {
+
             return;
         }
 
-        int index = Integer.parseInt(text) - 1;
+        int index =
+                Integer.parseInt(text) - 1;
 
-        if (index < 0 || index >= products.size()) {
-            sendText(chatId, "❌ Невірний номер товару.");
+        if (index < 0 ||
+                index >= products.size()) {
+
+            sendText(
+                    chatId,
+                    "❌ Невірний номер товару."
+            );
+
             return;
         }
 
-        Map<String, Object> product = products.get(index);
+        Map<String, Object> product =
+                products.get(index);
 
-        lastShownProduct.put(userId, product);
+        lastShownProduct.put(
+                userId,
+                product
+        );
 
-        // 🔥 ВИТЯГУЄМО ID
-        Object idObj = product.get("id");
+        boolean isExcelProduct =
+                product.containsKey("_excel");
 
-        if (idObj == null) {
-            sendText(chatId, "❌ У товару немає ID.");
-            return;
+        // 🔥 Якщо товар із MySQL
+        if (!isExcelProduct) {
+
+            Object idObj =
+                    product.get("id");
+
+            if (idObj == null) {
+
+                sendText(
+                        chatId,
+                        "❌ У товару немає ID."
+                );
+
+                return;
+            }
+
+            try {
+
+                Integer productId =
+                        Integer.parseInt(
+                                String.valueOf(idObj)
+                        );
+
+                adminSelectedProductsIds.put(
+                        userId,
+                        List.of(productId)
+                );
+
+            } catch (Exception e) {
+
+                sendText(
+                        chatId,
+                        "❌ Некоректний ID товару."
+                );
+
+                return;
+            }
         }
 
-        Integer productId;
-        try {
-            productId = Integer.parseInt(String.valueOf(idObj));
-        } catch (Exception e) {
-            sendText(chatId, "❌ Некоректний ID товару.");
-            return;
-        }
+        adminSelectedProduct.put(
+                userId,
+                product
+        );
 
-        // 🔥 СИНХРОНІЗАЦІЯ ДАНИХ
-        adminSelectedProduct.put(userId, product);
-        adminSelectedProductsIds.put(userId, List.of(productId));
+        boolean isAdmin =
+                (ADMINS.contains(userId)
+                        || DEVELOPERS.contains(userId))
+                        && adminMode.getOrDefault(
+                        userId,
+                        false
+                );
 
-        boolean isAdmin = (ADMINS.contains(userId) || DEVELOPERS.contains(userId))
-                && adminMode.getOrDefault(userId, false);
-
-        // 🔧 ADMIN FLOW
+        // 🔧 Редагування товару
         if (isAdmin) {
 
-            userStates.put(userId, "editing_product");
+            userStates.put(
+                    userId,
+                    "editing_product"
+            );
 
-            sendText(chatId,
-                    "✏️ Ви обрали товар:\n\n" +
-                            safeToString(product.get("name"), "Без назви"));
+            StringBuilder sb =
+                    new StringBuilder();
 
-            sendMessageSafely(createEditMenu(chatId, userId));
+            sb.append("✏️ Ви обрали товар:\n\n");
+
+            sb.append(
+                    safeToString(
+                            product.get("name"),
+                            "Без назви"
+                    )
+            );
+
+            if (isExcelProduct) {
+
+                sb.append(
+                        "\n\n📄 Джерело: Excel"
+                );
+            }
+
+            sendText(
+                    chatId,
+                    sb.toString()
+            );
+
+            sendMessageSafely(
+                    createEditMenu(
+                            chatId,
+                            userId
+                    )
+            );
+
             return;
         }
 
-        // 👤 USER FLOW
+        // 👤 Звичайний користувач
         try {
-            sendProductFromMap(Long.parseLong(chatId), product);
 
-            userStates.put(userId, "choose_product");
+            sendProductFromMap(
+                    Long.parseLong(chatId),
+                    product
+            );
+
+            userStates.put(
+                    userId,
+                    "choose_product"
+            );
 
         } catch (Exception e) {
+
             e.printStackTrace();
-            sendText(chatId, "❌ Помилка відображення товару.");
+
+            sendText(
+                    chatId,
+                    "❌ Помилка відображення товару."
+            );
         }
     }
 
