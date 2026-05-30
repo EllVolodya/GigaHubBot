@@ -3364,7 +3364,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                     .build(),
 
                             InlineKeyboardButton.builder()
-                                    .text("📦 Як замовити товар?")
+                                    .text("\uD83D\uDCAC Як написати в підтримку?")
                                     .callbackData("video_buy")
                                     .build()
                     ));
@@ -3376,7 +3376,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                     .build(),
 
                             InlineKeyboardButton.builder()
-                                    .text("💬 Як написати в підтримку?")
+                                    .text("📦 Як замовити товар?")
                                     .callbackData("video_support")
                                     .build()
                     ));
