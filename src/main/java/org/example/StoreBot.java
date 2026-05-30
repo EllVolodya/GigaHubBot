@@ -1137,8 +1137,12 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             // ✏️ Редагування товару
-            if (text != null
-                    && text.equals("Редагувати товар")) {
+            if (text != null && text.equals("Редагувати товар")) {
+
+                ReplyKeyboardMarkup markup =
+                        new ReplyKeyboardMarkup();
+
+                markup.setResizeKeyboard(true);
 
                 KeyboardRow row1 = new KeyboardRow();
                 row1.add("🔍 Пошук у MySQL");
@@ -1149,21 +1153,12 @@ public class StoreBot extends TelegramLongPollingBot {
                 KeyboardRow row3 = new KeyboardRow();
                 row3.add(BACK_BUTTON);
 
-                ReplyKeyboardMarkup markup =
-                        new ReplyKeyboardMarkup();
-
-                markup.setResizeKeyboard(true);
                 markup.setKeyboard(
                         List.of(
                                 row1,
                                 row2,
                                 row3
                         )
-                );
-
-                userStates.put(
-                        userId,
-                        "choose_search_source"
                 );
 
                 try {
@@ -1183,6 +1178,48 @@ public class StoreBot extends TelegramLongPollingBot {
                             "❌ Помилка відкриття меню."
                     );
                 }
+
+                return;
+            }
+
+            // 🔍 MYSQL
+            if (text != null && text.equals("🔍 Пошук у MySQL")) {
+
+                adminSearchSource.put(
+                        userId,
+                        "mysql"
+                );
+
+                userStates.put(
+                        userId,
+                        "awaiting_search"
+                );
+
+                sendText(
+                        chatId,
+                        "🔍 Введіть назву товару для пошуку в MySQL:"
+                );
+
+                return;
+            }
+
+            // 🔍 EXCEL
+            if (text != null && text.equals("🔍 Пошук з EXCEL")) {
+
+                adminSearchSource.put(
+                        userId,
+                        "excel"
+                );
+
+                userStates.put(
+                        userId,
+                        "awaiting_search"
+                );
+
+                sendText(
+                        chatId,
+                        "🔍 Введіть назву товару для пошуку в Excel:"
+                );
 
                 return;
             }
