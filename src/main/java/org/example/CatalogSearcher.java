@@ -877,64 +877,119 @@ public class CatalogSearcher {
 
         List<Object> params = new ArrayList<>();
 
-        // 🔹 CATEGORY
+        // Категорія
         if (category != null && !category.isBlank()) {
+
             sql.append(" AND c.name = ?");
-            params.add(category);
+            params.add(category.trim());
         }
 
-        // 🔹 SUBCATEGORY
+        // Підкатегорія
         if (subcategory != null && !subcategory.isBlank()) {
+
             sql.append(" AND s.name = ?");
-            params.add(subcategory);
+            params.add(subcategory.trim());
         }
 
-        // 🔥 ГОЛОВНА ЛОГІКА
-        if (subfilter != null && !subfilter.isBlank()) {
-            // 👉 тільки підфільтр
-            sql.append(" AND sf.name = ?");
-            params.add(subfilter);
+        // Фільтр
+        if (filter != null && !filter.isBlank()) {
 
-        } else if (filter != null && !filter.isBlank()) {
-            // 👉 тільки фільтр (без підфільтрів!)
             sql.append(" AND f.name = ?");
-            sql.append(" AND p.subfilter_id IS NULL");
-            params.add(filter);
+            params.add(filter.trim());
         }
+
+        // Підфільтр
+        if (subfilter != null && !subfilter.isBlank()) {
+
+            sql.append(" AND sf.name = ?");
+            params.add(subfilter.trim());
+        }
+
+        System.out.println("========== PRODUCT SEARCH ==========");
+        System.out.println("CATEGORY   = " + category);
+        System.out.println("SUBCATEGORY= " + subcategory);
+        System.out.println("FILTER     = " + filter);
+        System.out.println("SUBFILTER  = " + subfilter);
+        System.out.println("SQL        = " + sql);
+        System.out.println("PARAMS     = " + params);
+        System.out.println("====================================");
 
         try (Connection conn = DatabaseManager.getConnection()) {
 
-            PreparedStatement ps = conn.prepareStatement(sql.toString());
+            PreparedStatement ps =
+                    conn.prepareStatement(sql.toString());
 
             for (int i = 0; i < params.size(); i++) {
-                ps.setString(i + 1, params.get(i).toString());
+
+                ps.setString(
+                        i + 1,
+                        String.valueOf(params.get(i))
+                );
             }
 
             ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
 
-                Map<String, Object> product = new HashMap<>();
+                Map<String, Object> product =
+                        new HashMap<>();
 
-                product.put("id", rs.getLong("id"));
-                product.put("name", rs.getString("name"));
-                product.put("price", rs.getString("price"));
-                product.put("unit", rs.getString("unit"));
+                product.put(
+                        "id",
+                        rs.getLong("id")
+                );
 
-                byte[] descBytes = rs.getBytes("description");
+                product.put(
+                        "name",
+                        rs.getString("name")
+                );
+
+                product.put(
+                        "price",
+                        rs.getString("price")
+                );
+
+                product.put(
+                        "unit",
+                        rs.getString("unit")
+                );
+
+                byte[] descBytes =
+                        rs.getBytes("description");
+
                 if (descBytes != null) {
-                    product.put("description",
-                            new String(descBytes, java.nio.charset.StandardCharsets.UTF_8));
+
+                    product.put(
+                            "description",
+                            new String(
+                                    descBytes,
+                                    java.nio.charset.StandardCharsets.UTF_8
+                            )
+                    );
+
                 } else {
-                    product.put("description", "");
+
+                    product.put(
+                            "description",
+                            ""
+                    );
                 }
 
-                product.put("photo", rs.getString("photo"));
+                product.put(
+                        "photo",
+                        rs.getString("photo")
+                );
 
                 products.add(product);
             }
 
+            System.out.println(
+                    "PRODUCTS FOUND = " +
+                            products.size()
+            );
+
         } catch (Exception e) {
+
             e.printStackTrace();
         }
 
