@@ -12044,20 +12044,66 @@ public class StoreBot extends TelegramLongPollingBot {
                         "👉 Введіть кількість:");
     }
 
-    private void updateProductSubfilter(String productId, String subfilterName) {
+    private void updateProductSubfilter(
+            String productId,
+            String subfilterName
+    ) {
 
-        try (Connection conn = DatabaseManager.getConnection()) {
+        try (Connection conn =
+                     DatabaseManager.getConnection()) {
 
-            PreparedStatement ps = conn.prepareStatement(
-                    "UPDATE products SET subfilter = ? WHERE id = ?"
+            // Знаходимо ID підфільтра
+            PreparedStatement find =
+                    conn.prepareStatement(
+                            "SELECT id FROM subfilters WHERE name = ? LIMIT 1"
+                    );
+
+            find.setString(
+                    1,
+                    subfilterName
             );
 
-            ps.setString(1, subfilterName);
-            ps.setString(2, productId);
+            ResultSet rs =
+                    find.executeQuery();
 
-            ps.executeUpdate();
+            if (!rs.next()) {
+
+                System.out.println(
+                        "SUBFILTER NOT FOUND: "
+                                + subfilterName
+                );
+
+                return;
+            }
+
+            int subfilterId =
+                    rs.getInt("id");
+
+            // Записуємо subfilter_id в товар
+            PreparedStatement update =
+                    conn.prepareStatement(
+                            "UPDATE products SET subfilter_id = ? WHERE id = ?"
+                    );
+
+            update.setInt(
+                    1,
+                    subfilterId
+            );
+
+            update.setInt(
+                    2,
+                    Integer.parseInt(productId)
+            );
+
+            int rows =
+                    update.executeUpdate();
+
+            System.out.println(
+                    "UPDATED ROWS = " + rows
+            );
 
         } catch (Exception e) {
+
             e.printStackTrace();
         }
     }
