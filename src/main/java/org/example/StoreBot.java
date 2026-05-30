@@ -880,68 +880,179 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        // 🔥 ПІДФІЛЬТР
+        // 🔥 ВИБІР ПІДФІЛЬТРА ДЛЯ ТОВАРУ
         if ("awaiting_subfilter".equals(state)) {
 
             if (BACK_BUTTON.equals(text)) {
-                userStates.put(userId, "awaiting_filter_select");
-                sendMessageSafely(createFilterSelectMenuAdmin(userId, chatId, 0));
+
+                userStates.put(
+                        userId,
+                        "awaiting_filter_select"
+                );
+
+                sendMessageSafely(
+                        createFilterSelectMenuAdmin(
+                                userId,
+                                chatId,
+                                0
+                        )
+                );
+
                 return;
             }
 
-            String filterName = (String) tempStorage.get(userId + "_selected_filter_name");
+            String filterName = (String)
+                    tempStorage.get(
+                            userId + "_selected_filter_name"
+                    );
 
-            if (filterName == null) {
-                sendText(chatId, "❌ Спочатку обери фільтр");
+            if (filterName == null ||
+                    filterName.isBlank()) {
+
+                sendText(
+                        chatId,
+                        "❌ Спочатку оберіть фільтр."
+                );
+
                 return;
             }
 
-            CatalogSearcher searcher = new CatalogSearcher();
-            List<String> allowed = searcher.getSubfilters(filterName);
+            CatalogSearcher searcher =
+                    new CatalogSearcher();
 
-            if (allowed == null || allowed.isEmpty()) {
-                sendText(chatId, "❌ Підфільтри не знайдені");
+            List<String> subfilters =
+                    searcher.getSubfilters(
+                            filterName
+                    );
+
+            if (subfilters == null ||
+                    subfilters.isEmpty()) {
+
+                sendText(
+                        chatId,
+                        "❌ Для цього фільтра немає підфільтрів."
+                );
+
                 return;
             }
 
-            // 🔥 НОРМАЛІЗАЦІЯ ТЕКСТУ
-            String cleanText = text.trim();
-            String matchedSubfilter = null;
+            String selectedText =
+                    text.trim();
 
-            for (String sub : allowed) {
-                if (sub.equalsIgnoreCase(cleanText)) {
-                    matchedSubfilter = sub; // беремо точний варіант з БД
+            String matchedSubfilter =
+                    null;
+
+            for (String subfilter : subfilters) {
+
+                if (subfilter != null &&
+                        subfilter.equalsIgnoreCase(
+                                selectedText
+                        )) {
+
+                    matchedSubfilter =
+                            subfilter;
+
                     break;
                 }
             }
 
             if (matchedSubfilter == null) {
-                sendText(chatId, "❌ Обери підфільтр з кнопок");
+
+                sendText(
+                        chatId,
+                        "❌ Оберіть підфільтр кнопкою."
+                );
+
                 return;
             }
 
-            Map<String, Object> product = adminSelectedProduct.get(userId);
+            Map<String, Object> product =
+                    adminSelectedProduct.get(
+                            userId
+                    );
 
             if (product == null) {
-                sendText(chatId, "❌ Помилка: товар не знайдено");
+
+                sendText(
+                        chatId,
+                        "❌ Товар не знайдено."
+                );
+
                 return;
             }
 
-            String productId = String.valueOf(product.get("id"));
+            Object productIdObj =
+                    product.get("id");
+
+            if (productIdObj == null) {
+
+                sendText(
+                        chatId,
+                        "❌ Не вдалося отримати ID товару."
+                );
+
+                return;
+            }
+
+            String productId =
+                    String.valueOf(
+                            productIdObj
+                    );
 
             try {
-                updateProductSubfilter(productId, matchedSubfilter);
+
+                System.out.println(
+                        "PRODUCT ID = " +
+                                productId
+                );
+
+                System.out.println(
+                        "FILTER = " +
+                                filterName
+                );
+
+                System.out.println(
+                        "SUBFILTER = " +
+                                matchedSubfilter
+                );
+
+                updateProductSubfilter(
+                        productId,
+                        matchedSubfilter
+                );
+
+                sendText(
+                        chatId,
+                        "✅ Підфільтр успішно встановлено:\n" +
+                                matchedSubfilter
+                );
+
+                tempStorage.remove(
+                        userId +
+                                "_selected_filter_name"
+                );
+
+                userStates.remove(
+                        userId
+                );
+
+                sendMessageSafely(
+                        createEditMenu(
+                                chatId,
+                                userId
+                        )
+                );
+
             } catch (Exception e) {
+
                 e.printStackTrace();
-                sendText(chatId, "❌ Помилка при збереженні підфільтра");
-                return;
+
+                sendText(
+                        chatId,
+                        "❌ Помилка при збереженні підфільтра:\n"
+                                + e.getMessage()
+                );
             }
-
-            sendText(chatId, "✅ Підфільтр встановлено: " + matchedSubfilter);
-
-            userStates.remove(userId);
-
-            sendMessageSafely(createEditMenu(chatId, userId));
 
             return;
         }
@@ -3572,7 +3683,7 @@ public class StoreBot extends TelegramLongPollingBot {
         }
     }
 
-    // 🔹    Показ кошика
+    // 🔹 Показ кошика
     public void showCart(Long userId) throws TelegramApiException {
         List<Map<String, Object>> cart = userCart.get(userId);
 
