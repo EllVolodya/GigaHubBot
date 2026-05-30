@@ -1124,7 +1124,11 @@ public class StoreBot extends TelegramLongPollingBot {
             if ("🔍 Пошук у MySQL".equals(text)) {
 
                 adminSearchSource.put(userId, "mysql");
-                userStates.put(userId, "awaiting_search");
+
+                userStates.put(
+                        userId,
+                        "awaiting_search"
+                );
 
                 sendText(
                         chatId,
@@ -1137,7 +1141,11 @@ public class StoreBot extends TelegramLongPollingBot {
             if ("🔍 Пошук з EXCEL".equals(text)) {
 
                 adminSearchSource.put(userId, "excel");
-                userStates.put(userId, "awaiting_search");
+
+                userStates.put(
+                        userId,
+                        "awaiting_search"
+                );
 
                 sendText(
                         chatId,
@@ -1146,8 +1154,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 return;
             }
-
-            return;
         }
 
         // 🔍 MYSQL
@@ -1199,12 +1205,41 @@ public class StoreBot extends TelegramLongPollingBot {
                 userStates.remove(userId);
 
                 try {
-
                     sendCategories(userId);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                return;
+            }
+
+            // ✏️ Редагувати товар
+            if (text != null
+                    && text.contains("Редагувати товар")) {
+
+                userStates.put(
+                        userId,
+                        "choose_search_source"
+                );
+
+                try {
+
+                    SendMessage menu =
+                            showAdminSearchSourceMenu(
+                                    userId,
+                                    Long.parseLong(chatId)
+                            );
+
+                    execute(menu);
 
                 } catch (Exception e) {
 
                     e.printStackTrace();
+
+                    sendText(
+                            chatId,
+                            "❌ Помилка відкриття меню пошуку."
+                    );
                 }
 
                 return;
@@ -1222,7 +1257,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🔗 Інвайти
+            // 🔗 Запрошувальні посилання
             if (text != null
                     && text.contains("Запрошувальні посилання")) {
 
@@ -1266,7 +1301,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // 🗂 Редагування категорій
+            // 🗂️ Редагування категорій
             if (text != null
                     && text.contains("Редагувати категорії")) {
 
@@ -1294,7 +1329,10 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            // ❌ Невідома дія
+            System.out.println(
+                    "[UNKNOWN DEVELOPER MENU] TEXT = " + text
+            );
+
             sendText(
                     chatId,
                     "❓ Невідома дія."
