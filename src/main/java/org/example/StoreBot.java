@@ -1118,6 +1118,80 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        // ✏️ Редагування товару
+        if ("choose_search_source".equals(state)) {
+
+            if ("🔍 Пошук у MySQL".equals(text)) {
+
+                adminSearchSource.put(userId, "mysql");
+                userStates.put(userId, "awaiting_search");
+
+                sendText(
+                        chatId,
+                        "🔍 Введіть назву товару для пошуку в MySQL:"
+                );
+
+                return;
+            }
+
+            if ("🔍 Пошук з EXCEL".equals(text)) {
+
+                adminSearchSource.put(userId, "excel");
+                userStates.put(userId, "awaiting_search");
+
+                sendText(
+                        chatId,
+                        "🔍 Введіть назву товару для пошуку в Excel:"
+                );
+
+                return;
+            }
+
+            return;
+        }
+
+        // 🔍 MYSQL
+        if (text != null && text.equals("🔍 Пошук у MySQL")) {
+
+            adminSearchSource.put(
+                    userId,
+                    "mysql"
+            );
+
+            userStates.put(
+                    userId,
+                    "awaiting_search"
+            );
+
+            sendText(
+                    chatId,
+                    "🔍 Введіть назву товару для пошуку в MySQL:"
+            );
+
+            return;
+        }
+
+        // 🔍 EXCEL
+        if (text != null && text.equals("🔍 Пошук з EXCEL")) {
+
+            adminSearchSource.put(
+                    userId,
+                    "excel"
+            );
+
+            userStates.put(
+                    userId,
+                    "awaiting_search"
+            );
+
+            sendText(
+                    chatId,
+                    "🔍 Введіть назву товару для пошуку в Excel:"
+            );
+
+            return;
+        }
+
         if ("developer_menu".equals(state)) {
 
             if (BACK_BUTTON.equals(text)) {
@@ -1132,80 +1206,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     e.printStackTrace();
                 }
-
-                return;
-            }
-
-            // ✏️ Редагування товару
-            if ("choose_search_source".equals(state)) {
-
-                if ("🔍 Пошук у MySQL".equals(text)) {
-
-                    adminSearchSource.put(userId, "mysql");
-                    userStates.put(userId, "awaiting_search");
-
-                    sendText(
-                            chatId,
-                            "🔍 Введіть назву товару для пошуку в MySQL:"
-                    );
-
-                    return;
-                }
-
-                if ("🔍 Пошук з EXCEL".equals(text)) {
-
-                    adminSearchSource.put(userId, "excel");
-                    userStates.put(userId, "awaiting_search");
-
-                    sendText(
-                            chatId,
-                            "🔍 Введіть назву товару для пошуку в Excel:"
-                    );
-
-                    return;
-                }
-
-                return;
-            }
-
-            // 🔍 MYSQL
-            if (text != null && text.equals("🔍 Пошук у MySQL")) {
-
-                adminSearchSource.put(
-                        userId,
-                        "mysql"
-                );
-
-                userStates.put(
-                        userId,
-                        "awaiting_search"
-                );
-
-                sendText(
-                        chatId,
-                        "🔍 Введіть назву товару для пошуку в MySQL:"
-                );
-
-                return;
-            }
-
-            // 🔍 EXCEL
-            if (text != null && text.equals("🔍 Пошук з EXCEL")) {
-
-                adminSearchSource.put(
-                        userId,
-                        "excel"
-                );
-
-                userStates.put(
-                        userId,
-                        "awaiting_search"
-                );
-
-                sendText(
-                        chatId,
-                        "🔍 Введіть назву товару для пошуку в Excel:"
-                );
 
                 return;
             }
