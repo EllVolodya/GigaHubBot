@@ -579,48 +579,53 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        if ("consultant_reply".equals(userStates.get(CONSULTANT_CHAT_ID))
+        if ("consultant_reply".equals(userStates.get(userId))
                 && update.getMessage().hasPhoto()) {
 
-            Long target = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
+            Long target = consultantReplyTarget.get(userId);
+
+            if (target == null) {
+                sendText(chatId, "❌ Користувач не вибраний.");
+                return;
+            }
 
             List<PhotoSize> photos = update.getMessage().getPhoto();
             PhotoSize largest = photos.get(photos.size() - 1);
             String fileId = largest.getFileId();
 
             try {
+
                 SendPhoto ph = new SendPhoto();
                 ph.setChatId(target.toString());
                 ph.setPhoto(new InputFile(fileId));
-                ph.setCaption("📸 Відповідь від консультанта:");
+
+                if (update.getMessage().getCaption() != null) {
+                    ph.setCaption(
+                            "📸 Відповідь від консультанта:\n\n" +
+                                    update.getMessage().getCaption()
+                    );
+                } else {
+                    ph.setCaption("📸 Відповідь від консультанта:");
+                }
 
                 execute(ph);
 
-                // зберегти в історію як фото
                 supportAnswers.computeIfAbsent(target, k -> new ArrayList<>())
                         .add("📸 Відповідь консультанта: [фото]");
 
-                for (Long consultantId : CONSULTANT_CHAT_ID) {
-
-                    sendText(
-                            String.valueOf(consultantId),
-                            "✔ Фото надіслано покупцю!"
-                    );
-                }
+                sendText(chatId, "✅ Фото успішно надіслано!");
 
             } catch (TelegramApiException e) {
-                e.printStackTrace();
-                for (Long consultantId : CONSULTANT_CHAT_ID) {
 
-                    sendText(
-                            String.valueOf(consultantId),
-                            "❌ Помилка при надсиланні фото."
-                    );
-                }
+                e.printStackTrace();
+
+                sendText(chatId,
+                        "❌ Не вдалося надіслати фото (користувач заблокував бота або не запускав його)");
             }
 
-            // вихід зі стану
-            userStates.remove(CONSULTANT_CHAT_ID);
+            userStates.remove(userId);
+            consultantReplyTarget.remove(userId);
+
             return;
         }
 
@@ -12126,24 +12131,36 @@ public class StoreBot extends TelegramLongPollingBot {
         sendMessageSafely(createEditMenu(chatId, userId));
     }
 
-    public void handleAwaitingUserId(Long userId, String text) {
-        try {
-            Long targetUserId = Long.parseLong(text);
+    public void handleAwaitingUserId(Long consultantId, String text) {
 
-            // 🔥 просто зберігаємо без перевірок
-            consultantReplyTarget.put(userId, targetUserId);
+        try {
+
+            Long targetUserId = Long.parseLong(text.trim());
+
+            consultantReplyTarget.put(consultantId, targetUserId);
+
+            userStates.put(consultantId, "consultant_reply");
 
             sendText(
-                    userId.toString(),
-                    "✅ Ви обрали користувача:\n" +
-                            "🆔 ID: " + targetUserId + "\n\n" +
-                            "✏️ Напишіть повідомлення — я відправлю його навіть якщо він зараз не онлайн."
+                    consultantId.toString(),
+                    "✅ Користувач обраний\n\n" +
+                            "👤 ID: " + targetUserId + "\n\n" +
+                            "📨 Надішліть будь-яке повідомлення:\n" +
+                            "• текст\n" +
+                            "• фото\n" +
+                            "• відео\n" +
+                            "• документ\n" +
+                            "• голосове повідомлення\n\n" +
+                            "Я автоматично перешлю його користувачу."
             );
 
-            userStates.put(userId, "consultant_reply");
-
         } catch (NumberFormatException e) {
-            sendText(userId.toString(), "❌ Введіть правильний ID (число).");
+
+            sendText(
+                    consultantId.toString(),
+                    "❌ Некоректний ID.\n\n" +
+                            "Введіть числовий Telegram ID користувача."
+            );
         }
     }
 
