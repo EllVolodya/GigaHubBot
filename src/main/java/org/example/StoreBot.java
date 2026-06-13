@@ -153,7 +153,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private static final String VIDEO_HELP_FILE_ID =
             "BAACAgIAAyEFAATOLPSsAAMFahque7IZcH1hjuxeyRNhIcbvCHEAAvmSAAIzIdhIf0Ixb76RFtw7BA";
-    private static final String ORDER_VIDEO_FILE_ID = "file_id";
+    private static final String ORDER_VIDEO_FILE_ID = "BAACAgIAAyEFAATOLPSsAAMGai1VUA8vc-WaqJ2ai9-Vkty2J-UAAqWdAAK7A2lJR31nnUaXj488BA";
     private static final String BUY_VIDEO_FILE_ID = "file_id";
     private static final String START_VIDEO_FILE_ID = "file_id";
     private static final String SUPPORT_VIDEO_FILE_ID = "BAACAgIAAyEFAATOLPSsAAMDahqfawvYeEwu4f4rhy3plxsFQTAAAmOSAAIzIdhIyF3iW-ltMbM7BA";
