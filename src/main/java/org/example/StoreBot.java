@@ -96,11 +96,11 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Double> tempWidth = new HashMap<>();
 
     //Права
-    private final List<Long> ADMINS = List.of(1030917576L, 533570832L);// тут айді продавців меню (Мій ІД 620298889L )
-    private final List<Long> DEVELOPERS = List.of(1030917576L, 533570832L); // тут айді розробників меню
+    private final List<Long> ADMINS = List.of(620298889L, 1030917576L, 533570832L);// тут айді продавців меню (Мій ІД 620298889L )
+    private final List<Long> DEVELOPERS = List.of(620298889L, 1030917576L, 533570832L); // тут айді розробників меню
     private final List<Long> CONSULTANT_CHAT_ID =
             List.of(
-                    533570832L
+                    620298889L, 533570832L
             );  // тут айді консультантів меню
 
     // 🔹 Адмінські стани
@@ -155,7 +155,7 @@ public class StoreBot extends TelegramLongPollingBot {
             "BAACAgIAAyEFAATOLPSsAAMFahque7IZcH1hjuxeyRNhIcbvCHEAAvmSAAIzIdhIf0Ixb76RFtw7BA";
     private static final String ORDER_VIDEO_FILE_ID = "BAACAgIAAyEFAATOLPSsAAMGai1VUA8vc-WaqJ2ai9-Vkty2J-UAAqWdAAK7A2lJR31nnUaXj488BA";
     private static final String BUY_VIDEO_FILE_ID = "BAACAgIAAyEFAATOLPSsAAMHai1dtL3lxBvEWYS3qS9unYa5VF8AAu6dAAK7A2lJf5NXtISL5L88BA";
-    private static final String START_VIDEO_FILE_ID = "file_id";
+    private static final String START_VIDEO_FILE_ID = "BAACAgIAAyEFAATOLPSsAAMIai1hdt_zNRlPG_NEKwh5EiRvd0kAAhyeAAK7A2lJ6td-L9ir9eo8BA";
     private static final String SUPPORT_VIDEO_FILE_ID = "BAACAgIAAyEFAATOLPSsAAMDahqfawvYeEwu4f4rhy3plxsFQTAAAmOSAAIzIdhIyF3iW-ltMbM7BA";
 
     private static StoreBot instance;
