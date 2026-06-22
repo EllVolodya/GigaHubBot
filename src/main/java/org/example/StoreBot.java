@@ -434,6 +434,50 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if (text.equals("/logout")) {
+
+            try {
+
+                clearUserState(userId);
+
+                userStates.remove(userId);
+                currentCategory.remove(userId);
+                currentSubcategory.remove(userId);
+                currentFilter.remove(userId);
+                currentSubfilter.remove(userId);
+                userFilters.remove(userId);
+                filterPage.remove(userId);
+                userProductLists.remove(userId);
+                productIndex.remove(userId);
+                selectedFilterForSubfilter.remove(userId);
+                editItemIndex.remove(userId);
+
+                // TODO: Видалення користувача з БД
+                DatabaseManager.deleteUser(userId);
+
+                String firstName = message.getFrom().getFirstName();
+
+                SendMessage consultantMsg = new SendMessage();
+                consultantMsg.setChatId(String.valueOf(CONSULTANT_CHAT_ID));
+                consultantMsg.setText(
+                        "🚪 Користувач вийшов\n\n" +
+                                "👤 Ім'я: " + firstName + "\n" +
+                                "🆔 Telegram ID: " + userId
+                );
+                execute(consultantMsg);
+
+                SendMessage userMsg = new SendMessage();
+                userMsg.setChatId(chatId);
+                userMsg.setText("✅ Ви успішно вийшли з акаунта.");
+                execute(userMsg);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            return;
+        }
+
         // 1. STATE — ПЕРШИЙ!
         if ("VIEW_PRODUCTS".equals(state)) {
 

@@ -81,4 +81,22 @@ public class DatabaseManager {
             e.printStackTrace();
         }
     }
+
+    public static void deleteUser(long telegramId) {
+        String sql = "DELETE FROM users WHERE telegram_id = ?";
+
+        try (Connection conn = getConnection();
+             var ps = conn.prepareStatement(sql)) {
+
+            ps.setLong(1, telegramId);
+
+            int rows = ps.executeUpdate();
+
+            System.out.println("🗑 Видалено користувачів: " + rows);
+
+        } catch (SQLException e) {
+            System.err.println("❌ Помилка видалення користувача");
+            e.printStackTrace();
+        }
+    }
 }
