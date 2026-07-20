@@ -515,28 +515,37 @@ public class StoreBot extends TelegramLongPollingBot {
 
             markup.setKeyboard(List.of(row));
 
-            if (lastShownProduct.containsKey(userId)) {
+            boolean fromProduct =
+                    lastShownProduct.containsKey(userId)
+                            && "awaiting_quantity".equals(userStates.get(userId));
+
+            if (fromProduct) {
 
                 userStates.put(userId, "awaiting_consult_message");
 
                 sendMessage(
                         chatId,
-                        "📦 Цей товар доступний під замовлення.\n\n" +
-                                "✍️ Напишіть ваше питання або вкажіть, яку кількість товару вас цікавить.\n\n" +
-                                "👨‍💼 Консультант отримає ваше повідомлення 👇",
+                        "📦 *Товар доступний під замовлення*\n\n" +
+                                "✍️ Напишіть своє питання або вкажіть кількість товару, яка вас цікавить.\n\n" +
+                                "👨‍💼 Консультант отримає ваше повідомлення та відповість найближчим часом.",
                         markup
                 );
 
             } else {
+
+                lastShownProduct.remove(userId);
+
                 userStates.put(userId, "ask_consultant");
 
                 sendMessage(
                         chatId,
-                        "✏️ Напишіть своє питання — я передам консультанту.\n" +
-                                "📸 Фото теж можна надсилати 😉",
+                        "✍️ Напишіть своє питання.\n\n" +
+                                "👨‍💼 Я передам його консультанту.\n\n" +
+                                "📸 Також можна надіслати фотографію.",
                         markup
                 );
             }
+
             return;
         }
 
