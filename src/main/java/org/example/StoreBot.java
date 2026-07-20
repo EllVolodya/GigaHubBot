@@ -8076,11 +8076,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row1 = new KeyboardRow();
         row1.add("Написати консультанту");
+        row1.add("💬 Залишити відгук");
         keyboard.add(row1);
-
-        KeyboardRow row2 = new KeyboardRow();
-        row2.add("💬 Залишити відгук");
-        keyboard.add(row2);
 
         KeyboardRow row3 = new KeyboardRow();
         row3.add(new KeyboardButton(BACK_BUTTON));
@@ -8097,7 +8094,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "✉️ *Написати консультанту*\n" +
                                 "Передам твоє питання нашим майстрам — підкажуть і допоможуть обрати найкращий варіант.\n\n" +
 
-                                "\n\n💬 *Залишити відгук*\n" +
+                                "💬 *Залишити відгук*\n" +
                                 "Поділись своєю думкою про наш сервіс — нам важливо знати, що можна покращити 💙"
                 )
                 .parseMode("Markdown")
