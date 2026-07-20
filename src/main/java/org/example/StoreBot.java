@@ -5551,21 +5551,23 @@ public class StoreBot extends TelegramLongPollingBot {
                             msg.setChatId(adminId.toString());
                             msg.setPhoto(new InputFile(fileId));
                             msg.setCaption(
-                                    "📸 Фото від покупця:\n" +
-                                            "🆔 User ID: " + userId + "\n" +
-                                            "💬 Chat ID: " + realChatId + "\n\n" +
-                                            (caption.isBlank() ? "" : "📝 Підпис:\n" + caption)
+                                    "📩 Нове фото від покупця\n\n" +
+                                            "🆔 User ID: " + userId + "\n\n" +
+                                            (caption.isBlank()
+                                                    ? ""
+                                                    : "📝 Підпис:\n" + caption)
                             );
 
                             execute(msg);
                         }
 
-                        sendReplyButtonToConsultant(userId);
-                        sendText(realChatId, "📸 Ваше фото передано консультанту!");
+                        sendText(realChatId,
+                                "✅ Фото передано консультанту.\n\n👨‍💼 Очікуйте відповідь.");
 
                     } catch (Exception e) {
                         e.printStackTrace();
-                        sendText(realChatId, "❌ Помилка при відправці фото консультанту.");
+                        sendText(realChatId,
+                                "❌ Помилка при відправці фото консультанту.");
                     }
 
                     userStates.remove(userId);
@@ -5591,21 +5593,22 @@ public class StoreBot extends TelegramLongPollingBot {
 
                             SendMessage adminMsg = new SendMessage(
                                     adminId.toString(),
-                                    "📩 Нове повідомлення від покупця:\n\n" +
-                                            "🆔 User ID: " + userId + "\n" +
-                                            "💬 Chat ID: " + realChatId + "\n\n" +
-                                            "📝 Текст:\n" + text
+                                    "📩 Нове повідомлення від покупця\n\n" +
+                                            "🆔 User ID: " + userId + "\n\n" +
+                                            "💬 Повідомлення:\n" +
+                                            text
                             );
 
                             execute(adminMsg);
                         }
 
-                        sendReplyButtonToConsultant(userId);
-                        sendText(realChatId, "✅ Ваше повідомлення передано консультанту!");
+                        sendText(realChatId,
+                                "✅ Ваше повідомлення передано консультанту!\n\n👨‍💼 Очікуйте відповідь.");
 
                     } catch (Exception e) {
                         e.printStackTrace();
-                        sendText(realChatId, "❌ Помилка при пересилці повідомлення консультанту.");
+                        sendText(realChatId,
+                                "❌ Помилка при пересилці повідомлення консультанту.");
                     }
 
                     userStates.remove(userId);
