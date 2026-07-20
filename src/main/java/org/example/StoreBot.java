@@ -5520,58 +5520,81 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "ask_consultant" -> {
 
+                Map<String, Object> product = lastShownProduct.get(userId);
+
+                String productInfo = "";
+
+                if (product != null) {
+
+                    String productName = String.valueOf(
+                            product.getOrDefault("name", "Невідомий товар")
+                    );
+
+                    productInfo =
+                            "📦 Товар:\n" +
+                                    productName +
+                                    "\n\n";
+                }
+
                 if (update.getMessage().hasPhoto()) {
 
                     List<PhotoSize> photos = update.getMessage().getPhoto();
                     PhotoSize largest = photos.get(photos.size() - 1);
+
                     String fileId = largest.getFileId();
 
                     String caption = update.getMessage().getCaption();
                     if (caption == null) caption = "";
-
-                    lastUserMessage.put(userId,
-                            caption.isBlank() ? "📸 Фото без підпису" : caption);
 
                     try {
 
                         for (Long adminId : CONSULTANT_CHAT_ID) {
 
                             SendPhoto msg = new SendPhoto();
+
                             msg.setChatId(adminId.toString());
                             msg.setPhoto(new InputFile(fileId));
+
                             msg.setCaption(
-                                    "📩 Нове фото від покупця\n\n" +
+                                    "📩 Нове повідомлення від покупця\n\n" +
                                             "🆔 User ID: " + userId + "\n\n" +
+                                            productInfo +
                                             (caption.isBlank()
-                                                    ? ""
-                                                    : "📝 Підпис:\n" + caption)
+                                                    ? "📸 Фото без підпису"
+                                                    : "📝 Повідомлення:\n" + caption)
                             );
 
                             execute(msg);
                         }
 
                         sendText(realChatId,
-                                "✅ Фото передано консультанту.\n\n👨‍💼 Очікуйте відповідь.");
+                                "✅ Дякуємо! Ваше повідомлення вже отримав консультант.\n\n" +
+                                        "💬 Найближчим часом він зв'яжеться з вами.");
 
                     } catch (Exception e) {
+
                         e.printStackTrace();
+
                         sendText(realChatId,
-                                "❌ Помилка при відправці фото консультанту.");
+                                "❌ Помилка при відправці повідомлення.");
+
                     }
 
                     userStates.remove(userId);
+                    lastShownProduct.remove(userId);
+
                     break;
                 }
 
                 if (text != null && !text.isBlank()) {
 
-                    lastUserMessage.put(userId, text);
-
                     String botReply = botAutoAnswer(text);
 
                     if (botReply != null) {
+
                         sendText(realChatId,
-                                botReply + "\n\n✉️ Якщо хочеш поговорити з консультантом — натисни кнопку.");
+                                botReply + "\n\n✉️ Якщо потрібно — можете звернутися до консультанта.");
+
                         userStates.remove(userId);
                         break;
                     }
@@ -5584,6 +5607,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                     adminId.toString(),
                                     "📩 Нове повідомлення від покупця\n\n" +
                                             "🆔 User ID: " + userId + "\n\n" +
+                                            productInfo +
                                             "💬 Повідомлення:\n" +
                                             text
                             );
@@ -5592,17 +5616,24 @@ public class StoreBot extends TelegramLongPollingBot {
                         }
 
                         sendText(realChatId,
-                                "✅ Ваше повідомлення передано консультанту!\n\n👨‍💼 Очікуйте відповідь.");
+                                "✅ Дякуємо! Ваше повідомлення вже отримав консультант.\n\n" +
+                                        "💬 Найближчим часом він зв'яжеться з вами.");
 
                     } catch (Exception e) {
+
                         e.printStackTrace();
+
                         sendText(realChatId,
-                                "❌ Помилка при пересилці повідомлення консультанту.");
+                                "❌ Помилка при відправці повідомлення.");
+
                     }
 
                     userStates.remove(userId);
+                    lastShownProduct.remove(userId);
+
                     break;
                 }
+
                 break;
             }
 
