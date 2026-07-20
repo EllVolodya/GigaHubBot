@@ -552,32 +552,36 @@ public class StoreBot extends TelegramLongPollingBot {
             if (BACK_BUTTON.equals(text)) {
 
                 userStates.remove(userId);
-
+                lastShownProduct.remove(userId);
                 return;
             }
 
             try {
+                String productInfo = "";
+                Map<String, Object> product = lastShownProduct.get(userId);
 
-                long ticketId = SupportManager.createTicket(
-                        userId,
-                        update.getMessage().getFrom().getUserName(),
-                        null,
-                        text
-                );
+                if (product != null) {
 
-                System.out.println("Ticket ID = " + ticketId);
+                    String productName = String.valueOf(
+                            product.getOrDefault("name", "Невідомий товар")
+                    );
+
+                    productInfo =
+                            "📦 Товар:\n" +
+                                    productName +
+                                    "\n\n";
+                }
 
                 for (Long adminId : CONSULTANT_CHAT_ID) {
 
                     SendMessage adminMsg = new SendMessage(
                             adminId.toString(),
-                            "📩 Нове звернення #" + ticketId + "\n\n" +
+                            "📩 Нове повідомлення від покупця\n\n" +
                                     "🆔 User ID: " + userId + "\n\n" +
+                                    productInfo +
                                     "💬 Повідомлення:\n" +
-                                    text + "\n\n" +
-                                    "📌 Статус: 🟡 OPEN"
+                                    text
                     );
-
                     execute(adminMsg);
                 }
 
@@ -588,8 +592,11 @@ public class StoreBot extends TelegramLongPollingBot {
             } catch (Exception e) {
                 e.printStackTrace();
                 sendText(realChatId,
-                        "❌ Помилка при створенні звернення.");
+                        "❌ Помилка при відправці повідомлення консультанту.");
             }
+
+            userStates.remove(userId);
+            lastShownProduct.remove(userId);
 
             return;
         }
