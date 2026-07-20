@@ -552,51 +552,35 @@ public class StoreBot extends TelegramLongPollingBot {
 
             try {
 
-                Map<String, Object> product =
-                        lastShownProduct.get(userId);
+                long ticketId = SupportManager.createTicket(
+                        userId,
+                        update.getMessage().getFrom().getUserName(),
+                        null,
+                        text
+                );
 
-                String productName =
-                        product != null
-                                ? String.valueOf(product.get("name"))
-                                : "Невідомий товар";
+                for (Long adminId : CONSULTANT_CHAT_ID) {
 
-                // 🔥 ВІДПРАВКА ВСІМ КОНСУЛЬТАНТАМ
-                for (Long consultantId : CONSULTANT_CHAT_ID) {
-
-                    sendText(
-                            String.valueOf(consultantId),
-
-                            "📩 Нове повідомлення від покупця\n\n"
-
-                                    + "👤 User ID: "
-                                    + userId
-                                    + "\n"
-
-                                    + "📦 Товар: "
-                                    + productName
-                                    + "\n\n"
-
-                                    + "💬 Повідомлення:\n"
-                                    + text
+                    SendMessage adminMsg = new SendMessage(
+                            adminId.toString(),
+                            "📩 Нове звернення #" + ticketId + "\n\n" +
+                                    "🆔 User ID: " + userId + "\n\n" +
+                                    "💬 Повідомлення:\n" +
+                                    text + "\n\n" +
+                                    "📌 Статус: 🟡 OPEN"
                     );
+
+                    execute(adminMsg);
                 }
 
-                sendText(
-                        chatId,
-                        "✅ Повідомлення відправлено консультанту.\n\n" +
-                                "👨‍💼 Очікуйте відповідь."
-                );
-
-                userStates.remove(userId);
+                sendText(realChatId,
+                        "✅ Дякуємо! Ваше повідомлення вже отримав консультант.\n\n" +
+                                "💬 Найближчим часом він зв'яжеться з вами.");
 
             } catch (Exception e) {
-
                 e.printStackTrace();
-
-                sendText(
-                        chatId,
-                        "❌ Помилка при відправці повідомлення."
-                );
+                sendText(realChatId,
+                        "❌ Помилка при створенні звернення.");
             }
 
             return;
@@ -3288,50 +3272,52 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
                 }
 
-                case "💬 Відповісти покупцю" -> {
-                    Long targetUserId = consultantReplyTarget.get(CONSULTANT_CHAT_ID);
-
-                    if (targetUserId == null) {
-                        for (Long consultantId : CONSULTANT_CHAT_ID) {
-
-                            sendText(
-                                    String.valueOf(consultantId),
-                                    "❌ Немає покупця, який чекає відповіді."
-                            );
-                        }
-                        return;
-                    }
-
-                    // Отримуємо останнє повідомлення цього покупця
-                    String lastMsg = lastUserMessage.get(targetUserId);
-                    if (lastMsg == null) lastMsg = "— (останнє повідомлення не збережено)";
-
-                    // Виводимо продавцю деталі покупця
-                    for (Long consultantId : CONSULTANT_CHAT_ID) {
-
-                        sendText(
-                                String.valueOf(consultantId),
-                                "🧍‍♂️ Покупець:\n" +
-                                        "🆔 User ID: " + targetUserId + "\n" +
-                                        "💬 Повідомлення: " + lastMsg + "\n\n" +
-                                        "✏️ Напишіть відповідь або надішліть фото — я передам покупцю."
-                        );
-                    }
-
-                    // Переводимо продавця в режим відповіді
-                    for (Long consultantId : CONSULTANT_CHAT_ID) {
-
-                        userStates.put(
-                                consultantId,
-                                "consultant_reply"
-                        );
-                    }
-                    break;
-                }
-
                 case "🆔 Відповісти по ID" -> {
                     sendText(chatId, "✏️ Введіть User ID покупця:");
                     userStates.put(userId, "awaiting_user_id");
+                }
+
+                case "📩 Звернення користувачів" -> {
+
+                    try {
+
+                        ResultSet rs = SupportManager.getOpenTickets();
+
+                        StringBuilder sb = new StringBuilder();
+
+                        sb.append("📩 Список звернень\n\n");
+
+                        while (rs != null && rs.next()) {
+
+                            sb.append("🆔 #")
+                                    .append(rs.getLong("id"))
+                                    .append("\n");
+
+                            sb.append("👤 User: ")
+                                    .append(rs.getLong("user_id"))
+                                    .append("\n");
+
+                            sb.append("📌 Статус: ")
+                                    .append(rs.getString("status"))
+                                    .append("\n\n");
+                        }
+
+                        if (sb.toString().equals("📩 Список звернень\n\n")) {
+
+                            sb.append("✅ Активних звернень немає.");
+
+                        }
+
+                        sendText(chatId, sb.toString());
+
+                    } catch (Exception e) {
+
+                        e.printStackTrace();
+
+                        sendText(chatId, "❌ Помилка завантаження звернень.");
+
+                    }
+
                 }
 
                 case "✅ Підтвердити" -> {
@@ -7869,13 +7855,16 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow r1 = new KeyboardRow();
         r1.add(new KeyboardButton("🛒 Замовлення користувачів"));
-        r1.add(new KeyboardButton("🆔 Відповісти по ID"));
-        r1.add(new KeyboardButton("💬 Відгуки користувачів"));
+        r1.add(new KeyboardButton("📩 Звернення користувачів"));
 
         KeyboardRow r2 = new KeyboardRow();
-        r2.add(new KeyboardButton(BACK_BUTTON));
+        r2.add(new KeyboardButton("🆔 Відповісти по ID"));
+        r2.add(new KeyboardButton("💬 Відгуки користувачів"));
 
-        kb.setKeyboard(List.of(r1, r2));
+        KeyboardRow r3 = new KeyboardRow();
+        r3.add(new KeyboardButton(BACK_BUTTON));
+
+        kb.setKeyboard(List.of(r1, r2, r3));
 
         msg.setReplyMarkup(kb);
         return msg;
