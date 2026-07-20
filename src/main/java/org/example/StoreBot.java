@@ -2846,33 +2846,27 @@ public class StoreBot extends TelegramLongPollingBot {
                     execute(msg);
                 }
                 case "💬 Допомога" -> sendMessage(createHelpMenu(chatId));
+
                 case "Написати консультанту" -> {
+
+                    lastShownProduct.remove(userId);
+
                     userStates.put(userId, "ask_consultant");
 
                     sendText(chatId, """
                         ✏️ Напишіть своє питання — я передам консультанту.
                         Фото теж можна кидати 📸😉
                         """);
+
                     break;
                 }
+
                 case "💬 Залишити відгук" -> {
                     userStates.put(userId, "waiting_for_feedback");
                     sendText(chatId,
                             "📝 Напишіть свій відгук.\n" +
                                     "Ми уважно його прочитаємо та врахуємо 🙏");
                 }
-                case "💌 Відповіді" -> {
-                    List<String> answers = supportAnswers.get(userId);
-                    String reply = (answers == null || answers.isEmpty())
-                            ? "Поки що немає відповідей від консультантів."
-                            : "💌 Відповіді консультантів:\n\n" + String.join("\n\n", answers);
-                    sendText(chatId, reply);
-                }
-                case "🧮 Будівельний калькулятор" -> {
-                    userStates.put(userId, "material_calc_menu");
-                    sendMaterialCalcMenu(chatId);
-                }
-
 
                 case "🔍 Пошук товару" -> {
                     userStates.put(userId, "waiting_for_search");
@@ -3026,7 +3020,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "🏬 Самовивіз" -> {
 
-                    // 🔥 ВИХОДИМО З ПОШУКУ
                     userStates.remove(userId);
 
                     tempStorage.put(userId + "_deliveryType", "Самовивіз");
@@ -3046,7 +3039,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "📦 Доставка по місту" -> {
 
-                    // 🔥 ВИХОДИМО З ПОШУКУ
                     userStates.remove(userId);
 
                     tempStorage.put(userId + "_deliveryType", "Доставка по місту");
@@ -3063,7 +3055,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "📮 Доставка Новою поштою" -> {
 
-                    // 🔥 ВИХОДИМО З ПОШУКУ
                     userStates.remove(userId);
 
                     tempStorage.put(userId + "_deliveryType", "Нова Пошта");
@@ -5768,77 +5759,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 sendText(chatId, "Відправте фото або відео (або напишіть 'немає'):");
             }
 
-            /*case "awaiting_hit_media" -> {
-
-                // 1️⃣ Дані
-                String title = String.valueOf(
-                        tempStorage.getOrDefault(userId + "_hit_title", "немає")
-                );
-
-                String description = String.valueOf(
-                        tempStorage.getOrDefault(userId + "_hit_description", "немає")
-                );
-
-                // 2️⃣ Медіа
-                String mediaUrl = "немає";
-                if (text == null || !text.equalsIgnoreCase("немає")) {
-                    mediaUrl = HitsManager.uploadFromTelegram(this, update.getMessage());
-                    if (mediaUrl == null) mediaUrl = "немає";
-                }
-
-                // 3️⃣ Зберігаємо
-                HitsManager.saveHit(title, description, mediaUrl);
-
-                // 4️⃣ Очищення
-                userStates.remove(userId);
-                tempStorage.remove(userId + "_hit_title");
-                tempStorage.remove(userId + "_hit_description");
-
-                // 5️⃣ Адміну
-                sendText(chatId, "✅ Товар успішно додано у Хіт продажу!");
-
-                // 🔔 6️⃣ РОЗСИЛКА ВСІМ (ПО CHAT_ID З БД)
-                for (String targetChatId : userManager.getAllChatIds()) {
-                    try {
-                        sendText(
-                                targetChatId,
-                                "🌟 Новий Хіт продажу з’явився в магазині!\n" +
-                                        "👉 Перегляньте його у розділі «Хіти продажів»!"
-                        );
-                    } catch (Exception ignored) {}
-                }
-            }*/
-
-            /*case "awaiting_hit_media_only" -> {
-
-                // 1️⃣ Медіа
-                String mediaUrl = "немає";
-                if (text == null || !text.equalsIgnoreCase("немає")) {
-                    mediaUrl = HitsManager.uploadFromTelegram(this, update.getMessage());
-                    if (mediaUrl == null) mediaUrl = "немає";
-                }
-
-                // 2️⃣ Зберігаємо
-                HitsManager.saveHit(null, "немає", mediaUrl);
-
-                // 3️⃣ Очищення
-                userStates.remove(userId);
-
-                // 4️⃣ Адміну
-                sendText(chatId, "✅ Товар успішно додано у Хіт продажу!");
-
-                // 🔔 5️⃣ РОЗСИЛКА ВСІМ (ПО CHAT_ID З БД)
-                for (String targetChatId : userManager.getAllChatIds()) {
-                    try {
-                        sendText(
-                                targetChatId,
-                                "🌟 Новий Хіт продажу з’явився в магазині!\n" +
-                                        "👉 Перегляньте його у розділі «Хіти продажів»!"
-                        );
-                    } catch (Exception ignored) {}
-                }
-            }*/
-
             case "choose_subcategory_for_filter" -> {
 
                 try {
@@ -8156,11 +8076,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow row1 = new KeyboardRow();
         row1.add("Написати консультанту");
-        row1.add("💌 Відповіді");
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
-        //row2.add("🧮 Будівельний калькулятор");
         row2.add("💬 Залишити відгук");
         keyboard.add(row2);
 
@@ -8178,9 +8096,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
                                 "✉️ *Написати консультанту*\n" +
                                 "Передам твоє питання нашим майстрам — підкажуть і допоможуть обрати найкращий варіант.\n\n" +
-
-                                "💌 *Переглянути відповіді*\n" +
-                                "Тут знаходяться всі відповіді консультанта. Нічого не загубиться!" +
 
                                 "\n\n💬 *Залишити відгук*\n" +
                                 "Поділись своєю думкою про наш сервіс — нам важливо знати, що можна покращити 💙"
