@@ -503,13 +503,9 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔥 Кнопка "Написати консультанту"
         if (text != null &&
                 (text.equalsIgnoreCase("📞 Написати консультанту")
-                        || text.equalsIgnoreCase("Написати консультанту"))
-                && lastShownProduct.containsKey(userId)) {
+                        || text.equalsIgnoreCase("Написати консультанту"))) {
 
-            System.out.println("📞 PRODUCT CONSULT BUTTON CLICKED");
-
-            // Стан для звернення по конкретному товару
-            userStates.put(userId, "awaiting_consult_message");
+            System.out.println("📞 CONSULT BUTTON CLICKED");
 
             ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
             markup.setResizeKeyboard(true);
@@ -519,14 +515,28 @@ public class StoreBot extends TelegramLongPollingBot {
 
             markup.setKeyboard(List.of(row));
 
-            sendMessage(
-                    chatId,
-                    "📦 Цей товар доступний під замовлення.\n\n" +
-                            "✍️ Напишіть ваше питання або вкажіть, яку кількість товару вас цікавить.\n\n" +
-                            "👨‍💼 Консультант отримає ваше повідомлення 👇",
-                    markup
-            );
+            if (lastShownProduct.containsKey(userId)) {
 
+                userStates.put(userId, "awaiting_consult_message");
+
+                sendMessage(
+                        chatId,
+                        "📦 Цей товар доступний під замовлення.\n\n" +
+                                "✍️ Напишіть ваше питання або вкажіть, яку кількість товару вас цікавить.\n\n" +
+                                "👨‍💼 Консультант отримає ваше повідомлення 👇",
+                        markup
+                );
+
+            } else {
+                userStates.put(userId, "ask_consultant");
+
+                sendMessage(
+                        chatId,
+                        "✏️ Напишіть своє питання — я передам консультанту.\n" +
+                                "📸 Фото теж можна надсилати 😉",
+                        markup
+                );
+            }
             return;
         }
 
