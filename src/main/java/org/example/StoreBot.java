@@ -559,6 +559,8 @@ public class StoreBot extends TelegramLongPollingBot {
                         text
                 );
 
+                System.out.println("Ticket ID = " + ticketId);
+
                 for (Long adminId : CONSULTANT_CHAT_ID) {
 
                     SendMessage adminMsg = new SendMessage(
@@ -3280,44 +3282,28 @@ public class StoreBot extends TelegramLongPollingBot {
                 case "📩 Звернення користувачів" -> {
 
                     try {
-
                         ResultSet rs = SupportManager.getOpenTickets();
-
                         StringBuilder sb = new StringBuilder();
-
                         sb.append("📩 Список звернень\n\n");
-
                         while (rs != null && rs.next()) {
-
                             sb.append("🆔 #")
                                     .append(rs.getLong("id"))
                                     .append("\n");
-
                             sb.append("👤 User: ")
                                     .append(rs.getLong("user_id"))
                                     .append("\n");
-
                             sb.append("📌 Статус: ")
                                     .append(rs.getString("status"))
                                     .append("\n\n");
                         }
-
                         if (sb.toString().equals("📩 Список звернень\n\n")) {
-
                             sb.append("✅ Активних звернень немає.");
-
                         }
-
                         sendText(chatId, sb.toString());
-
                     } catch (Exception e) {
-
                         e.printStackTrace();
-
                         sendText(chatId, "❌ Помилка завантаження звернень.");
-
                     }
-
                 }
 
                 case "✅ Підтвердити" -> {
@@ -7855,7 +7841,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow r1 = new KeyboardRow();
         r1.add(new KeyboardButton("🛒 Замовлення користувачів"));
-        r1.add(new KeyboardButton("📩 Звернення користувачів"));
+        //r1.add(new KeyboardButton("📩 Звернення користувачів"));
 
         KeyboardRow r2 = new KeyboardRow();
         r2.add(new KeyboardButton("🆔 Відповісти по ID"));
