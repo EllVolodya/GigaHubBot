@@ -3186,7 +3186,7 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 // Адмін меню
-                case "⚙️ Продавца меню" -> {
+                case "⚙️ Продавца-консультанта меню" -> {
 
                     // 🔥 очищаємо старі стани
                     userStates.remove(userId);
@@ -7811,7 +7811,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (ADMINS.contains(userId)) {
             KeyboardRow adminRow = new KeyboardRow();
-            adminRow.add("⚙️ Продавца меню");
+            adminRow.add("⚙️ Продавца-консультанта меню");
             keyboard.add(adminRow);
         }
 
