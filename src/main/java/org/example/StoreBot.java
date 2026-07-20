@@ -5531,7 +5531,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "ask_consultant" -> {
 
-                // 📸 Якщо користувач відправляє фото
                 if (update.getMessage().hasPhoto()) {
 
                     List<PhotoSize> photos = update.getMessage().getPhoto();
@@ -5541,21 +5540,25 @@ public class StoreBot extends TelegramLongPollingBot {
                     String caption = update.getMessage().getCaption();
                     if (caption == null) caption = "";
 
-                    // 🔥 ЗБЕРІГАЄМО ОСТАННЄ ПОВІДОМЛЕННЯ ПОКУПЦЯ
-                    lastUserMessage.put(userId, caption.isBlank() ? "📸 Фото без підпису" : caption);
+                    lastUserMessage.put(userId,
+                            caption.isBlank() ? "📸 Фото без підпису" : caption);
 
                     try {
-                        SendPhoto msg = new SendPhoto();
-                        msg.setChatId(CONSULTANT_CHAT_ID.toString());
-                        msg.setPhoto(new InputFile(fileId));
-                        msg.setCaption(
-                                "📸 Фото від покупця:\n" +
-                                        "🆔 User ID: " + userId + "\n" +
-                                        "💬 Chat ID: " + realChatId + "\n\n" +
-                                        (caption.isEmpty() ? "" : "📝 Підпис:\n" + caption)
-                        );
 
-                        execute(msg);
+                        for (Long adminId : CONSULTANT_CHAT_ID) {
+
+                            SendPhoto msg = new SendPhoto();
+                            msg.setChatId(adminId.toString());
+                            msg.setPhoto(new InputFile(fileId));
+                            msg.setCaption(
+                                    "📸 Фото від покупця:\n" +
+                                            "🆔 User ID: " + userId + "\n" +
+                                            "💬 Chat ID: " + realChatId + "\n\n" +
+                                            (caption.isBlank() ? "" : "📝 Підпис:\n" + caption)
+                            );
+
+                            execute(msg);
+                        }
 
                         sendReplyButtonToConsultant(userId);
                         sendText(realChatId, "📸 Ваше фото передано консультанту!");
@@ -5569,36 +5572,36 @@ public class StoreBot extends TelegramLongPollingBot {
                     break;
                 }
 
-
-                // ✏️ Якщо користувач відправив текст
                 if (text != null && !text.isBlank()) {
 
-                    // 🔥 ЗБЕРІГАЄМО ОСТАННІЙ ТЕКСТ ПОКУПЦЯ
                     lastUserMessage.put(userId, text);
 
-                    // AI-підказка
                     String botReply = botAutoAnswer(text);
 
                     if (botReply != null) {
-                        sendText(realChatId, botReply + "\n\n✉️ Якщо хочеш поговорити з консультантом — натисни кнопку.");
+                        sendText(realChatId,
+                                botReply + "\n\n✉️ Якщо хочеш поговорити з консультантом — натисни кнопку.");
                         userStates.remove(userId);
                         break;
                     }
 
-                    // Передаємо консультанту
                     try {
-                        SendMessage adminMsg = new SendMessage(
-                                CONSULTANT_CHAT_ID.toString(),
-                                "📩 Нове повідомлення від покупця:\n" +
-                                        "🆔 User ID: " + userId + "\n" +
-                                        "💬 Chat ID: " + realChatId + "\n\n" +
-                                        "📝 Текст:\n" + text
-                        );
 
-                        execute(adminMsg);
+                        for (Long adminId : CONSULTANT_CHAT_ID) {
+
+                            SendMessage adminMsg = new SendMessage(
+                                    adminId.toString(),
+                                    "📩 Нове повідомлення від покупця:\n\n" +
+                                            "🆔 User ID: " + userId + "\n" +
+                                            "💬 Chat ID: " + realChatId + "\n\n" +
+                                            "📝 Текст:\n" + text
+                            );
+
+                            execute(adminMsg);
+                        }
 
                         sendReplyButtonToConsultant(userId);
-                        sendText(realChatId, "Ваше повідомлення передано консультанту!");
+                        sendText(realChatId, "✅ Ваше повідомлення передано консультанту!");
 
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -5608,7 +5611,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     userStates.remove(userId);
                     break;
                 }
-
                 break;
             }
 
