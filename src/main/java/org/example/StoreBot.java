@@ -7835,22 +7835,20 @@ public class StoreBot extends TelegramLongPollingBot {
     }
 
     private SendMessage createAdminMenu(String chatId) {
-        SendMessage msg = new SendMessage(chatId, "🔐 Адмін-панель:");
+        SendMessage msg = new SendMessage(chatId, "🔐 Продаця-консультанта меню:");
         ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
         kb.setResizeKeyboard(true);
 
         KeyboardRow r1 = new KeyboardRow();
         r1.add(new KeyboardButton("🛒 Замовлення користувачів"));
+        r1.add(new KeyboardButton("🆔 Відповісти по ID"));
+        r1.add(new KeyboardButton("💬 Відгуки користувачів"));
         //r1.add(new KeyboardButton("📩 Звернення користувачів"));
 
         KeyboardRow r2 = new KeyboardRow();
-        r2.add(new KeyboardButton("🆔 Відповісти по ID"));
-        r2.add(new KeyboardButton("💬 Відгуки користувачів"));
+        r2.add(new KeyboardButton(BACK_BUTTON));
 
-        KeyboardRow r3 = new KeyboardRow();
-        r3.add(new KeyboardButton(BACK_BUTTON));
-
-        kb.setKeyboard(List.of(r1, r2, r3));
+        kb.setKeyboard(List.of(r1, r2));
 
         msg.setReplyMarkup(kb);
         return msg;
