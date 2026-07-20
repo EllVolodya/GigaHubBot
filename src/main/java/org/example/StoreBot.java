@@ -500,24 +500,21 @@ public class StoreBot extends TelegramLongPollingBot {
             }
         }
 
-        // 🔥 КНОПКА "НАПИСАТИ КОНСУЛЬТАНТУ"
+        // 🔥 Кнопка "Написати консультанту"
         if (text != null &&
                 (text.equalsIgnoreCase("📞 Написати консультанту")
-                        || text.equalsIgnoreCase("Написати консультанту"))) {
+                        || text.equalsIgnoreCase("Написати консультанту"))
+                && lastShownProduct.containsKey(userId)) {
 
-            System.out.println("📞 CONSULT BUTTON CLICKED");
+            System.out.println("📞 PRODUCT CONSULT BUTTON CLICKED");
 
-            // 🔥 зберігаємо state
+            // Стан для звернення по конкретному товару
             userStates.put(userId, "awaiting_consult_message");
 
-            ReplyKeyboardMarkup markup =
-                    new ReplyKeyboardMarkup();
-
+            ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
             markup.setResizeKeyboard(true);
 
-            KeyboardRow row =
-                    new KeyboardRow();
-
+            KeyboardRow row = new KeyboardRow();
             row.add(BACK_BUTTON);
 
             markup.setKeyboard(List.of(row));
@@ -525,8 +522,7 @@ public class StoreBot extends TelegramLongPollingBot {
             sendMessage(
                     chatId,
                     "📦 Цей товар доступний під замовлення.\n\n" +
-                            "✍️ Напишіть ваше питання або вкажіть, " +
-                            "яку кількість товару вас цікавить.\n\n" +
+                            "✍️ Напишіть ваше питання або вкажіть, яку кількість товару вас цікавить.\n\n" +
                             "👨‍💼 Консультант отримає ваше повідомлення 👇",
                     markup
             );
