@@ -515,25 +515,22 @@ public class StoreBot extends TelegramLongPollingBot {
 
             markup.setKeyboard(List.of(row));
 
-            boolean fromProduct =
-                    lastShownProduct.containsKey(userId)
-                            && "awaiting_quantity".equals(userStates.get(userId));
-
-            if (fromProduct) {
+            if (lastShownProduct.containsKey(userId)) {
 
                 userStates.put(userId, "awaiting_consult_message");
 
+                Map<String, Object> product = lastShownProduct.get(userId);
+                String productName = String.valueOf(product.getOrDefault("name", "Товар"));
+
                 sendMessage(
                         chatId,
-                        "📦 *Товар доступний під замовлення*\n\n" +
-                                "✍️ Напишіть своє питання або вкажіть кількість товару, яка вас цікавить.\n\n" +
-                                "👨‍💼 Консультант отримає ваше повідомлення та відповість найближчим часом.",
+                        "📦 *Товар:* " + productName + "\n\n" +
+                                "✍️ Напишіть своє питання або вкажіть кількість товару.\n\n" +
+                                "👨‍💼 Консультант побачить, про який товар йде мова, та відповість найближчим часом.",
                         markup
                 );
 
             } else {
-
-                lastShownProduct.remove(userId);
 
                 userStates.put(userId, "ask_consultant");
 
