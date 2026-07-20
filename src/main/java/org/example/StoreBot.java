@@ -4660,7 +4660,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         System.out.println("Calculated maxAvailable: " + maxAvailable);
 
-        // 🔴 товар під замовлення
         if (unit.equals("під замовлення")) {
 
             sendText(chatId,
@@ -4669,13 +4668,25 @@ public class StoreBot extends TelegramLongPollingBot {
                             "Наш консультант зв’яжеться з тобою найближчим часом 🧱🤝");
 
             String adminMsg =
-                    "📢 *Новий запит під замовлення!*\n\n" +
-                            "👤 Покупець цікавиться товаром:\n" +
-                            "📦 " + productName + "\n\n" +
-                            "🆔 Chat ID: " + chatId;
+                    "📩 Новий запит на товар під замовлення\n\n" +
+                            "🆔 User ID: " + chatId + "\n\n" +
+                            "📦 Товар:\n" +
+                            productName;
 
-            sendReplyButtonToConsultant(chatId);
-            sendText(String.valueOf(CONSULTANT_CHAT_ID), adminMsg);
+            try {
+
+                for (Long adminId : CONSULTANT_CHAT_ID) {
+
+                    SendMessage msg = new SendMessage();
+                    msg.setChatId(adminId.toString());
+                    msg.setText(adminMsg);
+
+                    execute(msg);
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
 
             return;
         }
@@ -7858,10 +7869,9 @@ public class StoreBot extends TelegramLongPollingBot {
 
         KeyboardRow r1 = new KeyboardRow();
         r1.add(new KeyboardButton("🛒 Замовлення користувачів"));
-        r1.add(new KeyboardButton("💬 Відповісти покупцю"));
+        r1.add(new KeyboardButton("🆔 Відповісти по ID"));
 
         KeyboardRow r2 = new KeyboardRow();
-        r2.add(new KeyboardButton("🆔 Відповісти по ID"));
         r2.add(new KeyboardButton(BACK_BUTTON));
 
         kb.setKeyboard(List.of(r1, r2));
@@ -10005,105 +10015,6 @@ public class StoreBot extends TelegramLongPollingBot {
         } catch (SQLException e) {
             e.printStackTrace();
             return null;
-        }
-    }
-
-    private void forwardTextToConsultant(Long userId, Long chatIdLong, String text) {
-        try {
-            SendMessage msg = new SendMessage(
-                    CONSULTANT_CHAT_ID.toString(),
-                    "📩 Нове повідомлення від покупця:\n" +
-                            "🆔 User ID: " + userId + "\n" +
-                            "💬 Chat ID: " + chatIdLong + "\n\n" +
-                            text
-            );
-
-            execute(msg);
-
-            // показуємо кнопку відповіді
-            sendReplyButtonToConsultant(userId);
-
-            sendText(chatIdLong, "Ваше повідомлення передано консультанту!");
-            userStates.remove(userId);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void forwardPhotoToConsultant(Long userId, Long chatIdLong, Update update) {
-        try {
-            List<PhotoSize> photos = update.getMessage().getPhoto();
-            PhotoSize largest = photos.get(photos.size() - 1);
-            String fileId = largest.getFileId();
-
-            SendPhoto msg = new SendPhoto();
-            msg.setChatId(CONSULTANT_CHAT_ID.toString());
-            msg.setPhoto(new InputFile(fileId));
-            msg.setCaption(
-                    "📩 Фото від покупця:\n" +
-                            "🆔 User ID: " + userId + "\n" +
-                            "💬 Chat ID: " + chatIdLong
-            );
-
-            execute(msg);
-
-            sendReplyButtonToConsultant(userId);
-
-            sendText(chatIdLong, "Ваше фото передано консультанту!");
-            userStates.remove(userId);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void sendReplyButtonToConsultant(Long targetUserId)
-            throws TelegramApiException {
-
-        for (Long consultantId : CONSULTANT_CHAT_ID) {
-
-            // 🔥 зберігаємо кому відповідати
-            consultantReplyTarget.put(
-                    consultantId,
-                    targetUserId
-            );
-
-            SendMessage replyBtn =
-                    new SendMessage(
-                            String.valueOf(consultantId),
-                            "🤝 Покупець чекає на відповідь.\n\n" +
-                                    "Хочете відповісти?"
-                    );
-
-            ReplyKeyboardMarkup km =
-                    new ReplyKeyboardMarkup();
-
-            km.setResizeKeyboard(true);
-
-            // 🔥 кнопка відповісти
-            KeyboardRow row1 =
-                    new KeyboardRow();
-
-            row1.add(
-                    "💬 Відповісти покупцю"
-            );
-
-            // 🔥 кнопка назад
-            KeyboardRow row2 =
-                    new KeyboardRow();
-
-            row2.add(
-                    BACK_BUTTON
-            );
-
-            km.setKeyboard(
-                    List.of(row1, row2)
-            );
-
-            replyBtn.setReplyMarkup(km);
-
-            execute(replyBtn);
         }
     }
 
