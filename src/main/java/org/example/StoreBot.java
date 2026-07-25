@@ -1375,7 +1375,6 @@ public class StoreBot extends TelegramLongPollingBot {
         if ("developer_menu".equals(state)) {
 
             if (BACK_BUTTON.equals(text)) {
-
                 userStates.remove(userId);
 
                 try {
@@ -1388,8 +1387,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             // ✏️ Редагувати товар
-            if (text != null
-                    && text.contains("Редагувати товар")) {
+            if (text != null && text.contains("Редагувати товар")) {
 
                 userStates.put(
                         userId,
@@ -1420,8 +1418,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             // ♻️ Оновити каталог
-            if (text != null
-                    && text.contains("Оновити каталог")) {
+            if (text != null && text.contains("Оновити каталог")) {
 
                 sendText(
                         chatId,
@@ -1432,8 +1429,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             // 🔗 Запрошувальні посилання
-            if (text != null
-                    && text.contains("Запрошувальні посилання")) {
+            if (text != null && text.contains("Запрошувальні посилання")) {
 
                 userStates.put(
                         userId,
@@ -1448,8 +1444,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             // ⚙️ Керування фільтрами
-            if (text != null
-                    && text.contains("Керування фільтрами")) {
+            if (text != null && text.contains("Керування фільтрами")) {
 
                 userStates.put(
                         userId,
@@ -1457,7 +1452,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 );
 
                 try {
-
                     execute(
                             createFiltersAdminMenu(chatId)
                     );
@@ -1465,7 +1459,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 } catch (TelegramApiException e) {
 
                     e.printStackTrace();
-
                     sendText(
                             chatId,
                             "❌ Не вдалося відкрити меню фільтрів."
@@ -1476,8 +1469,7 @@ public class StoreBot extends TelegramLongPollingBot {
             }
 
             // 🗂️ Редагування категорій
-            if (text != null
-                    && text.contains("Редагувати категорії")) {
+            if (text != null && text.contains("Редагувати категорії")) {
 
                 userStates.put(
                         userId,
@@ -1485,7 +1477,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 );
 
                 try {
-
                     execute(
                             createCategoryAdminMenu(chatId)
                     );
@@ -1493,10 +1484,34 @@ public class StoreBot extends TelegramLongPollingBot {
                 } catch (TelegramApiException e) {
 
                     e.printStackTrace();
-
                     sendText(
                             chatId,
                             "❌ Не вдалося відкрити меню категорій."
+                    );
+                }
+
+                return;
+            }
+
+            // 🎂 Дні народження
+            if (text != null && text.contains("Дні народження")) {
+
+                userStates.put(
+                        userId,
+                        "birthday_menu"
+                );
+
+                try {
+                    execute(
+                            createBirthdayMenu(chatId)
+                    );
+
+                } catch (TelegramApiException e) {
+
+                    e.printStackTrace();
+                    sendText(
+                            chatId,
+                            "❌ Не вдалося відкрити меню днів народження."
                     );
                 }
 
@@ -1511,7 +1526,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     chatId,
                     "❓ Невідома дія."
             );
-
             return;
         }
 
