@@ -24,6 +24,9 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Document;
 
 import java.time.LocalDate;
+
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.format.DateTimeFormatter;
 
 import java.util.*;
@@ -1532,11 +1535,10 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        //Меню день народження
         if ("birthday_menu".equals(state)) {
 
             // ⬅️ Назад
-            if (BACK_BUTTON.equals(text) || "⬅️ Меню розробника".equals(text)) {
+            if (BACK_BUTTON.equals(text)) {
 
                 userStates.put(userId, "developer_menu");
 
@@ -1554,15 +1556,13 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 userStates.put(userId, "birthday_add_name");
 
-                sendText(
-                        chatId,
+                sendText(chatId,
                         """
                         👤 Введіть ПІБ працівника.
-        
+                        
                         Приклад:
                         Левченко Альона
-                        """
-                );
+                        """);
 
                 return;
             }
@@ -1570,10 +1570,57 @@ public class StoreBot extends TelegramLongPollingBot {
             // 📋 Список
             if (text != null && text.contains("Список")) {
 
-                sendText(
-                        chatId,
-                        "📋 Функція перегляду списку поки що в розробці."
-                );
+                String sql = """
+                            SELECT full_name,
+                                   branch,
+                                   birthday
+                            FROM birthdays
+                            WHERE is_active = 1
+                            ORDER BY MONTH(birthday), DAY(birthday)
+                            """;
+
+                try (Connection conn = DatabaseManager.getConnection();
+                     PreparedStatement ps = conn.prepareStatement(sql);
+                     ResultSet rs = ps.executeQuery()) {
+
+                    StringBuilder builder = new StringBuilder();
+
+                    builder.append("🎂 <b>Список днів народження</b>\n\n");
+
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+                    while (rs.next()) {
+
+                        java.sql.Date birthday = rs.getDate("birthday");
+
+                        builder.append("👤 ")
+                                .append(rs.getString("full_name"))
+                                .append("\n");
+
+                        builder.append("🏢 ")
+                                .append(rs.getString("branch"))
+                                .append("\n");
+
+                        builder.append("🎂 ")
+                                .append(formatter.format(birthday.toLocalDate()))
+                                .append("\n\n");
+                    }
+
+                    if (builder.toString().equals("🎂 <b>Список днів народження</b>\n\n")) {
+                        builder.append("Список порожній.");
+                    }
+
+                    SendMessage sendMessage = new SendMessage();
+                    sendMessage.setChatId(chatId);
+                    sendMessage.setParseMode("HTML");
+                    sendMessage.setText(builder.toString());
+
+                    execute(sendMessage);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка отримання списку.");
+                }
 
                 return;
             }
@@ -1581,10 +1628,63 @@ public class StoreBot extends TelegramLongPollingBot {
             // 📅 Найближчі
             if (text != null && text.contains("Найближчі")) {
 
-                sendText(
-                        chatId,
-                        "📅 Функція найближчих днів народження поки що в розробці."
-                );
+                String sql = """
+            SELECT full_name,
+                   branch,
+                   birthday
+            FROM birthdays
+            WHERE is_active = 1
+            ORDER BY
+                CASE
+                    WHEN DAYOFYEAR(birthday) >= DAYOFYEAR(CURDATE())
+                    THEN DAYOFYEAR(birthday)
+                    ELSE DAYOFYEAR(birthday) + 366
+                END
+            LIMIT 10
+            """;
+
+                try (Connection conn = DatabaseManager.getConnection();
+                     PreparedStatement ps = conn.prepareStatement(sql);
+                     ResultSet rs = ps.executeQuery()) {
+
+                    StringBuilder builder = new StringBuilder();
+
+                    builder.append("📅 <b>Найближчі дні народження</b>\n\n");
+
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+                    while (rs.next()) {
+
+                        java.sql.Date birthday = rs.getDate("birthday");
+
+                        builder.append("🎂 ")
+                                .append(rs.getString("full_name"))
+                                .append("\n");
+
+                        builder.append("🏢 ")
+                                .append(rs.getString("branch"))
+                                .append("\n");
+
+                        builder.append("📅 ")
+                                .append(formatter.format(birthday.toLocalDate()))
+                                .append("\n\n");
+                    }
+
+                    if (builder.toString().equals("📅 <b>Найближчі дні народження</b>\n\n")) {
+                        builder.append("Нічого не знайдено.");
+                    }
+
+                    SendMessage sendMessage = new SendMessage();
+                    sendMessage.setChatId(chatId);
+                    sendMessage.setParseMode("HTML");
+                    sendMessage.setText(builder.toString());
+
+                    execute(sendMessage);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка отримання найближчих днів народження.");
+                }
 
                 return;
             }
@@ -1592,10 +1692,13 @@ public class StoreBot extends TelegramLongPollingBot {
             // ✏️ Редагувати
             if (text != null && text.contains("Редагувати")) {
 
-                sendText(
-                        chatId,
-                        "✏️ Функція редагування поки що в розробці."
-                );
+                userStates.put(userId, "birthday_edit");
+
+                sendText(chatId,
+                        """
+                        ✏️ Введіть ПІБ працівника,
+                        якого потрібно відредагувати.
+                        """);
 
                 return;
             }
@@ -1603,18 +1706,18 @@ public class StoreBot extends TelegramLongPollingBot {
             // 🗑 Видалити
             if (text != null && text.contains("Видалити")) {
 
-                sendText(
-                        chatId,
-                        "🗑 Функція видалення поки що в розробці."
-                );
+                userStates.put(userId, "birthday_delete");
+
+                sendText(chatId,
+                        """
+                        🗑 Введіть ПІБ працівника,
+                        якого потрібно видалити.
+                        """);
 
                 return;
             }
 
-            sendText(
-                    chatId,
-                    "❓ Невідома дія."
-            );
+            sendText(chatId, "❓ Невідома дія.");
 
             return;
         }
