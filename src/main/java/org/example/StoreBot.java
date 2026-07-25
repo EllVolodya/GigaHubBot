@@ -1655,6 +1655,7 @@ public class StoreBot extends TelegramLongPollingBot {
                                 FROM birthdays
                                 WHERE is_active = 1
                                   AND MONTH(birthday) = MONTH(CURDATE())
+                                  AND DAY(birthday) >= DAY(CURDATE())
                                 ORDER BY DAY(birthday)
                                 """;
 
@@ -1689,7 +1690,7 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
 
                     if (!found) {
-                        builder.append("У цьому місяці днів народження немає.");
+                        builder.append("У цьому місяці більше днів народження немає.");
                     }
 
                     SendMessage sendMessage = new SendMessage();
