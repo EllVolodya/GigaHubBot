@@ -1648,61 +1648,93 @@ public class StoreBot extends TelegramLongPollingBot {
             // 📅 Найближчі
             if (text != null && text.contains("Найближчі")) {
 
-                String sql = """
-                                SELECT full_name,
-                                       branch,
-                                       birthday
-                                FROM birthdays
-                                WHERE is_active = 1
-                                  AND MONTH(birthday) = MONTH(CURDATE())
-                                  AND DAY(birthday) >= DAY(CURDATE())
-                                ORDER BY DAY(birthday)
-                                """;
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
-                try (Connection conn = DatabaseManager.getConnection();
-                     PreparedStatement ps = conn.prepareStatement(sql);
-                     ResultSet rs = ps.executeQuery()) {
+                try (Connection conn = DatabaseManager.getConnection()) {
+
+                    String sqlThisMonth = """
+            SELECT full_name, branch, birthday
+            FROM birthdays
+            WHERE is_active = 1
+              AND MONTH(birthday) = MONTH(CURDATE())
+              AND DAY(birthday) >= DAY(CURDATE())
+            ORDER BY DAY(birthday)
+            """;
 
                     StringBuilder builder = new StringBuilder();
+                    boolean foundThisMonth = false;
 
-                    builder.append("📅 <b>Дні народження цього місяця</b>\n\n");
+                    try (PreparedStatement ps = conn.prepareStatement(sqlThisMonth);
+                         ResultSet rs = ps.executeQuery()) {
 
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+                        while (rs.next()) {
+                            if (!foundThisMonth) {
+                                builder.append("📅 <b>Дні народження цього місяця</b>\n\n");
+                                foundThisMonth = true;
+                            }
 
-                    boolean found = false;
+                            java.sql.Date birthday = rs.getDate("birthday");
 
-                    while (rs.next()) {
-                        found = true;
-
-                        java.sql.Date birthday = rs.getDate("birthday");
-
-                        builder.append("🎂 ")
-                                .append(rs.getString("full_name"))
-                                .append("\n");
-
-                        builder.append("🏢 ")
-                                .append(rs.getString("branch"))
-                                .append("\n");
-
-                        builder.append("📅 ")
-                                .append(formatter.format(birthday.toLocalDate()))
-                                .append("\n\n");
+                            builder.append("🎂 ")
+                                    .append(rs.getString("full_name"))
+                                    .append("\n");
+                            builder.append("🏢 ")
+                                    .append(rs.getString("branch"))
+                                    .append("\n");
+                            builder.append("📅 ")
+                                    .append(formatter.format(birthday.toLocalDate()))
+                                    .append("\n\n");
+                        }
                     }
 
-                    if (!found) {
-                        builder.append("У цьому місяці більше днів народження немає.");
+                    if (!foundThisMonth) {
+
+                        String sqlNext = """
+                SELECT full_name, branch, birthday
+                FROM birthdays
+                WHERE is_active = 1
+                ORDER BY
+                    CASE
+                        WHEN DAYOFYEAR(birthday) >= DAYOFYEAR(CURDATE())
+                        THEN DAYOFYEAR(birthday)
+                        ELSE DAYOFYEAR(birthday) + 366
+                    END
+                LIMIT 8
+                """;
+
+                        try (PreparedStatement ps = conn.prepareStatement(sqlNext);
+                             ResultSet rs = ps.executeQuery()) {
+
+                            builder.append("📅 <b>В цьому місяці вже немає днів народження</b>\n");
+                            builder.append("Ось наступні:\n\n");
+
+                            while (rs.next()) {
+                                java.sql.Date birthday = rs.getDate("birthday");
+                                LocalDate date = birthday.toLocalDate();
+
+                                builder.append("🎂 ")
+                                        .append(rs.getString("full_name"))
+                                        .append("\n");
+                                builder.append("🏢 ")
+                                        .append(rs.getString("branch"))
+                                        .append("\n");
+                                builder.append("📅 ")
+                                        .append(formatter.format(date))
+                                        .append("\n\n");
+                            }
+                        }
                     }
 
                     SendMessage sendMessage = new SendMessage();
                     sendMessage.setChatId(chatId);
                     sendMessage.setParseMode("HTML");
-                    sendMessage.setText(builder.toString());
+                    sendMessage.setText(builder.toString().trim());
 
                     execute(sendMessage);
 
                 } catch (Exception e) {
                     e.printStackTrace();
-                    sendText(chatId, "❌ Помилка отримання днів народження цього місяця.");
+                    sendText(chatId, "❌ Помилка отримання днів народження.");
                 }
 
                 return;
