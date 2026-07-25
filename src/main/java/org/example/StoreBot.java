@@ -1649,19 +1649,14 @@ public class StoreBot extends TelegramLongPollingBot {
             if (text != null && text.contains("Найближчі")) {
 
                 String sql = """
-            SELECT full_name,
-                   branch,
-                   birthday
-            FROM birthdays
-            WHERE is_active = 1
-            ORDER BY
-                CASE
-                    WHEN DAYOFYEAR(birthday) >= DAYOFYEAR(CURDATE())
-                    THEN DAYOFYEAR(birthday)
-                    ELSE DAYOFYEAR(birthday) + 366
-                END
-            LIMIT 10
-            """;
+                                SELECT full_name,
+                                       branch,
+                                       birthday
+                                FROM birthdays
+                                WHERE is_active = 1
+                                  AND MONTH(birthday) = MONTH(CURDATE())
+                                ORDER BY DAY(birthday)
+                                """;
 
                 try (Connection conn = DatabaseManager.getConnection();
                      PreparedStatement ps = conn.prepareStatement(sql);
@@ -1669,11 +1664,14 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     StringBuilder builder = new StringBuilder();
 
-                    builder.append("📅 <b>Найближчі дні народження</b>\n\n");
+                    builder.append("📅 <b>Дні народження цього місяця</b>\n\n");
 
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
+                    boolean found = false;
+
                     while (rs.next()) {
+                        found = true;
 
                         java.sql.Date birthday = rs.getDate("birthday");
 
@@ -1690,8 +1688,8 @@ public class StoreBot extends TelegramLongPollingBot {
                                 .append("\n\n");
                     }
 
-                    if (builder.toString().equals("📅 <b>Найближчі дні народження</b>\n\n")) {
-                        builder.append("Нічого не знайдено.");
+                    if (!found) {
+                        builder.append("У цьому місяці днів народження немає.");
                     }
 
                     SendMessage sendMessage = new SendMessage();
@@ -1703,7 +1701,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 } catch (Exception e) {
                     e.printStackTrace();
-                    sendText(chatId, "❌ Помилка отримання найближчих днів народження.");
+                    sendText(chatId, "❌ Помилка отримання днів народження цього місяця.");
                 }
 
                 return;
