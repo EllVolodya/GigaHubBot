@@ -23,6 +23,9 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Document;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
 import java.util.*;
 import java.util.List;
 import java.util.Map;
@@ -139,6 +142,8 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Long> replyTargets = new HashMap<>();
     private static final Logger LOGGER = Logger.getLogger(StoreBot.class.getName());
 
+    private final Map<Long, BirthdayData> birthdayData = new HashMap<>();
+
     //Розробників стани
     private final Map<Long, Boolean> developerMenuState = new HashMap<>();
     private final Map<String, String> developerState = new HashMap<>(); // Зберігаємо стан кожного користувача по chatId
@@ -187,6 +192,37 @@ public class StoreBot extends TelegramLongPollingBot {
         if (param.isEmpty()) return null;
 
         return param;
+    }
+
+    public class BirthdayData {
+
+        private String fullName;
+        private String branch;
+        private LocalDate birthday;
+
+        public String getFullName() {
+            return fullName;
+        }
+
+        public void setFullName(String fullName) {
+            this.fullName = fullName;
+        }
+
+        public String getBranch() {
+            return branch;
+        }
+
+        public void setBranch(String branch) {
+            this.branch = branch;
+        }
+
+        public LocalDate getBirthday() {
+            return birthday;
+        }
+
+        public void setBirthday(LocalDate birthday) {
+            this.birthday = birthday;
+        }
     }
 
     @Override
@@ -912,6 +948,90 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 return;
             }
+        }
+
+        if ("birthday_add_name".equals(userStates.get(userId))) {
+
+            BirthdayData data = new BirthdayData();
+            data.setFullName(text);
+
+            birthdayData.put(userId, data);
+
+            userStates.put(userId, "birthday_add_branch");
+
+            sendText(chatId, """
+            📍 Введіть підрозділ.
+
+            Наприклад:
+            Новий Буг
+            """);
+
+            return;
+        }
+
+        if ("birthday_add_branch".equals(userStates.get(userId))) {
+
+            BirthdayData data = birthdayData.get(userId);
+            data.setBranch(text);
+
+            userStates.put(userId, "birthday_add_date");
+
+            sendText(chatId, """
+            🎂 Введіть дату народження.
+
+            Формат:
+            28.07.2001
+            """);
+
+            return;
+        }
+
+        if ("birthday_add_date".equals(userStates.get(userId))) {
+
+            try {
+
+                LocalDate birthday = LocalDate.parse(
+                        text,
+                        DateTimeFormatter.ofPattern("dd.MM.yyyy")
+                );
+
+                BirthdayData data = birthdayData.get(userId);
+                data.setBirthday(birthday);
+
+                String sql = """
+                INSERT INTO birthdays (full_name, branch, birthday)
+                VALUES (?, ?, ?)
+                """;
+
+                try (Connection conn = DatabaseManager.getConnection();
+                     PreparedStatement ps = conn.prepareStatement(sql)) {
+
+                    ps.setString(1, data.getFullName());
+                    ps.setString(2, data.getBranch());
+                    ps.setDate(3, java.sql.Date.valueOf(data.getBirthday()));
+
+                    ps.executeUpdate();
+                }
+
+                birthdayData.remove(userId);
+                userStates.remove(userId);
+
+                sendText(chatId,
+                        "✅ Працівника успішно додано!\n\n" +
+                                "👤 " + data.getFullName() + "\n" +
+                                "🏢 " + data.getBranch() + "\n" +
+                                "🎂 " + text);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+
+                sendText(chatId,
+                        "❌ Помилка!\n" +
+                                "Перевірте формат дати.\n\n" +
+                                "Приклад: 28.07.2001");
+            }
+
+            return;
         }
 
         // 🔥 ВИБІР ПІДФІЛЬТРА ДЛЯ ТОВАРУ
@@ -3149,27 +3269,42 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 case "🔄 Оновити каталог" -> {
                     if (DEVELOPERS.contains(userId)) execute(createDeveloperCatalogMenu(chatId));
-                    else sendText(chatId, "⛔ У вас немає доступу.");
+                    else sendText(chatId, "У вас немає доступу.");
                 }
 
                 case "🔗 Запрошувальні посилання" -> {
                     if (DEVELOPERS.contains(userId)) {
                         userStates.put(userId, "invites_menu");
                         sendMessage(createInvitesMenu(chatId));
-                    } else sendText(chatId, "⛔ У вас немає доступу.");
+                    } else sendText(chatId, "У вас немає доступу.");
+                }
+
+                case "🎂 Дні народження" -> {
+                    if (DEVELOPERS.contains(userId)) {
+                        userStates.put(userId, "birthday_menu");
+                        sendMessage(createBirthdayMenu(chatId));
+                    } else {
+                        sendText(chatId, "У вас немає доступу.");
+                    }
+                }
+
+                case "➕ Додати" -> {
+                    if (DEVELOPERS.contains(userId)) {
+                        userStates.put(userId, "birthday_add_name");
+                        sendText(chatId, """
+                                            👤 Введіть ПІБ працівника.
+                            
+                                            Приклад:
+                                            Левченко Альона
+                                            """);
+                    } else {
+                        sendText(chatId, "У вас немає доступу.");
+                    }
                 }
 
                 case "📜 Логирування" -> {
                     if (DEVELOPERS.contains(userId)) sendMessage(createLogsMenu(chatId));
-                    else sendText(chatId, "⛔ У вас немає доступу.");
-                }
-
-                case "📝 Список онови" -> {
-                    if (DEVELOPERS.contains(userId)) {
-                        List<String> updates = DeveloperFileManager.getChangelog();
-                        if (updates.isEmpty()) sendText(chatId, "📝 Список оновлень поки порожній.");
-                        else sendText(chatId, "📝 Список оновлень:\n\n" + String.join("\n\n", updates));
-                    } else sendText(chatId, "⛔ У вас немає доступу.");
+                    else sendText(chatId, "У вас немає доступу.");
                 }
 
                 case "📊 Статистика запрошувань" -> {
@@ -3217,7 +3352,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                         sendText(
                                 chatId,
-                                "⛔ У вас немає доступу."
+                                "У вас немає доступу."
                         );
                     }
                 }
@@ -3249,7 +3384,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                             sendText(
                                     chatId,
-                                    "❌ Помилка відкриття меню."
+                                    "Помилка відкриття меню."
                             );
                         }
 
@@ -3257,7 +3392,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                         sendText(
                                 chatId,
-                                "⛔ Немає доступу."
+                                "Немає доступу."
                         );
                     }
 
@@ -3283,7 +3418,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     } catch (SQLException e) {
                         LOGGER.severe("[Admin Error] Failed to load orders for user " + userId + ": " + e.getMessage());
-                        sendText(chatId, "❌ Помилка при завантаженні замовлень з бази.");
+                        sendText(chatId, "Помилка при завантаженні замовлень з бази.");
                     }
                 }
 
@@ -7908,23 +8043,62 @@ public class StoreBot extends TelegramLongPollingBot {
         KeyboardRow row1 = new KeyboardRow();
         row1.add("🔄 Оновити каталог");
         row1.add("✏️ Редагувати товар");
-        row1.add("Редагувати категорії");
+        row1.add("📝 Редагувати категорії");
         keyboard.add(row1);
 
         KeyboardRow row2 = new KeyboardRow();
         row2.add("⚙️ Керування фільтрами");
         row2.add("🔗 Запрошувальні посилання");
+        row2.add("🎂 Дні народження");
         keyboard.add(row2);
 
-        KeyboardRow row3 = new KeyboardRow();
-        row3.add(new KeyboardButton(BACK_BUTTON));
-        keyboard.add(row3);
+        KeyboardRow row4 = new KeyboardRow();
+        row4.add(new KeyboardButton(BACK_BUTTON));
+        keyboard.add(row4);
 
         markup.setKeyboard(keyboard);
 
         return SendMessage.builder()
                 .chatId(chatId)
                 .text("👨‍💻 Меню розробника, оберіть дію:")
+                .replyMarkup(markup)
+                .build();
+    }
+
+    private SendMessage createBirthdayMenu(String chatId) {
+
+        ReplyKeyboardMarkup markup = new ReplyKeyboardMarkup();
+        markup.setResizeKeyboard(true);
+
+        List<KeyboardRow> keyboard = new ArrayList<>();
+
+        KeyboardRow row1 = new KeyboardRow();
+        row1.add("➕ Додати");
+        row1.add("📋 Список");
+        keyboard.add(row1);
+
+        KeyboardRow row2 = new KeyboardRow();
+        row2.add("📅 Найближчі");
+        row2.add("✏️ Редагувати");
+        keyboard.add(row2);
+
+        KeyboardRow row3 = new KeyboardRow();
+        row3.add("🗑 Видалити");
+        keyboard.add(row3);
+
+        KeyboardRow row4 = new KeyboardRow();
+        row4.add(new KeyboardButton("⬅️ Меню розробника"));
+        keyboard.add(row4);
+
+        markup.setKeyboard(keyboard);
+
+        return SendMessage.builder()
+                .chatId(chatId)
+                .text("""
+                    🎂 Меню днів народження
+                    
+                    Оберіть необхідну дію:
+                    """)
                 .replyMarkup(markup)
                 .build();
     }
