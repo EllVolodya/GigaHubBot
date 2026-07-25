@@ -1689,28 +1689,28 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     if (!foundThisMonth) {
 
-                        String sqlNext = """
+                        String sqlNextMonth = """
                 SELECT full_name, branch, birthday
                 FROM birthdays
                 WHERE is_active = 1
-                ORDER BY
-                    CASE
-                        WHEN DAYOFYEAR(birthday) >= DAYOFYEAR(CURDATE())
-                        THEN DAYOFYEAR(birthday)
-                        ELSE DAYOFYEAR(birthday) + 366
-                    END
-                LIMIT 8
+                  AND (
+                        (MONTH(CURDATE()) < 12 AND MONTH(birthday) = MONTH(CURDATE()) + 1)
+                     OR (MONTH(CURDATE()) = 12 AND MONTH(birthday) = 1)
+                  )
+                ORDER BY DAY(birthday)
                 """;
 
-                        try (PreparedStatement ps = conn.prepareStatement(sqlNext);
+                        try (PreparedStatement ps = conn.prepareStatement(sqlNextMonth);
                              ResultSet rs = ps.executeQuery()) {
 
                             builder.append("📅 <b>В цьому місяці вже немає днів народження</b>\n");
-                            builder.append("Ось наступні:\n\n");
+                            builder.append("Ось дні народження <b>наступного місяця</b>:\n\n");
+
+                            boolean foundNext = false;
 
                             while (rs.next()) {
+                                foundNext = true;
                                 java.sql.Date birthday = rs.getDate("birthday");
-                                LocalDate date = birthday.toLocalDate();
 
                                 builder.append("🎂 ")
                                         .append(rs.getString("full_name"))
@@ -1719,8 +1719,12 @@ public class StoreBot extends TelegramLongPollingBot {
                                         .append(rs.getString("branch"))
                                         .append("\n");
                                 builder.append("📅 ")
-                                        .append(formatter.format(date))
+                                        .append(formatter.format(birthday.toLocalDate()))
                                         .append("\n\n");
+                            }
+
+                            if (!foundNext) {
+                                builder.append("У наступному місяці також немає днів народження.");
                             }
                         }
                     }
