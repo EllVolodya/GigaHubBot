@@ -1493,6 +1493,92 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
+            if ("birthday_menu".equals(state)) {
+
+                // ⬅️ Назад
+                if (BACK_BUTTON.equals(text) || "⬅️ Меню розробника".equals(text)) {
+
+                    userStates.put(userId, "developer_menu");
+
+                    try {
+                        execute(createDeveloperMenu(chatId));
+                    } catch (TelegramApiException e) {
+                        e.printStackTrace();
+                    }
+
+                    return;
+                }
+
+                // ➕ Додати
+                if (text != null && text.contains("Додати")) {
+
+                    userStates.put(userId, "birthday_add_name");
+
+                    sendText(
+                            chatId,
+                            """
+                            👤 Введіть ПІБ працівника.
+            
+                            Приклад:
+                            Левченко Альона
+                            """
+                    );
+
+                    return;
+                }
+
+                // 📋 Список
+                if (text != null && text.contains("Список")) {
+
+                    sendText(
+                            chatId,
+                            "📋 Функція перегляду списку поки що в розробці."
+                    );
+
+                    return;
+                }
+
+                // 📅 Найближчі
+                if (text != null && text.contains("Найближчі")) {
+
+                    sendText(
+                            chatId,
+                            "📅 Функція найближчих днів народження поки що в розробці."
+                    );
+
+                    return;
+                }
+
+                // ✏️ Редагувати
+                if (text != null && text.contains("Редагувати")) {
+
+                    sendText(
+                            chatId,
+                            "✏️ Функція редагування поки що в розробці."
+                    );
+
+                    return;
+                }
+
+                // 🗑 Видалити
+                if (text != null && text.contains("Видалити")) {
+
+                    sendText(
+                            chatId,
+                            "🗑 Функція видалення поки що в розробці."
+                    );
+
+                    return;
+                }
+
+                sendText(
+                        chatId,
+                        "❓ Невідома дія."
+                );
+
+                return;
+            }
+
             // 🎂 Дні народження
             if (text != null && text.contains("Дні народження")) {
 
