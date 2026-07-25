@@ -993,10 +993,23 @@ public class StoreBot extends TelegramLongPollingBot {
 
             try {
 
-                LocalDate birthday = LocalDate.parse(
-                        text,
-                        DateTimeFormatter.ofPattern("dd.MM.yyyy")
-                );
+                LocalDate birthday;
+
+                if (text.matches("\\d{2}\\.\\d{2}")) {
+
+                    birthday = LocalDate.parse(
+                            text + ".2000",
+                            DateTimeFormatter.ofPattern("dd.MM.yyyy")
+                    );
+
+                } else {
+
+                    birthday = LocalDate.parse(
+                            text,
+                            DateTimeFormatter.ofPattern("dd.MM.yyyy")
+                    );
+
+                }
 
                 BirthdayData data = birthdayData.get(userId);
                 data.setBirthday(birthday);
@@ -1011,7 +1024,7 @@ public class StoreBot extends TelegramLongPollingBot {
 
                     ps.setString(1, data.getFullName());
                     ps.setString(2, data.getBranch());
-                    ps.setDate(3, java.sql.Date.valueOf(data.getBirthday()));
+                    ps.setDate(3, java.sql.Date.valueOf(birthday));
 
                     ps.executeUpdate();
                 }
@@ -1026,12 +1039,19 @@ public class StoreBot extends TelegramLongPollingBot {
                                 "🎂 " + text);
 
             } catch (Exception e) {
+
                 e.printStackTrace();
 
                 sendText(chatId,
-                        "❌ Помилка!\n" +
-                                "Перевірте формат дати.\n\n" +
-                                "Приклад: 28.07.2001");
+                        """
+                        ❌ Невірний формат дати.
+        
+                        Можна вводити:
+        
+                        28.07
+                        або
+                        28.07.2001
+                        """);
             }
 
             return;
