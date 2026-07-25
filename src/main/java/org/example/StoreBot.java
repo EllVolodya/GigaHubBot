@@ -1582,6 +1582,9 @@ public class StoreBot extends TelegramLongPollingBot {
             // 🎂 Дні народження
             if (text != null && text.contains("Дні народження")) {
 
+                System.out.println("STATE = " + state);
+                System.out.println("TEXT = " + text);
+
                 userStates.put(
                         userId,
                         "birthday_menu"
