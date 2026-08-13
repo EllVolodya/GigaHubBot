@@ -99,4 +99,50 @@ public class DatabaseManager {
             e.printStackTrace();
         }
     }
+
+    public static long getUsersCount(boolean onlyCurrentMonth) {
+        String sql = onlyCurrentMonth
+                ? """
+                SELECT COUNT(*) FROM users 
+                WHERE YEAR(registered_at) = YEAR(CURDATE()) 
+                  AND MONTH(registered_at) = MONTH(CURDATE())
+              """
+                : "SELECT COUNT(*) FROM users";
+
+        try (Connection conn = getConnection();
+             var stmt = conn.createStatement();
+             var rs = stmt.executeQuery(sql)) {
+
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Помилка підрахунку користувачів");
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    public static long getOrdersCount(boolean onlyCurrentMonth) {
+        String sql = onlyCurrentMonth
+                ? """
+                SELECT COUNT(*) FROM orders 
+                WHERE YEAR(date) = YEAR(CURDATE()) 
+                  AND MONTH(date) = MONTH(CURDATE())
+              """
+                : "SELECT COUNT(*) FROM orders";
+
+        try (Connection conn = getConnection();
+             var stmt = conn.createStatement();
+             var rs = stmt.executeQuery(sql)) {
+
+            if (rs.next()) {
+                return rs.getLong(1);
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Помилка підрахунку замовлень");
+            e.printStackTrace();
+        }
+        return 0;
+    }
 }

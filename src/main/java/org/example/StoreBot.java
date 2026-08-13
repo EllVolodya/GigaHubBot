@@ -245,10 +245,8 @@ public class StoreBot extends TelegramLongPollingBot {
     @Override
     public void onUpdateReceived(Update update) {
 
-        // 🔥 NULL CHECK
         if (update == null) return;
 
-        // 🔥 Якщо немає ні message ні callback
         if (!update.hasMessage() && !update.hasCallbackQuery()) {
             return;
         }
@@ -263,15 +261,10 @@ public class StoreBot extends TelegramLongPollingBot {
                     .toString();
 
             switch (data) {
-
-                // 🎥 ВІДЕО
-
                 case "video_order" -> sendHelpVideo(callbackChatId, ORDER_VIDEO_FILE_ID);
                 case "video_buy" -> sendHelpVideo(callbackChatId, BUY_VIDEO_FILE_ID);
                 case "video_start" -> sendHelpVideo(callbackChatId, START_VIDEO_FILE_ID);
                 case "video_support" -> sendHelpVideo(callbackChatId, SUPPORT_VIDEO_FILE_ID);
-
-                // 📝 ТЕКСТ
 
                 case "text_pay" -> sendText(
                         callbackChatId,
@@ -491,7 +484,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 selectedFilterForSubfilter.remove(userId);
                 editItemIndex.remove(userId);
 
-                // TODO: Видалення користувача з БД
                 DatabaseManager.deleteUser(userId);
 
                 String firstName = message.getFrom().getFirstName();
@@ -517,7 +509,6 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 1. STATE — ПЕРШИЙ!
         if ("VIEW_PRODUCTS".equals(state)) {
 
             if (text.matches("\\d+")) {
@@ -3564,9 +3555,19 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
                 }
 
-                case "📜 Логирування" -> {
-                    if (DEVELOPERS.contains(userId)) sendMessage(createLogsMenu(chatId));
-                    else sendText(chatId, "У вас немає доступу.");
+                case "📊 Звіт" -> {
+                    userStates.put(userId, "report_period");
+                    handleState(userId, chatId, text, "report_period", update);
+                }
+
+                case "📅 За поточний місяць" -> {
+                    userStates.put(userId, "report_month");
+                    handleState(userId, chatId, text, "report_month", update);
+                }
+
+                case "📈 За весь час" -> {
+                    userStates.put(userId, "report_all");
+                    handleState(userId, chatId, text, "report_all", update);
                 }
 
                 case "📊 Статистика запрошувань" -> {
@@ -5262,12 +5263,10 @@ public class StoreBot extends TelegramLongPollingBot {
                     );
                 }
             }
+
             case "filter" -> {
 
                 List<String> filters = userFilters.get(userId);
-
-                System.out.println("STATE FILTER");
-                System.out.println("FILTERS = " + filters);
 
                 if (filters == null || filters.isEmpty()) {
 
@@ -5325,10 +5324,6 @@ public class StoreBot extends TelegramLongPollingBot {
                         userStates.put(
                                 userId,
                                 "subfilter"
-                        );
-
-                        System.out.println(
-                                "STATE SET TO SUBFILTER"
                         );
 
                         sendSubfilters(
@@ -5418,11 +5413,6 @@ public class StoreBot extends TelegramLongPollingBot {
                     String subcategory = currentSubcategory.get(userId);
                     String filter = currentFilter.get(userId);
 
-                    System.out.println("CATEGORY = " + category);
-                    System.out.println("SUBCATEGORY = " + subcategory);
-                    System.out.println("FILTER = " + filter);
-                    System.out.println("SUBFILTER = " + selectedSubfilter);
-
                     if (category == null || subcategory == null || filter == null) {
 
                         sendText(
@@ -5492,6 +5482,33 @@ public class StoreBot extends TelegramLongPollingBot {
                 );
 
                 return;
+            }
+
+            case "report_period" -> {
+                try {
+                    execute(createReportPeriodMenu(chatId));
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при показі меню звіту: " + e.getMessage());
+                }
+            }
+
+            case "report_month" -> {
+                try {
+                    execute(createReportMessage(chatId, true));
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при формуванні звіту за місяць");
+                }
+            }
+
+            case "report_all" -> {
+                try {
+                    execute(createReportMessage(chatId, false));
+                } catch (TelegramApiException e) {
+                    e.printStackTrace();
+                    sendText(chatId, "❌ Помилка при формуванні звіту за весь час");
+                }
             }
             case "editing" -> handleEditing(userId, chatId, text);
             case "awaiting_field_value" -> handleAwaitingField(userId, chatId, text);
@@ -8284,13 +8301,32 @@ public class StoreBot extends TelegramLongPollingBot {
         r1.add(new KeyboardButton("🛒 Замовлення користувачів"));
         r1.add(new KeyboardButton("🆔 Відповісти по ID"));
         r1.add(new KeyboardButton("💬 Відгуки користувачів"));
-        //r1.add(new KeyboardButton("📩 Звернення користувачів"));
+
+        KeyboardRow r2 = new KeyboardRow();
+        r2.add(new KeyboardButton("📊 Звіт"));
+
+        KeyboardRow r3 = new KeyboardRow();
+        r3.add(new KeyboardButton(BACK_BUTTON));
+
+        kb.setKeyboard(List.of(r1, r2, r3));
+
+        msg.setReplyMarkup(kb);
+        return msg;
+    }
+
+    private SendMessage createReportPeriodMenu(String chatId) {
+        SendMessage msg = new SendMessage(chatId, "📊 Оберіть період звіту:");
+        ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
+        kb.setResizeKeyboard(true);
+
+        KeyboardRow r1 = new KeyboardRow();
+        r1.add(new KeyboardButton("📅 За поточний місяць"));
+        r1.add(new KeyboardButton("📈 За весь час"));
 
         KeyboardRow r2 = new KeyboardRow();
         r2.add(new KeyboardButton(BACK_BUTTON));
 
         kb.setKeyboard(List.of(r1, r2));
-
         msg.setReplyMarkup(kb);
         return msg;
     }
@@ -12671,10 +12707,8 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private void startOrder(Long userId, String chatId, Map<String, Object> product) {
 
-        // зберігаємо товар
         tempStorage.put(userId + "_product", product);
 
-        // міняємо стан
         userStates.put(userId, "awaiting_quantity");
 
         // беремо назву
@@ -12693,7 +12727,6 @@ public class StoreBot extends TelegramLongPollingBot {
         try (Connection conn =
                      DatabaseManager.getConnection()) {
 
-            // Знаходимо ID підфільтра
             PreparedStatement find =
                     conn.prepareStatement(
                             "SELECT id FROM subfilters WHERE name = ? LIMIT 1"
@@ -12720,7 +12753,6 @@ public class StoreBot extends TelegramLongPollingBot {
             int subfilterId =
                     rs.getInt("id");
 
-            // Записуємо subfilter_id в товар
             PreparedStatement update =
                     conn.prepareStatement(
                             "UPDATE products SET subfilter_id = ? WHERE id = ?"
@@ -12761,5 +12793,36 @@ public class StoreBot extends TelegramLongPollingBot {
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
+    }
+
+    private SendMessage createReportMessage(String chatId, boolean onlyCurrentMonth) {
+        long users = DatabaseManager.getUsersCount(onlyCurrentMonth);
+        long orders = DatabaseManager.getOrdersCount(onlyCurrentMonth);
+
+        String periodText = onlyCurrentMonth ? "за поточний місяць" : "за весь час";
+
+        String text = String.format("""
+            📊 Звіт %s
+
+            👥 Зареєстровано користувачів: %d
+            🛒 Кількість замовлень: %d
+            """, periodText, users, orders);
+
+        SendMessage msg = new SendMessage(chatId, text);
+
+        ReplyKeyboardMarkup kb = new ReplyKeyboardMarkup();
+        kb.setResizeKeyboard(true);
+
+        KeyboardRow r1 = new KeyboardRow();
+        r1.add(new KeyboardButton("📅 За поточний місяць"));
+        r1.add(new KeyboardButton("📈 За весь час"));
+
+        KeyboardRow r2 = new KeyboardRow();
+        r2.add(new KeyboardButton(BACK_BUTTON));
+
+        kb.setKeyboard(List.of(r1, r2));
+        msg.setReplyMarkup(kb);
+
+        return msg;
     }
 }
