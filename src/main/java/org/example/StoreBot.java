@@ -3556,18 +3556,15 @@ public class StoreBot extends TelegramLongPollingBot {
                 }
 
                 case "📊 Звіт" -> {
-                    userStates.put(userId, "report_period");
-                    handleState(userId, chatId, text, "report_period", update);
+                    execute(createReportPeriodMenu(chatId));
                 }
 
                 case "📅 За поточний місяць" -> {
-                    userStates.put(userId, "report_month");
-                    handleState(userId, chatId, text, "report_month", update);
+                    execute(createReportMessage(chatId, true));
                 }
 
                 case "📈 За весь час" -> {
-                    userStates.put(userId, "report_all");
-                    handleState(userId, chatId, text, "report_all", update);
+                    execute(createReportMessage(chatId, false));
                 }
 
                 case "📊 Статистика запрошувань" -> {
