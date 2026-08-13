@@ -105,13 +105,13 @@ public class DatabaseManager {
 
         if (onlyCurrentMonth) {
             sql = """
-            SELECT COUNT(*) FROM users 
+            SELECT COUNT(*) FROM accounts 
             WHERE registered_at IS NOT NULL
               AND YEAR(registered_at) = YEAR(CURDATE()) 
               AND MONTH(registered_at) = MONTH(CURDATE())
             """;
         } else {
-            sql = "SELECT COUNT(*) FROM users";
+            sql = "SELECT COUNT(*) FROM accounts";
         }
 
         try (Connection conn = getConnection();
