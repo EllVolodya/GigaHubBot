@@ -101,25 +101,33 @@ public class DatabaseManager {
     }
 
     public static long getUsersCount(boolean onlyCurrentMonth) {
-        String sql = onlyCurrentMonth
-                ? """
-                SELECT COUNT(*) FROM users 
-                WHERE YEAR(registered_at) = YEAR(CURDATE()) 
-                  AND MONTH(registered_at) = MONTH(CURDATE())
-              """
-                : "SELECT COUNT(*) FROM users";
+        String sql;
+
+        if (onlyCurrentMonth) {
+            sql = """
+            SELECT COUNT(*) FROM users 
+            WHERE registered_at IS NOT NULL
+              AND YEAR(registered_at) = YEAR(CURDATE()) 
+              AND MONTH(registered_at) = MONTH(CURDATE())
+            """;
+        } else {
+            sql = "SELECT COUNT(*) FROM users";
+        }
 
         try (Connection conn = getConnection();
              var stmt = conn.createStatement();
              var rs = stmt.executeQuery(sql)) {
 
             if (rs.next()) {
-                return rs.getLong(1);
+                long count = rs.getLong(1);
+                System.out.println("📊 Users count (" + (onlyCurrentMonth ? "місяць" : "весь час") + "): " + count);
+                return count;
             }
         } catch (SQLException e) {
             System.err.println("❌ Помилка підрахунку користувачів");
             e.printStackTrace();
         }
+
         return 0;
     }
 
