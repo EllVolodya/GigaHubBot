@@ -3145,67 +3145,6 @@ public class StoreBot extends TelegramLongPollingBot {
                         tempProductName.remove(chatId);
                     }
 
-                    case "catalog" -> {
-
-                        if (text == null || text.isBlank()) {
-                            return;
-                        }
-
-                        CatalogSearcher searcher = new CatalogSearcher();
-
-                        List<String> categories = searcher.getCategories();
-
-                        if (categories == null || categories.isEmpty()) {
-                            sendText(
-                                    chatId,
-                                    "❌ Категорії не знайдено."
-                            );
-                            return;
-                        }
-
-                        String selectedCategory = null;
-
-                        for (String category : categories) {
-
-                            if (category.equalsIgnoreCase(text.trim())) {
-                                selectedCategory = category;
-                                break;
-                            }
-                        }
-
-                        if (selectedCategory == null) {
-
-                            sendText(
-                                    chatId,
-                                    "❌ Оберіть категорію з кнопок."
-                            );
-
-                            return;
-                        }
-
-                        // 🔥 Зберігаємо категорію
-                        currentCategory.put(
-                                userId,
-                                selectedCategory
-                        );
-
-                        // 🔥 Очищаємо стару підкатегорію
-                        currentSubcategory.remove(userId);
-
-                        // 🔥 Переходимо до підкатегорій
-                        userStates.put(
-                                userId,
-                                "subcategory"
-                        );
-
-                        sendSubcategories(
-                                userId,
-                                selectedCategory
-                        );
-
-                        return;
-                    }
-
                     default -> {
                         return;
                     }
@@ -7141,6 +7080,67 @@ public class StoreBot extends TelegramLongPollingBot {
                 if (logs.isEmpty()) sendText(chatId, "📝 Список онови поки що пустий.");
                 else sendText(chatId, "📝 Changelog:\n" + String.join("\n", logs));
                 userStates.remove(userId);
+            }
+
+            case "catalog" -> {
+
+                if (text == null || text.isBlank()) {
+                    return;
+                }
+
+                CatalogSearcher searcher = new CatalogSearcher();
+
+                List<String> categories = searcher.getCategories();
+
+                if (categories == null || categories.isEmpty()) {
+                    sendText(
+                            chatId,
+                            "❌ Категорії не знайдено."
+                    );
+                    return;
+                }
+
+                String selectedCategory = null;
+
+                for (String category : categories) {
+
+                    if (category.equalsIgnoreCase(text.trim())) {
+                        selectedCategory = category;
+                        break;
+                    }
+                }
+
+                if (selectedCategory == null) {
+
+                    sendText(
+                            chatId,
+                            "❌ Оберіть категорію з кнопок."
+                    );
+
+                    return;
+                }
+
+                // 🔥 Зберігаємо категорію
+                currentCategory.put(
+                        userId,
+                        selectedCategory
+                );
+
+                // 🔥 Очищаємо стару підкатегорію
+                currentSubcategory.remove(userId);
+
+                // 🔥 Переходимо до підкатегорій
+                userStates.put(
+                        userId,
+                        "subcategory"
+                );
+
+                sendSubcategories(
+                        userId,
+                        selectedCategory
+                );
+
+                return;
             }
         }
     }
