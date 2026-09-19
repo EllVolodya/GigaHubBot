@@ -2937,53 +2937,75 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔎 Режим пошуку товару
         if ("waiting_for_search".equals(state)) {
 
-            // 🔴 Ігноруємо пусті повідомлення
             if (text == null || text.isBlank()) {
                 return;
             }
 
-            // ⬅️ Назад
-            if (text.equals(BACK_BUTTON)
-                    || text.equals("⬅️ Назад")
-                    || text.toLowerCase().contains("назад")) {
+            boolean isMainMenuButton =
+                    text.equals("🧱 Каталог товарів")
+                            || text.equals("🛒 Кошик")
+                            || text.equals("🧹 Очистити кошик")
+                            || text.equals("📍 Адреси та Контакти")
+                            || text.equals("🌐 Соц-мережі")
+                            || text.equals("💬 Допомога")
+                            || text.equals("💬 Залишити відгук")
+                            || text.equals("🔍 Пошук товару")
+                            || text.equals("🔍 Пошук")
+                            || text.equals("🔍 Пошук коду")
+                            || text.equals("📞 Написати консультанту")
+                            || text.equals("Написати консультанту")
+                            || text.equals("🎯 Хіт продажу")
+                            || text.equals("👨‍💻 Меню розробника")
+                            || text.equals("⚙️ Продавца-консультанта меню")
+                            || text.equals("🔗 Запрошувальні посилання")
+                            || text.equals("🎂 Дні народження")
+                            || text.equals("🛒 Замовлення користувачів")
+                            || text.equals("📩 Звернення користувачів")
+                            || text.equals("🆔 Відповісти по ID")
+                            || text.equals("🎥 Відеоінструкція");
 
-                System.out.println("🔥 BACK CLICKED");
+            if (isMainMenuButton) {
 
-                handleBack(userId, chatId);
-                return;
-            }
-
-            // 🚚 ВИБІР ДОСТАВКИ
-            if (text.equals("🏬 Самовивіз")
-                    || text.equals("📦 Доставка по місту")) {
-
-                userStates.remove(userId);
-                return;
-            }
-
-            ProductSearchManager searchHandler =
-                    new ProductSearchManager(this);
-
-            // 🔢 Вибір товару по номеру
-            if (text.matches("\\d+")) {
-
-                searchHandler.handleSearchNumber(
-                        userId,
-                        chatId,
-                        text
+                System.out.println(
+                        "🔙 Вихід з пошуку через кнопку: " + text
                 );
+                userStates.remove(userId);
+                state = null;
 
+            } else {
+
+                if (text.equals(BACK_BUTTON)
+                        || text.equals("⬅️ Назад")
+                        || text.toLowerCase().contains("назад")) {
+
+                    System.out.println("🔥 BACK CLICKED");
+
+                    handleBack(userId, chatId);
+                    return;
+                }
+                if (text.equals("🏬 Самовивіз")
+                        || text.equals("📦 Доставка по місту")) {
+
+                    userStates.remove(userId);
+                    return;
+                }
+
+                ProductSearchManager searchHandler =
+                        new ProductSearchManager(this);
+
+                if (text.matches("\\d+")) {
+
+                    searchHandler.handleSearchNumber(
+                            userId,
+                            chatId,
+                            text
+                    );
+
+                    return;
+                }
+                searchHandler.performSearch(userId, chatId,text.trim());
                 return;
             }
-
-            // 🔎 Пошук по тексту
-            searchHandler.performSearch(
-                    userId,
-                    chatId,
-                    text.trim()
-            );
-
-            return;
         }
 
         // ===== Optional: handle feedback / other states =====
