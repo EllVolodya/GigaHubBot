@@ -2693,8 +2693,94 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
+        if ("waiting_for_search".equals(state)) {
+
+            if (text == null || text.isBlank()) {
+                return;
+            }
+
+            boolean isMainMenuButton =
+                    text.equals("🧱 Каталог товарів")
+                            || text.equals("🛒 Кошик")
+                            || text.equals("🧹 Очистити кошик")
+                            || text.equals("📍 Адреси та Контакти")
+                            || text.equals("🌐 Соц-мережі")
+                            || text.equals("💬 Допомога")
+                            || text.equals("💬 Залишити відгук")
+                            || text.equals("🔍 Пошук товару")
+                            || text.equals("🔍 Пошук")
+                            || text.equals("🔍 Пошук коду")
+                            || text.equals("📞 Написати консультанту")
+                            || text.equals("Написати консультанту")
+                            || text.equals("🎯 Хіт продажу")
+                            || text.equals("👨‍💻 Меню розробника")
+                            || text.equals("⚙️ Продавца-консультанта меню")
+                            || text.equals("🔗 Запрошувальні посилання")
+                            || text.equals("🎂 Дні народження")
+                            || text.equals("🛒 Замовлення користувачів")
+                            || text.equals("📩 Звернення користувачів")
+                            || text.equals("🆔 Відповісти по ID")
+                            || text.equals("🎥 Відеоінструкція");
+
+            if (isMainMenuButton) {
+
+                System.out.println(
+                        "🔙 Вихід з пошуку: " + text
+                );
+
+                userStates.remove(userId);
+                state = null;
+
+            } else {
+
+                // ⬅️ Назад
+                if (text.equals(BACK_BUTTON)
+                        || text.equals("⬅️ Назад")
+                        || text.toLowerCase().contains("назад")) {
+
+                    System.out.println("🔥 BACK CLICKED");
+
+                    handleBack(userId, chatId);
+                    return;
+                }
+
+                if (text.equals("🏬 Самовивіз")
+                        || text.equals("📦 Доставка по місту")) {
+
+                    userStates.remove(userId);
+                    return;
+                }
+
+                ProductSearchManager searchHandler =
+                        new ProductSearchManager(this);
+
+                if (text.matches("\\d+")) {
+
+                    searchHandler.handleSearchNumber(
+                            userId,
+                            chatId,
+                            text
+                    );
+
+                    return;
+                }
+
+                searchHandler.performSearch(
+                        userId,
+                        chatId,
+                        text.trim()
+                );
+
+                return;
+            }
+        }
+
         if (state != null) {
-            System.out.println("[STATE] " + state + " TEXT=" + text);
+
+            System.out.println(
+                    "[STATE] " + state + " TEXT=" + text
+            );
+
             handleState(userId, chatId, text, state, update);
             return;
         }
@@ -2932,80 +3018,6 @@ public class StoreBot extends TelegramLongPollingBot {
 
         if (text == null || text.isBlank()) {
             return;
-        }
-
-        // 🔎 Режим пошуку товару
-        if ("waiting_for_search".equals(state)) {
-
-            if (text == null || text.isBlank()) {
-                return;
-            }
-
-            boolean isMainMenuButton =
-                    text.equals("🧱 Каталог товарів")
-                            || text.equals("🛒 Кошик")
-                            || text.equals("🧹 Очистити кошик")
-                            || text.equals("📍 Адреси та Контакти")
-                            || text.equals("🌐 Соц-мережі")
-                            || text.equals("💬 Допомога")
-                            || text.equals("💬 Залишити відгук")
-                            || text.equals("🔍 Пошук товару")
-                            || text.equals("🔍 Пошук")
-                            || text.equals("🔍 Пошук коду")
-                            || text.equals("📞 Написати консультанту")
-                            || text.equals("Написати консультанту")
-                            || text.equals("🎯 Хіт продажу")
-                            || text.equals("👨‍💻 Меню розробника")
-                            || text.equals("⚙️ Продавца-консультанта меню")
-                            || text.equals("🔗 Запрошувальні посилання")
-                            || text.equals("🎂 Дні народження")
-                            || text.equals("🛒 Замовлення користувачів")
-                            || text.equals("📩 Звернення користувачів")
-                            || text.equals("🆔 Відповісти по ID")
-                            || text.equals("🎥 Відеоінструкція");
-
-            if (isMainMenuButton) {
-
-                System.out.println(
-                        "🔙 Вихід з пошуку через кнопку: " + text
-                );
-                userStates.remove(userId);
-                state = null;
-
-            } else {
-
-                if (text.equals(BACK_BUTTON)
-                        || text.equals("⬅️ Назад")
-                        || text.toLowerCase().contains("назад")) {
-
-                    System.out.println("🔥 BACK CLICKED");
-
-                    handleBack(userId, chatId);
-                    return;
-                }
-                if (text.equals("🏬 Самовивіз")
-                        || text.equals("📦 Доставка по місту")) {
-
-                    userStates.remove(userId);
-                    return;
-                }
-
-                ProductSearchManager searchHandler =
-                        new ProductSearchManager(this);
-
-                if (text.matches("\\d+")) {
-
-                    searchHandler.handleSearchNumber(
-                            userId,
-                            chatId,
-                            text
-                    );
-
-                    return;
-                }
-                searchHandler.performSearch(userId, chatId,text.trim());
-                return;
-            }
         }
 
         // ===== Optional: handle feedback / other states =====
