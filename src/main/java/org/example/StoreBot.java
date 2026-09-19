@@ -10012,23 +10012,21 @@ public class StoreBot extends TelegramLongPollingBot {
 
     private ReplyKeyboardMarkup getSearchKeyboard() {
         ReplyKeyboardMarkup keyboard = new ReplyKeyboardMarkup();
-        keyboard.setResizeKeyboard(true); // робить клавіатуру зручною під мобільний
+        keyboard.setResizeKeyboard(true);
         keyboard.setOneTimeKeyboard(false);
 
         List<KeyboardRow> rows = new ArrayList<>();
 
-        // перший ряд — кнопки для товарів
         KeyboardRow row1 = new KeyboardRow();
-        row1.add("🛠 Додати в кошик");
-        row1.add(VIEW_CART_BUTTON);
+        row1.add("🛒 Замовити товар");
         rows.add(row1);
 
-        // другий ряд — кнопка назад
         KeyboardRow row2 = new KeyboardRow();
         row2.add(BACK_BUTTON);
         rows.add(row2);
 
         keyboard.setKeyboard(rows);
+
         return keyboard;
     }
 
