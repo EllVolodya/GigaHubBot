@@ -3135,8 +3135,9 @@ public class StoreBot extends TelegramLongPollingBot {
             switch (text) {
                 case "🧱 Каталог товарів" -> {
                     adminMode.put(userId, false);
-                    userStates.remove(userId);
+                    userStates.put(userId, "catalog");
                     sendCategories(userId);
+                    return;
                 }
                 case "\uD83D\uDED2 Кошик" -> {
                     try {
@@ -5141,6 +5142,46 @@ public class StoreBot extends TelegramLongPollingBot {
 
         Long realChatId = Long.parseLong(chatId);
         switch (state) {
+            case "catalog" -> {
+
+                if (text == null || text.isBlank()) {
+                    return;
+                }
+
+                CatalogSearcher searcher =
+                        new CatalogSearcher();
+
+                List<String> categories =
+                        searcher.getCategories();
+
+                if (categories == null || categories.isEmpty()) {
+                    sendText(chatId, "❌ Категорії не знайдено.");
+                    return;
+                }
+
+                String selectedCategory = null;
+
+                for (String category : categories) {
+
+                    if (category != null
+                            && category.equalsIgnoreCase(text.trim())) {
+
+                        selectedCategory = category;
+                        break;
+                    }
+                }
+
+                if (selectedCategory == null) {
+                    sendText(chatId, "❌ Будь ласка, оберіть категорію з кнопок.");
+                    return;
+                }
+                currentCategory.put(userId, selectedCategory);
+                currentSubcategory.remove(userId);
+                userStates.put(userId, "subcategory");
+
+                sendSubcategories(userId, selectedCategory);
+                return;
+            }
             case "search_catalog" -> handleSearch(userId, chatId, text);
             case "edit_product" -> {
                 try {
