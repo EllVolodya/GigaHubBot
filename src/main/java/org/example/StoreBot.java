@@ -2699,28 +2699,6 @@ public class StoreBot extends TelegramLongPollingBot {
             return;
         }
 
-        // 🔎 ПРЯМИЙ ПОШУК ТОВАРУ
-        if (state == null && text != null && !text.isBlank()) {
-
-            ProductSearchManager searchHandler =
-                    new ProductSearchManager(this);
-
-            // 🔥 Переходимо в режим пошуку
-            userStates.put(
-                    userId,
-                    "waiting_for_search"
-            );
-
-            // 🔎 Шукаємо товар за введеним текстом
-            searchHandler.performSearch(
-                    userId,
-                    chatId,
-                    text.trim()
-            );
-
-            return;
-        }
-
         System.out.println("[DEBUG] Received message from userId=" + userId + ": '" + text + "' (state=" + state + ")");
 
         String normalizedText = java.text.Normalizer.normalize(text, java.text.Normalizer.Form.NFKC)
@@ -3157,9 +3135,7 @@ public class StoreBot extends TelegramLongPollingBot {
             switch (text) {
                 case "🧱 Каталог товарів" -> {
                     adminMode.put(userId, false);
-
-                    userStates.put(userId, "catalog");
-
+                    userStates.remove(userId);
                     sendCategories(userId);
                 }
                 case "\uD83D\uDED2 Кошик" -> {
@@ -3938,7 +3914,30 @@ public class StoreBot extends TelegramLongPollingBot {
                     }
                 }
 
-                default -> handleText(userId, text);
+                default -> {
+                    if (text != null && !text.isBlank()) {
+
+                        System.out.println(
+                                "🔎 DIRECT SEARCH: " + text
+                        );
+
+                        ProductSearchManager searchHandler =
+                                new ProductSearchManager(this);
+
+                        userStates.put(
+                                userId,
+                                "waiting_for_search"
+                        );
+
+                        searchHandler.performSearch(
+                                userId,
+                                chatId,
+                                text.trim()
+                        );
+
+                        return;
+                    }
+                }
             }
 
             if (text != null && text.toLowerCase().contains("замовити")) {
@@ -7080,67 +7079,6 @@ public class StoreBot extends TelegramLongPollingBot {
                 if (logs.isEmpty()) sendText(chatId, "📝 Список онови поки що пустий.");
                 else sendText(chatId, "📝 Changelog:\n" + String.join("\n", logs));
                 userStates.remove(userId);
-            }
-
-            case "catalog" -> {
-
-                if (text == null || text.isBlank()) {
-                    return;
-                }
-
-                CatalogSearcher searcher = new CatalogSearcher();
-
-                List<String> categories = searcher.getCategories();
-
-                if (categories == null || categories.isEmpty()) {
-                    sendText(
-                            chatId,
-                            "❌ Категорії не знайдено."
-                    );
-                    return;
-                }
-
-                String selectedCategory = null;
-
-                for (String category : categories) {
-
-                    if (category.equalsIgnoreCase(text.trim())) {
-                        selectedCategory = category;
-                        break;
-                    }
-                }
-
-                if (selectedCategory == null) {
-
-                    sendText(
-                            chatId,
-                            "❌ Оберіть категорію з кнопок."
-                    );
-
-                    return;
-                }
-
-                // 🔥 Зберігаємо категорію
-                currentCategory.put(
-                        userId,
-                        selectedCategory
-                );
-
-                // 🔥 Очищаємо стару підкатегорію
-                currentSubcategory.remove(userId);
-
-                // 🔥 Переходимо до підкатегорій
-                userStates.put(
-                        userId,
-                        "subcategory"
-                );
-
-                sendSubcategories(
-                        userId,
-                        selectedCategory
-                );
-
-                return;
             }
         }
     }
