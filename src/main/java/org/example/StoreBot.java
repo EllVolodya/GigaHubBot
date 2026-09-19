@@ -2702,47 +2702,23 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔎 ПРЯМИЙ ПОШУК ТОВАРУ
         if (state == null && text != null && !text.isBlank()) {
 
-            boolean isMenuButton =
-                    text.equals("🧱 Каталог товарів")
-                            || text.equals("🛒 Кошик")
-                            || text.equals("🧹 Очистити кошик")
-                            || text.equals("📍 Адреси та Контакти")
-                            || text.equals("🌐 Соц-мережі")
-                            || text.equals("💬 Допомога")
-                            || text.equals("💬 Залишити відгук")
-                            || text.equals("🔍 Пошук товару")
-                            || text.equals("🔍 Пошук")
-                            || text.equals("🔍 Пошук коду")
-                            || text.equals("📞 Написати консультанту")
-                            || text.equals("Написати консультанту")
-                            || text.equals("🎯 Хіт продажу")
-                            || text.equals("👨‍💻 Меню розробника")
-                            || text.equals("⚙️ Продавца-консультанта меню")
-                            || text.equals("🔗 Запрошувальні посилання")
-                            || text.equals("🎂 Дні народження")
-                            || text.equals("🛒 Замовлення користувачів")
-                            || text.equals("📩 Звернення користувачів")
-                            || text.equals("🆔 Відповісти по ID")
-                            || text.equals("🎥 Відеоінструкція");
+            ProductSearchManager searchHandler =
+                    new ProductSearchManager(this);
 
-            if (!isMenuButton) {
+            // 🔥 Переходимо в режим пошуку
+            userStates.put(
+                    userId,
+                    "waiting_for_search"
+            );
 
-                ProductSearchManager searchHandler =
-                        new ProductSearchManager(this);
+            // 🔎 Шукаємо товар за введеним текстом
+            searchHandler.performSearch(
+                    userId,
+                    chatId,
+                    text.trim()
+            );
 
-                userStates.put(
-                        userId,
-                        "waiting_for_search"
-                );
-
-                searchHandler.performSearch(
-                        userId,
-                        chatId,
-                        text.trim()
-                );
-
-                return;
-            }
+            return;
         }
 
         System.out.println("[DEBUG] Received message from userId=" + userId + ": '" + text + "' (state=" + state + ")");
@@ -3180,8 +3156,10 @@ public class StoreBot extends TelegramLongPollingBot {
 
             switch (text) {
                 case "🧱 Каталог товарів" -> {
-                    adminMode.put(userId, false); // 🔥 ОСНОВНИЙ ФІКС
-                    userStates.remove(userId);
+                    adminMode.put(userId, false);
+
+                    userStates.put(userId, "catalog");
+
                     sendCategories(userId);
                 }
                 case "\uD83D\uDED2 Кошик" -> {
