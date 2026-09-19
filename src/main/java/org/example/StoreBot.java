@@ -2694,10 +2694,27 @@ public class StoreBot extends TelegramLongPollingBot {
         }
 
         if (state != null) {
-
             System.out.println("[STATE] " + state + " TEXT=" + text);
-
             handleState(userId, chatId, text, state, update);
+            return;
+        }
+
+        // 🔎 ПРЯМИЙ ПОШУК ТОВАРУ
+        if (state == null && text != null && !text.isBlank()) {
+
+            ProductSearchManager searchHandler =
+                    new ProductSearchManager(this);
+
+            userStates.put(
+                    userId,
+                    "waiting_for_search"
+            );
+
+            searchHandler.performSearch(
+                    userId,
+                    chatId,
+                    text.trim()
+            );
 
             return;
         }
@@ -2945,62 +2962,48 @@ public class StoreBot extends TelegramLongPollingBot {
                 return;
             }
 
-            try {
+            // ⬅️ Назад
+            if (text.equals(BACK_BUTTON)
+                    || text.equals("⬅️ Назад")
+                    || text.toLowerCase().contains("назад")) {
 
-                // 🛒 Додати в кошик
-                if (text.equals(ADD_TO_CART_BUTTON) || text.equals("🛒 Додати в кошик")) {
-                    addToCart(userId);
-                    return;
-                }
+                System.out.println("🔥 BACK CLICKED");
 
-                // 🛍 Перейти в кошик
-                if (text.equals(VIEW_CART_BUTTON) || text.equals("🛍️ Перейти в кошик")) {
-                    showCart(userId);
-                    return;
-                }
-
-                // ⬅️ Назад
-                if (text != null && (
-                        text.equals(BACK_BUTTON) ||
-                                text.equals("⬅️ Назад") ||
-                                text.toLowerCase().contains("назад")
-                )) {
-                    System.out.println("🔥 BACK CLICKED");
-
-                    handleBack(userId, chatId.toString());
-                    return;
-                }
-
-                // 🚚 ВИБІР ДОСТАВКИ (важливо)
-                if (text.equals("🏬 Самовивіз")
-                        || text.equals("📦 Доставка по місту")) {
-
-                    userStates.remove(userId); // виходимо з пошуку
-                    return;
-                }
-
-                // 🔢 Вибір товару по номеру
-                if (text.matches("\\d+")) {
-
-                    ProductSearchManager searchHandler =
-                            new ProductSearchManager(this);
-
-                    searchHandler.handleSearchNumber(userId, chatId, text);
-                    return;
-                }
-
-                // 🔎 Пошук по тексту
-                ProductSearchManager searchHandler =
-                        new ProductSearchManager(this);
-
-                searchHandler.performSearch(userId, chatId, text);
-                return;
-
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-                sendText(chatId, "❌ Помилка під час пошуку.");
+                handleBack(userId, chatId);
                 return;
             }
+
+            // 🚚 ВИБІР ДОСТАВКИ
+            if (text.equals("🏬 Самовивіз")
+                    || text.equals("📦 Доставка по місту")) {
+
+                userStates.remove(userId);
+                return;
+            }
+
+            ProductSearchManager searchHandler =
+                    new ProductSearchManager(this);
+
+            // 🔢 Вибір товару по номеру
+            if (text.matches("\\d+")) {
+
+                searchHandler.handleSearchNumber(
+                        userId,
+                        chatId,
+                        text
+                );
+
+                return;
+            }
+
+            // 🔎 Пошук по тексту
+            searchHandler.performSearch(
+                    userId,
+                    chatId,
+                    text.trim()
+            );
+
+            return;
         }
 
         // ===== Optional: handle feedback / other states =====
