@@ -2702,21 +2702,47 @@ public class StoreBot extends TelegramLongPollingBot {
         // 🔎 ПРЯМИЙ ПОШУК ТОВАРУ
         if (state == null && text != null && !text.isBlank()) {
 
-            ProductSearchManager searchHandler =
-                    new ProductSearchManager(this);
+            boolean isMenuButton =
+                    text.equals("🧱 Каталог товарів")
+                            || text.equals("🛒 Кошик")
+                            || text.equals("🧹 Очистити кошик")
+                            || text.equals("📍 Адреси та Контакти")
+                            || text.equals("🌐 Соц-мережі")
+                            || text.equals("💬 Допомога")
+                            || text.equals("💬 Залишити відгук")
+                            || text.equals("🔍 Пошук товару")
+                            || text.equals("🔍 Пошук")
+                            || text.equals("🔍 Пошук коду")
+                            || text.equals("📞 Написати консультанту")
+                            || text.equals("Написати консультанту")
+                            || text.equals("🎯 Хіт продажу")
+                            || text.equals("👨‍💻 Меню розробника")
+                            || text.equals("⚙️ Продавца-консультанта меню")
+                            || text.equals("🔗 Запрошувальні посилання")
+                            || text.equals("🎂 Дні народження")
+                            || text.equals("🛒 Замовлення користувачів")
+                            || text.equals("📩 Звернення користувачів")
+                            || text.equals("🆔 Відповісти по ID")
+                            || text.equals("🎥 Відеоінструкція");
 
-            userStates.put(
-                    userId,
-                    "waiting_for_search"
-            );
+            if (!isMenuButton) {
 
-            searchHandler.performSearch(
-                    userId,
-                    chatId,
-                    text.trim()
-            );
+                ProductSearchManager searchHandler =
+                        new ProductSearchManager(this);
 
-            return;
+                userStates.put(
+                        userId,
+                        "waiting_for_search"
+                );
+
+                searchHandler.performSearch(
+                        userId,
+                        chatId,
+                        text.trim()
+                );
+
+                return;
+            }
         }
 
         System.out.println("[DEBUG] Received message from userId=" + userId + ": '" + text + "' (state=" + state + ")");
