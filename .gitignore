@@ -36,3 +36,30 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credentials/
+
+# Local configuration
+application-local.properties
+config-local.yml
+config-local.yaml
+
+# Local database backups and dumps
+*.sql
+*.sql.gz
+*.dump
+*.bak
+
+# Logs
+*.log
+logs/
+
+# Generated Maven files
+dependency-reduced-pom.xml

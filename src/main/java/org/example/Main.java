@@ -1,3 +1,4 @@
+
 package org.example;
 
 import org.telegram.telegrambots.meta.TelegramBotsApi;
@@ -9,40 +10,48 @@ import java.sql.SQLException;
 import java.util.logging.Logger;
 
 public class Main {
-    private static final Logger logger = Logger.getLogger(Main.class.getName());
+    private static final Logger logger =
+            Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) {
         try (Connection conn = DatabaseManager.getConnection()) {
             if (conn != null && !conn.isClosed()) {
-                System.out.println("✅ Database is connected successfully!");
+                System.out.println("Database is connected successfully!");
             } else {
-                System.out.println("❌ Database connection failed!");
+                System.out.println("Database connection failed!");
             }
         } catch (SQLException e) {
-            System.out.println("❌ Error while checking database connection!");
+            System.err.println("Error while checking database connection!");
             e.printStackTrace();
         }
 
         try {
             String token = System.getenv("BOT_TOKEN");
+
             if (token == null || token.isBlank()) {
-                System.err.println("ERROR: BOT_TOKEN environment variable is not set.");
+                System.err.println(
+                        "ERROR: BOT_TOKEN environment variable is not set."
+                );
                 DatabaseManager.disconnect();
                 System.exit(1);
+                return;
             }
 
-            TelegramBotsApi botsApi = new TelegramBotsApi(DefaultBotSession.class);
+            TelegramBotsApi botsApi =
+                    new TelegramBotsApi(DefaultBotSession.class);
+
             StoreBot bot = new StoreBot(token);
             botsApi.registerBot(bot);
 
-            PaymentCallbackServer callbackServer = new PaymentCallbackServer(bot);
-            callbackServer.start();
-
             System.out.println("Bot started successfully!");
+
         } catch (TelegramApiException e) {
+            logger.severe("Failed to start Telegram bot: " + e.getMessage());
             e.printStackTrace();
         } finally {
-            Runtime.getRuntime().addShutdownHook(new Thread(DatabaseManager::disconnect));
+            Runtime.getRuntime().addShutdownHook(
+                    new Thread(DatabaseManager::disconnect)
+            );
         }
     }
 }
