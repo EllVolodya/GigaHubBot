@@ -7,27 +7,26 @@ import java.util.Map;
 
 public class DatabaseManager {
 
-    private static final String URL =
-            "jdbc:postgresql://postgres.yrpfrdiqnqegfjebshtc:J/M#KL8Pc!+2uZT@aws-0-eu-west-1.pooler.supabase.com:5432/postgres";
 
-    private static final String USER = "postgres";
-    private static final String PASSWORD = System.getenv("SUPABASE_DB_PASSWORD");
+    private static final String URL =
+            "jdbc:postgresql://aws-0-eu-west-1.pooler.supabase.com:5432/postgres";
+    private static final String USER = "postgres.yrpfrdiqnqegfjebshtc";
+
+    private static final String PASSWORD = "J/M#KL8Pc!+2uZT";
 
     private static Connection connection;
 
     static {
         try {
             Class.forName("org.postgresql.Driver");
-
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
-
             System.out.println("✅ Supabase PostgreSQL connected successfully!");
-
         } catch (Exception e) {
-            System.err.println("❌ Database connection failed: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("❌ Supabase connection failed: " + e.getMessage());
+            throw new ExceptionInInitializerError(e);
         }
     }
+
 
     public static synchronized Connection getConnection() throws SQLException {
         try {
