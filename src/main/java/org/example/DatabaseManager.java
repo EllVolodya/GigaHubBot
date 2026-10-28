@@ -7,17 +7,22 @@ import java.util.Map;
 
 public class DatabaseManager {
 
-    private static final String URL = "jdbc:mysql://crossover.proxy.rlwy.net:21254/railway?useUnicode=true&characterEncoding=UTF-8&connectTimeout=5000&socketTimeout=5000";
-    private static final String USER = "root";
-    private static final String PASSWORD = "ByZkOlzbofgNZSBVlPCdjayWsDBJfEcP";
+    private static final String URL =
+            "jdbc:postgresql://postgres.yrpfrdiqnqegfjebshtc:J/M#KL8Pc!+2uZT@aws-0-eu-west-1.pooler.supabase.com:5432/postgres";
+
+    private static final String USER = "postgres";
+    private static final String PASSWORD = System.getenv("SUPABASE_DB_PASSWORD");
 
     private static Connection connection;
 
     static {
         try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
+            Class.forName("org.postgresql.Driver");
+
             connection = DriverManager.getConnection(URL, USER, PASSWORD);
-            System.out.println("✅ Database connected successfully!");
+
+            System.out.println("✅ Supabase PostgreSQL connected successfully!");
+
         } catch (Exception e) {
             System.err.println("❌ Database connection failed: " + e.getMessage());
             e.printStackTrace();
@@ -39,36 +44,41 @@ public class DatabaseManager {
 
     public static String getCategoryInfoForProduct(Map<String, Object> product) {
         String name = String.valueOf(product.get("name"));
-        String category = "❓";
-        String subcategory = "❓";
 
         String query = """
-            SELECT c.name AS category, s.name AS subcategory
-            FROM categories c
-            JOIN subcategories s ON s.category_id = c.id
-            JOIN products p ON p.subcategory_id = s.id
-            WHERE p.name = ? LIMIT 1
+        SELECT c.name AS category, s.name AS subcategory
+        FROM public.products p
+        LEFT JOIN public.subcategories s ON s.id = p.subcategory_id
+        LEFT JOIN public.categories c ON c.id = s.category_id
+        WHERE p.name = ?
+        LIMIT 1
         """;
 
         try (Connection conn = getConnection();
              var ps = conn.prepareStatement(query)) {
 
             ps.setString(1, name);
-            var rs = ps.executeQuery();
 
-            if (rs.next()) {
-                category = rs.getString("category");
-                subcategory = rs.getString("subcategory");
-            } else {
-                System.out.println("⚠️ Category info not found for product: " + name);
+            try (var rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String category = rs.getString("category");
+                    String subcategory = rs.getString("subcategory");
+
+                    return "📂 "
+                            + (category != null ? category : "❓")
+                            + " → "
+                            + (subcategory != null ? subcategory : "❓");
+                }
             }
 
         } catch (SQLException e) {
-            System.err.println("❌ Error while getting category info for " + name);
+            System.err.println(
+                    "❌ Error while getting category info for " + name
+            );
             e.printStackTrace();
         }
 
-        return "📂 " + category + " → " + subcategory;
+        return "📂 ❓ → ❓";
     }
 
     public static void disconnect() {
@@ -101,18 +111,16 @@ public class DatabaseManager {
     }
 
     public static long getUsersCount(boolean onlyCurrentMonth) {
-        String sql;
-
-        if (onlyCurrentMonth) {
-            sql = """
-            SELECT COUNT(*) FROM accounts 
-            WHERE registered_at IS NOT NULL
-              AND YEAR(registered_at) = YEAR(CURDATE()) 
-              AND MONTH(registered_at) = MONTH(CURDATE())
-            """;
-        } else {
-            sql = "SELECT COUNT(*) FROM accounts";
-        }
+        String sql = onlyCurrentMonth
+                ? """
+              SELECT COUNT(*)
+              FROM public.accounts
+              WHERE registered_at IS NOT NULL
+                AND registered_at >= DATE_TRUNC('month', CURRENT_DATE)
+                AND registered_at < DATE_TRUNC('month', CURRENT_DATE)
+                                     + INTERVAL '1 month'
+              """
+                : "SELECT COUNT(*) FROM public.accounts";
 
         try (Connection conn = getConnection();
              var stmt = conn.createStatement();
@@ -120,7 +128,9 @@ public class DatabaseManager {
 
             if (rs.next()) {
                 long count = rs.getLong(1);
-                System.out.println("📊 Users count (" + (onlyCurrentMonth ? "місяць" : "весь час") + "): " + count);
+                System.out.println("📊 Users count (" +
+                        (onlyCurrentMonth ? "місяць" : "весь час") +
+                        "): " + count);
                 return count;
             }
         } catch (SQLException e) {
@@ -134,11 +144,13 @@ public class DatabaseManager {
     public static long getOrdersCount(boolean onlyCurrentMonth) {
         String sql = onlyCurrentMonth
                 ? """
-                SELECT COUNT(*) FROM orders 
-                WHERE YEAR(date) = YEAR(CURDATE()) 
-                  AND MONTH(date) = MONTH(CURDATE())
+              SELECT COUNT(*)
+              FROM public.orders
+              WHERE date >= DATE_TRUNC('month', CURRENT_DATE)
+                AND date < DATE_TRUNC('month', CURRENT_DATE)
+                               + INTERVAL '1 month'
               """
-                : "SELECT COUNT(*) FROM orders";
+                : "SELECT COUNT(*) FROM public.orders";
 
         try (Connection conn = getConnection();
              var stmt = conn.createStatement();
@@ -151,6 +163,7 @@ public class DatabaseManager {
             System.err.println("❌ Помилка підрахунку замовлень");
             e.printStackTrace();
         }
+
         return 0;
     }
 }
