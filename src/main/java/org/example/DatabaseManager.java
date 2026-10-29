@@ -7,38 +7,24 @@ import java.util.Map;
 
 public class DatabaseManager {
 
+    private static final String URL = System.getenv("DB_URL");
+    private static final String USER = System.getenv("DB_USER");
+    private static final String PASSWORD = System.getenv("DB_PASSWORD");
 
-    private static final String URL =
-            "jdbc:postgresql://aws-0-eu-west-1.pooler.supabase.com:5432/postgres";
-    private static final String USER = "postgres.yrpfrdiqnqegfjebshtc";
-
-    private static final String PASSWORD = "J/M#KL8Pc!+2uZT";
-
-    private static Connection connection;
-
-    static {
-        try {
-            Class.forName("org.postgresql.Driver");
-            connection = DriverManager.getConnection(URL, USER, PASSWORD);
-            System.out.println("✅ Supabase PostgreSQL connected successfully!");
-        } catch (Exception e) {
-            System.err.println("❌ Supabase connection failed: " + e.getMessage());
-            throw new ExceptionInInitializerError(e);
+    private static void validateDatabaseConfig() {
+        if (URL == null || URL.isBlank()
+                || USER == null || USER.isBlank()
+                || PASSWORD == null || PASSWORD.isBlank()) {
+            throw new IllegalStateException(
+                    "Missing database configuration. Check DB_URL, DB_USER and DB_PASSWORD."
+            );
         }
     }
 
+    public static Connection getConnection() throws SQLException {
+        validateDatabaseConfig();
 
-    public static synchronized Connection getConnection() throws SQLException {
-        try {
-            if (connection == null || connection.isClosed() || !connection.isValid(2)) {
-                // Перепідключення лише якщо з’єднання мертве
-                connection = DriverManager.getConnection(URL, USER, PASSWORD);
-                System.out.println("🔄 Database reconnected!");
-            }
-        } catch (SQLException e) {
-            throw new SQLException("❌ Не вдалося підключитися до БД", e);
-        }
-        return connection;
+        return DriverManager.getConnection(URL, USER, PASSWORD);
     }
 
     public static String getCategoryInfoForProduct(Map<String, Object> product) {
@@ -81,14 +67,7 @@ public class DatabaseManager {
     }
 
     public static void disconnect() {
-        try {
-            if (connection != null && !connection.isClosed()) {
-                connection.close();
-                System.out.println("🔌 Database disconnected.");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+        // Кожне з'єднання закривається у try-with-resources.
     }
 
     public static void deleteUser(long telegramId) {
