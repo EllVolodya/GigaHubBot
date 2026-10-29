@@ -1,7 +1,9 @@
 package org.example;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Map;
 
@@ -11,20 +13,33 @@ public class DatabaseManager {
     private static final String USER = System.getenv("DB_USER");
     private static final String PASSWORD = System.getenv("DB_PASSWORD");
 
-    private static void validateDatabaseConfig() {
+    private static final HikariDataSource DATA_SOURCE = createDataSource();
+
+    private static HikariDataSource createDataSource() {
         if (URL == null || URL.isBlank()
                 || USER == null || USER.isBlank()
                 || PASSWORD == null || PASSWORD.isBlank()) {
             throw new IllegalStateException(
-                    "Missing database configuration. Check DB_URL, DB_USER and DB_PASSWORD."
+                    "Missing DB_URL, DB_USER or DB_PASSWORD environment variable"
             );
         }
+
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(URL);
+        config.setUsername(USER);
+        config.setPassword(PASSWORD);
+
+        config.setPoolName("GigaHub-PostgreSQL");
+        config.setMaximumPoolSize(5);
+        config.setMinimumIdle(1);
+        config.setConnectionTimeout(10_000);
+        config.setValidationTimeout(5_000);
+
+        return new HikariDataSource(config);
     }
 
     public static Connection getConnection() throws SQLException {
-        validateDatabaseConfig();
-
-        return DriverManager.getConnection(URL, USER, PASSWORD);
+        return DATA_SOURCE.getConnection();
     }
 
     public static String getCategoryInfoForProduct(Map<String, Object> product) {
@@ -67,7 +82,9 @@ public class DatabaseManager {
     }
 
     public static void disconnect() {
-        // Кожне з'єднання закривається у try-with-resources.
+        if (!DATA_SOURCE.isClosed()) {
+            DATA_SOURCE.close();
+        }
     }
 
     public static void deleteUser(long telegramId) {
