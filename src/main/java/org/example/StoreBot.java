@@ -42,9 +42,7 @@ import java.io.InputStream;
 import java.io.IOException;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
 import java.sql.SQLException;
-import java.sql.ResultSet;
 import java.sql.Statement;
 
 import java.time.LocalDateTime;
@@ -70,7 +68,6 @@ public class StoreBot extends TelegramLongPollingBot {
     private Map<Long, String> userSelectedSubcategory = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userCart = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userOrders = new HashMap<>();
-    private Map<Long, String> userLastCategory = new HashMap<>();
     private final Map<Long, List<String>> userFilters = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userProducts = new HashMap<>();
     private final Map<Long, Integer> userProductIndex = new HashMap<>();
@@ -83,7 +80,6 @@ public class StoreBot extends TelegramLongPollingBot {
     private final Map<Long, Integer> searchIndex = new HashMap<>();
     private final Map<Long, Double> paintTemp = new HashMap<>();
     private final Map<Long, Double> paintLayers = new HashMap<>();
-    private final Map<Long, String> lastUserMessage = new HashMap<>();
     private final Map<Long, List<Map<String, Object>>> userProductLists = new HashMap<>();
 
     private final StateManager stateManager = new StateManager();
