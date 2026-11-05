@@ -17,23 +17,19 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 public class UserManager {
 
     private final Map<Long, Long> userChatMap = new HashMap<>();
-    private final Connection connection;
 
+    // Не зберігаємо Connection у полі класу:
+    // кожен метод отримує власне з'єднання та закриває його через try-with-resources.
     public UserManager() {
-        try {
-            this.connection = DatabaseManager.getConnection();
-        } catch (SQLException e) {
-            e.printStackTrace();
-            throw new RuntimeException("❌ Не вдалося підключитися до БД", e);
-        }
     }
 
     // Реєстрація нового користувача. Повертає стартове повідомлення, якщо користувач новий
     public SendMessage registerUser(Long telegramId, String name, String chatId) {
-        String selectSql = "SELECT id FROM accounts WHERE telegramid = ?";
+        String selectSql = "SELECT 1 FROM accounts WHERE telegramid = ?";
         String insertSql = "INSERT INTO accounts (telegramid, name, city, number, number_carts, bonus, is_admin, is_developer) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-        try (PreparedStatement selectStmt = connection.prepareStatement(selectSql)) {
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement selectStmt = connection.prepareStatement(selectSql)) {
             selectStmt.setString(1, telegramId.toString());
             try (ResultSet rs = selectStmt.executeQuery()) {
                 if (!rs.next()) {
@@ -113,7 +109,8 @@ public class UserManager {
     // Інкремент кількості замовлень
     public void incrementOrders(String telegramId) {
         String sql = "UPDATE accounts SET number_carts = number_carts + 1 WHERE telegramid = ?";
-        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+        try (Connection connection = DatabaseManager.getConnection();
+             PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.setString(1, telegramId);
             stmt.executeUpdate();
         } catch (SQLException e) {
@@ -205,14 +202,14 @@ public class UserManager {
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, "%" + name + "%");
-            ResultSet rs = ps.executeQuery();
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    long id = rs.getLong("id");
+                    String dbName = rs.getString("name");
 
-            if (rs.next()) {
-                long id = rs.getLong("id");
-                String dbName = rs.getString("name");
-
-                System.out.println("DEBUG DB MATCH: [" + dbName + "] id=" + id);
-                return id;
+                    System.out.println("DEBUG DB MATCH: [" + dbName + "] id=" + id);
+                    return id;
+                }
             }
 
             System.out.println("DEBUG NO DB MATCH for [" + name + "]");
@@ -285,15 +282,17 @@ public class UserManager {
              PreparedStatement select = conn.prepareStatement(selectSql)) {
 
             select.setString(1, "%" + productName + "%");
-            ResultSet rs = select.executeQuery();
 
-            if (!rs.next()) {
-                System.out.println("DEBUG product not found for [" + productName + "]");
-                return;
+            long productId;
+            String quantityText;
+            try (ResultSet rs = select.executeQuery()) {
+                if (!rs.next()) {
+                    System.out.println("DEBUG product not found for [" + productName + "]");
+                    return;
+                }
+                productId = rs.getLong("id");
+                quantityText = rs.getString("quantity");
             }
-
-            long productId = rs.getLong("id");
-            String quantityText = rs.getString("quantity");
 
             int current = extractMaxQuantity(quantityText);
             if (current < 0) return;
@@ -336,16 +335,16 @@ public class UserManager {
     }
 
     public boolean isUserExists(Long userId) {
-        try (Connection conn = DatabaseManager.getConnection()) {
+        String sql = "SELECT 1 FROM accounts WHERE telegramid = ?";
 
-            PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT id FROM accounts WHERE telegramid = ?"
-            );
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, userId.toString());
 
-            ResultSet rs = stmt.executeQuery();
-            return rs.next();
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
