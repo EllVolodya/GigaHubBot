@@ -34,6 +34,7 @@ public class DatabaseManager {
         config.setMinimumIdle(1);
         config.setConnectionTimeout(10_000);
         config.setValidationTimeout(5_000);
+        config.setLeakDetectionThreshold(60_000);
 
         return new HikariDataSource(config);
     }

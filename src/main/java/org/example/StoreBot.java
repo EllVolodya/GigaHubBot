@@ -5051,23 +5051,19 @@ public class StoreBot extends TelegramLongPollingBot {
 
                 int productId = parseIntSafe(product.get("id"));
 
-                Connection conn = DatabaseManager.getConnection();
+                try (Connection conn = DatabaseManager.getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(
+                             "SELECT quantity FROM products WHERE id = ?")) {
 
-                PreparedStatement stmt = conn.prepareStatement(
-                        "SELECT quantity FROM products WHERE id = ?"
-                );
+                    stmt.setInt(1, productId);
 
-                stmt.setInt(1, productId);
-
-                ResultSet rs = stmt.executeQuery();
-
-                if (rs.next()) {
-                    maxAvailable = rs.getInt("quantity");
-                    System.out.println("Stock loaded from DB: " + maxAvailable);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            maxAvailable = rs.getInt("quantity");
+                            System.out.println("Stock loaded from DB: " + maxAvailable);
+                        }
+                    }
                 }
-
-                rs.close();
-                stmt.close();
 
             } catch (Exception e) {
                 System.out.println("ERROR loading stock from DB");
@@ -5931,45 +5927,48 @@ public class StoreBot extends TelegramLongPollingBot {
 
             case "reject_order_reason" -> {
                 String reason = text;
+                Long orderUserId = null;
+                String orderCode = null;
 
-                try {
-                    Connection conn = DatabaseManager.getConnection();
+                String selectSql = """
+                        SELECT *
+                        FROM orders
+                        WHERE status <> 'Підтверджено'
+                          AND status <> 'Відхилено'
+                        ORDER BY id ASC
+                        LIMIT 1
+                        """;
 
-                    String sql = "SELECT * FROM orders WHERE status != 'Підтверджено' AND status != 'Відхилено' ORDER BY id ASC LIMIT 1";
-                    PreparedStatement stmt = conn.prepareStatement(sql);
-                    ResultSet rs = stmt.executeQuery();
+                try (Connection conn = DatabaseManager.getConnection()) {
+                    try (PreparedStatement stmt = conn.prepareStatement(selectSql);
+                         ResultSet rs = stmt.executeQuery()) {
 
-                    if (!rs.isBeforeFirst()) {
+                        if (rs.next()) {
+                            orderUserId = rs.getLong("userId");
+                            orderCode = rs.getString("orderCode");
+                        }
+                    }
+
+                    if (orderCode == null) {
                         sendText(chatId, "Замовлень немає.");
                         userStates.remove(userId);
-                        rs.close();
-                        stmt.close();
                         break;
                     }
 
-                    if (rs.next()) {
-                        Long orderUserId = rs.getLong("userId");
-                        String orderCode = rs.getString("orderCode");
-                        rs.close();
-                        stmt.close();
-
-                        sendText(orderUserId.toString(), "❌ Ваше замовлення відхилено.\nПричина: " + reason);
-
-                        String updateSql = "UPDATE orders SET status = ?, comment = ? WHERE orderCode = ?";
-                        PreparedStatement updateStmt = conn.prepareStatement(updateSql);
+                    String updateSql = "UPDATE orders SET status = ?, comment = ? WHERE orderCode = ?";
+                    int rows;
+                    try (PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
                         updateStmt.setString(1, "Відхилено");
                         updateStmt.setString(2, reason);
                         updateStmt.setString(3, orderCode);
-                        int rows = updateStmt.executeUpdate();
-                        updateStmt.close();
+                        rows = updateStmt.executeUpdate();
+                    }
 
-                        if (rows == 0) {
-                            sendText(chatId, "❌ Не вдалося оновити замовлення у базі.");
-                        } else {
-                            sendText(chatId, "Замовлення відхилено ✅");
-                        }
-
-                        showAdminOrder(userId, chatId);
+                    if (rows > 0) {
+                        sendText(orderUserId.toString(), "❌ Ваше замовлення відхилено.\nПричина: " + reason);
+                        sendText(chatId, "Замовлення відхилено ✅");
+                    } else {
+                        sendText(chatId, "❌ Не вдалося оновити замовлення у базі.");
                     }
 
                 } catch (SQLException e) {
@@ -5977,8 +5976,8 @@ public class StoreBot extends TelegramLongPollingBot {
                     sendText(chatId, "❌ Помилка при обробці замовлення.");
                 }
 
-                // Очищаємо стан
                 userStates.remove(userId);
+                showAdminOrder(userId, chatId);
             }
 
             case "reply_to_customer" -> {

@@ -5,9 +5,9 @@ import java.io.*;
 import java.sql.*;
 
 import java.util.*;
-import java.util.List;                       // для List
-import java.util.Map;                        // для Map
-import java.util.ArrayList;                  // для ArrayList
+import java.util.List;
+import java.util.Map;
+import java.util.ArrayList;
 
 public class CatalogSearcher {
 
@@ -111,7 +111,9 @@ public class CatalogSearcher {
     public List<Map<String, Object>> searchByKeywordsAdmin(String keywords) {
         List<Map<String, Object>> results = new ArrayList<>();
 
-        if (keywords == null || keywords.isEmpty()) return results;
+        if (keywords == null || keywords.isBlank()) {
+            return results;
+        }
 
         String sql = """
             SELECT p.*, s.name AS subcategory, c.name AS category
@@ -121,38 +123,28 @@ public class CatalogSearcher {
             WHERE LOWER(p.name) LIKE ?
             """;
 
-        Connection conn = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
 
-        try {
-            conn = DatabaseManager.getConnection(); // ⚡ бере вже активне з’єднання
-            ps = conn.prepareStatement(sql);
-            ps.setString(1, "%" + keywords.toLowerCase() + "%");
+            ps.setString(1, "%" + keywords.trim().toLowerCase(Locale.ROOT) + "%");
 
-            rs = ps.executeQuery();
-            while (rs.next()) {
-                Map<String, Object> product = new HashMap<>();
-                product.put("id", rs.getInt("id"));
-                product.put("name", rs.getString("name"));
-                product.put("price", rs.getString("price"));
-                product.put("subcategory", rs.getString("subcategory"));
-                product.put("category", rs.getString("category"));
-                results.add(product);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> product = new HashMap<>();
+                    product.put("id", rs.getInt("id"));
+                    product.put("name", rs.getString("name"));
+                    product.put("price", rs.getString("price"));
+                    product.put("subcategory", rs.getString("subcategory"));
+                    product.put("category", rs.getString("category"));
+                    results.add(product);
+                }
             }
 
         } catch (SQLException e) {
-            e.printStackTrace();
             System.err.println("❌ Error executing product search query: " + e.getMessage());
-        } finally {
-            // Закриваємо тільки statement і resultset — з’єднання залишається активним
-            try {
-                if (rs != null) rs.close();
-                if (ps != null) ps.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
+            e.printStackTrace();
         }
+
         return results;
     }
 
@@ -286,30 +278,27 @@ public class CatalogSearcher {
     }
 
     public List<Map<String, Object>> getProductsByCategory(String category) {
-
         List<Map<String, Object>> products = new ArrayList<>();
+        String sql = "SELECT * FROM products WHERE category = ? ORDER BY id";
 
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(
-                     "SELECT * FROM products WHERE category = ? ORDER BY id")) {
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, category);
 
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-
-                Map<String, Object> product = new HashMap<>();
-
-                product.put("id", rs.getInt("id"));
-                product.put("name", rs.getString("name"));
-                product.put("price", rs.getString("price"));
-                product.put("quantity", rs.getString("quantity"));
-
-                products.add(product);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> product = new HashMap<>();
+                    product.put("id", rs.getInt("id"));
+                    product.put("name", rs.getString("name"));
+                    product.put("price", rs.getString("price"));
+                    product.put("quantity", rs.getString("quantity"));
+                    products.add(product);
+                }
             }
 
-        } catch (Exception e) {
+        } catch (SQLException e) {
+            System.err.println("❌ Error loading products by category: " + e.getMessage());
             e.printStackTrace();
         }
 
@@ -779,78 +768,71 @@ public class CatalogSearcher {
     }
 
     public boolean addProductToFilter(Map<String, Object> product, String filterName, String subfilterName) {
+        if (product == null || !(product.get("id") instanceof Number productIdValue)
+                || filterName == null || filterName.isBlank()) {
+            return false;
+        }
 
-        if (product == null) return false;
-
-        try (Connection conn = DatabaseManager.getConnection()) {
-
-            int productId = ((Number) product.get("id")).intValue();
-
-            // 🔹 знайти filter_id
-            PreparedStatement psFilter = conn.prepareStatement(
-                    "SELECT id FROM filters WHERE name = ? LIMIT 1"
-            );
-            psFilter.setString(1, filterName);
-
-            ResultSet rsFilter = psFilter.executeQuery();
-
-            if (!rsFilter.next()) {
-                System.out.println("❌ Filter not found");
-                return false;
-            }
-
-            int filterId = rsFilter.getInt("id");
-
-            Integer subfilterId = null;
-
-            // 🔹 якщо є підфільтр
-            if (subfilterName != null) {
-
-                PreparedStatement psSub = conn.prepareStatement("""
+        int productId = productIdValue.intValue();
+        String filterSql = "SELECT id FROM filters WHERE name = ? LIMIT 1";
+        String subfilterSql = """
                 SELECT sf.id
                 FROM subfilters sf
                 JOIN filters f ON sf.filter_id = f.id
                 WHERE sf.name = ? AND f.name = ?
                 LIMIT 1
-            """);
+                """;
+        String updateSql = """
+                UPDATE products
+                SET filter_id = ?, subfilter_id = ?
+                WHERE id = ?
+                """;
 
-                psSub.setString(1, subfilterName);
-                psSub.setString(2, filterName);
+        try (Connection conn = DatabaseManager.getConnection()) {
+            int filterId;
 
-                ResultSet rsSub = psSub.executeQuery();
-
-                if (!rsSub.next()) {
-                    System.out.println("❌ Subfilter not found");
-                    return false;
+            try (PreparedStatement psFilter = conn.prepareStatement(filterSql)) {
+                psFilter.setString(1, filterName);
+                try (ResultSet rsFilter = psFilter.executeQuery()) {
+                    if (!rsFilter.next()) {
+                        System.out.println("❌ Filter not found: " + filterName);
+                        return false;
+                    }
+                    filterId = rsFilter.getInt("id");
                 }
-
-                subfilterId = rsSub.getInt("id");
             }
 
-            // 🔥 UPDATE
-            PreparedStatement psUpdate = conn.prepareStatement("""
-            UPDATE products
-            SET filter_id = ?, subfilter_id = ?
-            WHERE id = ?
-        """);
-
-            psUpdate.setInt(1, filterId);
-
-            if (subfilterId != null) {
-                psUpdate.setInt(2, subfilterId);
-            } else {
-                psUpdate.setNull(2, Types.INTEGER);
+            Integer subfilterId = null;
+            if (subfilterName != null && !subfilterName.isBlank()) {
+                try (PreparedStatement psSub = conn.prepareStatement(subfilterSql)) {
+                    psSub.setString(1, subfilterName);
+                    psSub.setString(2, filterName);
+                    try (ResultSet rsSub = psSub.executeQuery()) {
+                        if (!rsSub.next()) {
+                            System.out.println("❌ Subfilter not found: " + subfilterName);
+                            return false;
+                        }
+                        subfilterId = rsSub.getInt("id");
+                    }
+                }
             }
 
-            psUpdate.setInt(3, productId);
+            try (PreparedStatement psUpdate = conn.prepareStatement(updateSql)) {
+                psUpdate.setInt(1, filterId);
+                if (subfilterId != null) {
+                    psUpdate.setInt(2, subfilterId);
+                } else {
+                    psUpdate.setNull(2, Types.INTEGER);
+                }
+                psUpdate.setInt(3, productId);
 
-            int updated = psUpdate.executeUpdate();
+                int updated = psUpdate.executeUpdate();
+                System.out.println("UPDATED ROWS: " + updated);
+                return updated > 0;
+            }
 
-            System.out.println("UPDATED ROWS: " + updated);
-
-            return updated > 0;
-
-        } catch (Exception e) {
+        } catch (SQLException e) {
+            System.err.println("❌ Error assigning filter to product ID " + productId + ": " + e.getMessage());
             e.printStackTrace();
             return false;
         }
